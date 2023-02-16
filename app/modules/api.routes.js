@@ -13,19 +13,71 @@ router.post('/data-import', async (req, res) => {
 
         var payload = req.body
 
+        let payloadObj = {
+            "content": [
+                {
+                    "alsoKnownAs": [
+                        `did.${payload.schoolId}`
+                    ],
+                    "services": [
+                        {
+                            "id": "IdentityHub",
+                            "type": "IdentityHub",
+                            "serviceEndpoint": {
+                                "@context": "schema.identity.foundation/hub",
+                                "@type": "UserServiceEndpoint",
+                                "instance": [
+                                    "did:test:hub.id"
+                                ]
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+
+        const issuerRes = await middleware.generateDid(payloadObj);
+
+        console.log("issuerRes", issuerRes)
+
+        console.log("issuerRes", issuerRes[0].verificationMethod[0].controller)
+        var issuerId = issuerRes[0].verificationMethod[0].controller
+
         var responseArray = []
 
         for (const iterator of payload.studentData) {
 
-            const did = await middleware.generateDid();
+            let payloadObj2 = {
+                "content": [
+                    {
+                        "alsoKnownAs": [
+                            `did.${payload.schoolId}`
+                        ],
+                        "services": [
+                            {
+                                "id": `${iterator.student_id}`,
+                                "type": "IdentityHub",
+                                "serviceEndpoint": {
+                                    "@context": "schema.identity.foundation/hub",
+                                    "@type": "UserServiceEndpoint",
+                                    "instance": [
+                                        "did:test:hub.id"
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                ]
+            }
 
-            console.log("did", did)
+            const credRes = await middleware.generateDid(payloadObj2);
 
-            console.log("id", did[0].verificationMethod[0].controller)
-            var didId = did[0].verificationMethod[0].controller
+            console.log("credRes", credRes[0].verificationMethod[0].controller)
+            let credId = credRes[0].verificationMethod[0].controller
 
-            iterator.did = didId
+            iterator.issuerId = issuerId
             iterator.grade = payload.grade
+            iterator.credId = credId
             console.log("iterator", iterator)
 
 
@@ -70,17 +122,17 @@ router.post('/data-import2', async (req, res) => {
             console.log("iterator", iterator)
 
 
-            promises.push(middleware.issueCredentials(iterator))  
+            promises.push(middleware.issueCredentials(iterator))
         }
 
         Promise.all(promises)
-           .then((results) => {
-               console.log("All done", results);
-               resp.successGetResponse(res, results, 'api response');
-           })
-           .catch((e) => {
-               // Handle errors here
-           });
+            .then((results) => {
+                console.log("All done", results);
+                resp.successGetResponse(res, results, 'api response');
+            })
+            .catch((e) => {
+                // Handle errors here
+            });
     }
 
 })

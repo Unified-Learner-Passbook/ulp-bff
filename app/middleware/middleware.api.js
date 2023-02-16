@@ -2,29 +2,8 @@ var axios = require('axios');
 const cred_url = process.env.CRED_URL;
 const did_url = process.env.DID_URl;
 
-async function generateDid() {
-    var data = JSON.stringify({
-        "content": [
-            {
-                "alsoKnownAs": [
-                    "did.chinmoy12c@gmail.com.chinmoytest"
-                ],
-                "services": [
-                    {
-                        "id": "IdentityHub",
-                        "type": "IdentityHub",
-                        "serviceEndpoint": {
-                            "@context": "schema.identity.foundation/hub",
-                            "@type": "UserServiceEndpoint",
-                            "instance": [
-                                "did:test:hub.id"
-                            ]
-                        }
-                    }
-                ]
-            }
-        ]
-    });
+async function generateDid(payload) {
+    var data = JSON.stringify(payload);
 
     var config = {
         method: 'post',
@@ -62,11 +41,11 @@ async function issueCredentials(payload) {
                 "VerifiableCredential",
                 "UniversityDegreeCredential"
             ],
-            "issuer": "did:ulp:25d25352-4a6b-4160-ba39-2b8502f690a2",
+            "issuer": `${payload.issuerId}`,
             "issuanceDate": "2023-02-06T11:56:27.259Z",
             "expirationDate": "2023-02-08T11:56:27.259Z",
             "credentialSubject": {
-                "id": `${payload.did}`,
+                "id": `${payload.credId}`,
                 "grade": `${payload.grade}`,
                 "programme": "B.Tech",
                 "certifyingInstitute": "IIIT Sonepat",
