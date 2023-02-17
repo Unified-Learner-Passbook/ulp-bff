@@ -1,6 +1,6 @@
 var axios = require('axios');
-const cred_url = process.env.CRED_URL;
-const did_url = process.env.DID_URL;
+const cred_url = process.env.CRED_URL || 'http://64.227.185.154:3002'
+const did_url = process.env.DID_URL || 'http://64.227.185.154:3000';
 
 async function generateDid(payload) {
     var data = JSON.stringify(payload);
