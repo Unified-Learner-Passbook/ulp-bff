@@ -51,11 +51,11 @@ router.post('/data-import', async (req, res) => {
                 "content": [
                     {
                         "alsoKnownAs": [
-                            `did.${payload.schoolId}`
+                            `did.${iterator.student_id}`
                         ],
                         "services": [
                             {
-                                "id": `${iterator.student_id}`,
+                                "id": "IdentityHub",
                                 "type": "IdentityHub",
                                 "serviceEndpoint": {
                                     "@context": "schema.identity.foundation/hub",
