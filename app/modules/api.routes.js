@@ -94,7 +94,6 @@ router.post('/data-import', async (req, res) => {
         }
 
 
-
     }
 
 })
@@ -106,33 +105,109 @@ router.post('/data-import2', async (req, res) => {
 
         var payload = req.body
 
-        const promises = []
+        let payloadObj = {
+            "content": [
+                {
+                    "alsoKnownAs": [
+                        `did.${payload.schoolId}`
+                    ],
+                    "services": [
+                        {
+                            "id": "IdentityHub",
+                            "type": "IdentityHub",
+                            "serviceEndpoint": {
+                                "@context": "schema.identity.foundation/hub",
+                                "@type": "UserServiceEndpoint",
+                                "instance": [
+                                    "did:test:hub.id"
+                                ]
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+
+        const issuerRes = await middleware.generateDid(payloadObj);
+
+        console.log("issuerRes", issuerRes)
+
+        console.log("issuerRes", issuerRes[0].verificationMethod[0].controller)
+        var issuerId = issuerRes[0].verificationMethod[0].controller
+
+
+        const promises = [];
 
         for (const iterator of payload.studentData) {
 
-            const did = await middleware.generateDid();
+            let payloadObj2 = {
+                "content": [
+                    {
+                        "alsoKnownAs": [
+                            `did.${iterator.student_id}`
+                        ],
+                        "services": [
+                            {
+                                "id": "IdentityHub",
+                                "type": "IdentityHub",
+                                "serviceEndpoint": {
+                                    "@context": "schema.identity.foundation/hub",
+                                    "@type": "UserServiceEndpoint",
+                                    "instance": [
+                                        "did:test:hub.id"
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                ]
+            }
+            promises.push(middleware.generateDid(payloadObj2));
 
-            console.log("did", did)
-
-            console.log("id", did[0].verificationMethod[0].controller)
-            var didId = did[0].verificationMethod[0].controller
-
-            iterator.did = didId
-            iterator.grade = payload.grade
-            console.log("iterator", iterator)
-
-
-            promises.push(middleware.issueCredentials(iterator))
         }
 
-        Promise.all(promises)
-            .then((results) => {
-                console.log("All done", results);
-                resp.successGetResponse(res, results, 'api response');
+        console.log("promises 170", promises)
+        
+        let credRes = []
+        await Promise.all(promises)
+            .then((values) => {
+                console.log("values 175", values);
+                credRes = values;
+                //resp.successGetResponse(res, values, 'api response');
             })
-            .catch((e) => {
-                // Handle errors here
+            .catch((error) => {
+                console.error("err 187", error.message);
             });
+
+        console.log("credRes 182", credRes[0][0].verificationMethod[0].controller)
+        
+        const promises2 = [];
+        
+        for (const iterator of credRes) {
+            
+            let credId = iterator[0].verificationMethod[0].controller
+
+            iterator.issuerId = issuerId
+            iterator.grade = payload.grade
+            iterator.credId = credId
+            console.log("iterator", iterator)
+
+            promises2.push(middleware.issueCredentials(iterator))
+            
+        }
+
+        console.log("promises2 200", promises2)
+        return;
+        await Promise.all(promises2)
+            .then((values) => {
+                console.log("values 202", values);
+                resp.successGetResponse(res, values, 'api response');
+            })
+            .catch((error) => {
+                console.error("err 206", error.message);
+                resp.errorResponse(res, error.message, '500', "internl server error")
+            });
+
     }
 
 })
