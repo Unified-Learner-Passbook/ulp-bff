@@ -129,7 +129,7 @@ app.get('/', (req, res) => res.json({ message: 'hi' }));
 //  *
 //  */
 app.get("/v1", (req, res) => {
-  res.send("Welcome v1.0!!!");
+  res.send("Welcome to version v1.0!!!");
 });
 
 const api = require('./app/modules/api.routes');
