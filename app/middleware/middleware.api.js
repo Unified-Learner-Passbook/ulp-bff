@@ -117,7 +117,6 @@ async function issueCredentials(payload) {
         
     } catch (error) {
         console.log("cred error", error)
-        throw error
     }
     
         

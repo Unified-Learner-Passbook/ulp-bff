@@ -167,7 +167,7 @@ router.post('/data-import2', async (req, res) => {
         }
 
         console.log("promises 170", promises)
-        
+
         let credRes = []
         await Promise.all(promises)
             .then((values) => {
@@ -179,25 +179,31 @@ router.post('/data-import2', async (req, res) => {
                 console.error("err 187", error.message);
             });
 
-        console.log("credRes 182", credRes[0][0].verificationMethod[0].controller)
-        
+        console.log("credRes 182", credRes)
+
+        console.log("credRes 184", credRes[0][0].verificationMethod[0].controller)
+
         const promises2 = [];
-        
+        var i=0;
         for (const iterator of credRes) {
             
             let credId = iterator[0].verificationMethod[0].controller
 
-            iterator.issuerId = issuerId
-            iterator.grade = payload.grade
-            iterator.credId = credId
-            console.log("iterator", iterator)
+            let payloadObj = {
+                issuerId: issuerId,
+                grade: payload.grade,
+                credId: credId
+            }
 
-            promises2.push(middleware.issueCredentials(iterator))
-            
+
+            console.log(`payloadObj${i+1}`, payloadObj)
+
+            promises2.push(middleware.issueCredentials(payloadObj))
+            i++;
         }
 
         console.log("promises2 200", promises2)
-        return;
+        
         await Promise.all(promises2)
             .then((values) => {
                 console.log("values 202", values);
