@@ -36,12 +36,13 @@ router.post('/data-import', async (req, res) => {
             ]
         }
 
-        const issuerRes = await middleware.generateDid(payloadObj);
+        //const issuerRes = await middleware.generateDid(payloadObj);
 
-        console.log("issuerRes", issuerRes)
+        //console.log("issuerRes", issuerRes)
 
-        console.log("issuerRes", issuerRes[0].verificationMethod[0].controller)
-        var issuerId = issuerRes[0].verificationMethod[0].controller
+        //console.log("issuerRes", issuerRes[0].verificationMethod[0].controller)
+        // var issuerId = issuerRes[0].verificationMethod[0].controller
+        var issuerId = "did:ulp:f08f7782-0d09-4c47-aacb-9092"
 
         var responseArray = []
 
@@ -196,7 +197,7 @@ router.post('/data-import2', async (req, res) => {
             }
 
 
-            console.log(`payloadObj${i+1}`, payloadObj)
+            console.log(`payloadObj${i}`, payloadObj)
 
             promises2.push(middleware.issueCredentials(payloadObj))
             i++;
