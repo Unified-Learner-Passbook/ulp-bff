@@ -42,7 +42,7 @@ router.post('/data-import', async (req, res) => {
 
         //console.log("issuerRes", issuerRes[0].verificationMethod[0].controller)
         // var issuerId = issuerRes[0].verificationMethod[0].controller
-        var issuerId = "did:ulp:f08f7782-0d09-4c47-aacb-9092"
+        var issuerId = "did:ulp:f08f7782-0d09-4c47-aacb-9092113bc33e"
 
         var responseArray = []
 
@@ -92,6 +92,8 @@ router.post('/data-import', async (req, res) => {
         }
         if (responseArray.length > 0) {
             resp.successGetResponse(res, responseArray, 'api response');
+        } else {
+            resp.errorResponse(res, "error", '500', "internl server error")
         }
 
 

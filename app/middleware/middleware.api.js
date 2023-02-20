@@ -36,7 +36,7 @@ async function issueCredentials(payload) {
                 "https://www.w3.org/2018/credentials/v1",
                 "https://www.w3.org/2018/credentials/examples/v1"
             ],
-            "id": "did:ulp:0794a366-2478-4040-9204-6188c3671f5c",
+            "id": "",
             "type": [
                 "VerifiableCredential",
                 "UniversityDegreeCredential"
