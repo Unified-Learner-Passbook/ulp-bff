@@ -17,7 +17,7 @@ router.post('/data-import', async (req, res) => {
         //     "content": [
         //         {
         //             "alsoKnownAs": [
-        //                 `did.${payload.schoolId}`
+        //                 `did.${payload.schoolDid}`
         //             ],
         //             "services": [
         //                 {
@@ -46,20 +46,21 @@ router.post('/data-import', async (req, res) => {
         var issuerId = "did:ulp:f08f7782-0d09-4c47-aacb-9092113bc33e"
 
         //generate schema
-        var schemaRes = await middleware.generateSchema(payload.schemaId);
+        let schemaId = "did:ulpschema:098765";
+        var schemaRes = await middleware.generateSchema(schemaId);
 
         console.log("schemaRes", schemaRes)
         //return
 
         var responseArray = []
 
-        for (const iterator of payload.studentData) {
+        for (const iterator of payload.credentialSubject) {
 
             let payloadObj2 = {
                 "content": [
                     {
                         "alsoKnownAs": [
-                            `did.${iterator.student_id}`
+                            `did.${iterator.studentId}`
                         ],
                         "services": [
                             {

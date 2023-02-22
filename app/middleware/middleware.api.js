@@ -32,7 +32,7 @@ async function generateSchema(payload) {
     var config = {
         method: 'get',
         maxBodyLength: Infinity,
-        url: `${schema_url}/schema/jsonld?id=did:ulpschema:${payload}`,
+        url: `${schema_url}/schema/jsonld?id=${payload}`,
         headers: {}
     };
 
