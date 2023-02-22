@@ -6,37 +6,26 @@ const middleware = require('../middleware/middleware.api')
 module.exports = router;
 
 
-router.post('/data-import', async (req, res) => {
+router.post('/upload', async (req, res) => {
 
-    console.log("POST /data-import", req.body)
-    if (req.body) {
+    console.log("POST /upload", req.body)
+    if (req.body && req.query.type) {
+
+        if(req.query.type === "proofOfAssessment") {
+            var schemaId = "did:ulpschema:098765";
+        }
+        if(req.query.type === "proofOfEnrollment") {
+            var schemaId = "did:ulpschema:098765";
+        }
+        if(req.query.type === "proofOfBenifits") {
+            var schemaId = "did:ulpschema:098765";
+        }
 
         var payload = req.body
 
-        // let payloadObj = {
-        //     "content": [
-        //         {
-        //             "alsoKnownAs": [
-        //                 `did.${payload.schoolDid}`
-        //             ],
-        //             "services": [
-        //                 {
-        //                     "id": "IdentityHub",
-        //                     "type": "IdentityHub",
-        //                     "serviceEndpoint": {
-        //                         "@context": "schema.identity.foundation/hub",
-        //                         "@type": "UserServiceEndpoint",
-        //                         "instance": [
-        //                             "did:test:hub.id"
-        //                         ]
-        //                     }
-        //                 }
-        //             ]
-        //         }
-        //     ]
-        // }
+        //let schoolDid = payload.schoolDid
 
-        //const issuerRes = await middleware.generateDid(payloadObj);
+        //const issuerRes = await middleware.generateDid(schoolDid);
 
         //console.log("issuerRes", issuerRes)
 
@@ -44,9 +33,10 @@ router.post('/data-import', async (req, res) => {
         // var issuerId = issuerRes[0].verificationMethod[0].controller
 
         var issuerId = "did:ulp:f08f7782-0d09-4c47-aacb-9092113bc33e"
-
+        console.log("issuerId", issuerId)
         //generate schema
-        let schemaId = "did:ulpschema:098765";
+        console.log("schemaId", schemaId)
+        
         var schemaRes = await middleware.generateSchema(schemaId);
 
         console.log("schemaRes", schemaRes)
@@ -56,38 +46,26 @@ router.post('/data-import', async (req, res) => {
 
         for (const iterator of payload.credentialSubject) {
 
-            let payloadObj2 = {
-                "content": [
-                    {
-                        "alsoKnownAs": [
-                            `did.${iterator.studentId}`
-                        ],
-                        "services": [
-                            {
-                                "id": "IdentityHub",
-                                "type": "IdentityHub",
-                                "serviceEndpoint": {
-                                    "@context": "schema.identity.foundation/hub",
-                                    "@type": "UserServiceEndpoint",
-                                    "instance": [
-                                        "did:test:hub.id"
-                                    ]
-                                }
-                            }
-                        ]
-                    }
-                ]
-            }
+            let studentId = iterator.studentId;
 
-            const credRes = await middleware.generateDid(payloadObj2);
+            const credRes = await middleware.generateDid(studentId);
 
             console.log("credRes", credRes[0].verificationMethod[0].controller)
             let credId = credRes[0].verificationMethod[0].controller
+
+            let credentialSubject = {
+                "id": credId,
+                "grade": payload.grade,
+                "programme": iterator.programme? iterator.programme : "",
+                "certifyingInstitute": iterator.certifyingInstitute ? iterator.certifyingInstitute : "",
+                "evaluatingInstitute": iterator.certifyingInstitute ? iterator.certifyingInstitute : "",
+            }
 
             iterator.issuerId = issuerId
             iterator.grade = payload.grade
             iterator.credId = credId
             iterator.credSchema = schemaRes
+            iterator.credentialSubject = credentialSubject
             console.log("iterator", iterator)
 
 

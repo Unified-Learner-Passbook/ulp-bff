@@ -4,7 +4,28 @@ const did_url = process.env.DID_URL || 'http://64.227.185.154:3000';
 const schema_url = process.env.SCHEMA_URL || 'http://64.227.185.154:3001';
 
 async function generateDid(payload) {
-    var data = JSON.stringify(payload);
+    var data = JSON.stringify({
+        "content": [
+            {
+                "alsoKnownAs": [
+                    `did.${payload}`
+                ],
+                "services": [
+                    {
+                        "id": "IdentityHub",
+                        "type": "IdentityHub",
+                        "serviceEndpoint": {
+                            "@context": "schema.identity.foundation/hub",
+                            "@type": "UserServiceEndpoint",
+                            "instance": [
+                                "did:test:hub.id"
+                            ]
+                        }
+                    }
+                ]
+            }
+        ]
+    });
 
     var config = {
         method: 'post',
@@ -64,13 +85,7 @@ async function issueCredentials(payload) {
             "issuer": `${payload.issuerId}`,
             "issuanceDate": "2023-02-06T11:56:27.259Z",
             "expirationDate": "2023-02-08T11:56:27.259Z",
-            "credentialSubject": {
-                "id": `${payload.credId}`,
-                "grade": `${payload.grade}`,
-                "programme": "B.Tech",
-                "certifyingInstitute": "IIIT Sonepat",
-                "evaluatingInstitute": "NIT Kurukshetra"
-            },
+            "credentialSubject": payload.credentialSubject,
             "options": {
                 "created": "2020-04-02T18:48:36Z",
                 "credentialStatus": {
@@ -80,6 +95,8 @@ async function issueCredentials(payload) {
         },
         "credentialSchema": payload.credSchema
     });
+
+    console.log("data 99", JSON.parse(data))
 
     var config = {
         method: 'post',
