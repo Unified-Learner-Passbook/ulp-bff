@@ -13,28 +13,28 @@ router.post('/data-import', async (req, res) => {
 
         var payload = req.body
 
-        let payloadObj = {
-            "content": [
-                {
-                    "alsoKnownAs": [
-                        `did.${payload.schoolId}`
-                    ],
-                    "services": [
-                        {
-                            "id": "IdentityHub",
-                            "type": "IdentityHub",
-                            "serviceEndpoint": {
-                                "@context": "schema.identity.foundation/hub",
-                                "@type": "UserServiceEndpoint",
-                                "instance": [
-                                    "did:test:hub.id"
-                                ]
-                            }
-                        }
-                    ]
-                }
-            ]
-        }
+        // let payloadObj = {
+        //     "content": [
+        //         {
+        //             "alsoKnownAs": [
+        //                 `did.${payload.schoolId}`
+        //             ],
+        //             "services": [
+        //                 {
+        //                     "id": "IdentityHub",
+        //                     "type": "IdentityHub",
+        //                     "serviceEndpoint": {
+        //                         "@context": "schema.identity.foundation/hub",
+        //                         "@type": "UserServiceEndpoint",
+        //                         "instance": [
+        //                             "did:test:hub.id"
+        //                         ]
+        //                     }
+        //                 }
+        //             ]
+        //         }
+        //     ]
+        // }
 
         //const issuerRes = await middleware.generateDid(payloadObj);
 
@@ -42,7 +42,14 @@ router.post('/data-import', async (req, res) => {
 
         //console.log("issuerRes", issuerRes[0].verificationMethod[0].controller)
         // var issuerId = issuerRes[0].verificationMethod[0].controller
+
         var issuerId = "did:ulp:f08f7782-0d09-4c47-aacb-9092113bc33e"
+
+        //generate schema
+        var schemaRes = await middleware.generateSchema(payload.schemaId);
+
+        console.log("schemaRes", schemaRes)
+        //return
 
         var responseArray = []
 
@@ -79,6 +86,7 @@ router.post('/data-import', async (req, res) => {
             iterator.issuerId = issuerId
             iterator.grade = payload.grade
             iterator.credId = credId
+            iterator.credSchema = schemaRes
             console.log("iterator", iterator)
 
 
@@ -187,9 +195,9 @@ router.post('/data-import2', async (req, res) => {
         console.log("credRes 184", credRes[0][0].verificationMethod[0].controller)
 
         const promises2 = [];
-        var i=0;
+        var i = 0;
         for (const iterator of credRes) {
-            
+
             let credId = iterator[0].verificationMethod[0].controller
 
             let payloadObj = {
@@ -206,7 +214,7 @@ router.post('/data-import2', async (req, res) => {
         }
 
         console.log("promises2 200", promises2)
-        
+
         await Promise.all(promises2)
             .then((values) => {
                 console.log("values 202", values);
