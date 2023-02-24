@@ -39,7 +39,7 @@ async function generateDid(payload) {
 
     try {
         const response = await axios(config)
-        console.log("response did", response.data)
+        //console.log("response did", response.data)
         return response.data;
     } catch (error) {
         console.log("error did", error)
@@ -69,7 +69,7 @@ async function generateSchema(payload) {
 
 async function issueCredentials(payload) {
 
-    console.log("payload issueCred", payload)
+    //console.log("payload issueCred", payload)
 
     var data = JSON.stringify({
         "credential": {
@@ -96,7 +96,7 @@ async function issueCredentials(payload) {
         "credentialSchema": payload.credSchema
     });
 
-    console.log("data 99", JSON.parse(data))
+    //console.log("data 99", JSON.parse(data))
 
     var config = {
         method: 'post',
@@ -111,7 +111,7 @@ async function issueCredentials(payload) {
     try {
 
         const response = await axios(config)
-        console.log("response cred", response.data)
+        //console.log("response cred", response.data)
         return response.data;
 
     } catch (error) {

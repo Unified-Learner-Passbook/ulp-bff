@@ -40,17 +40,17 @@ router.post('/upload', async (req, res) => {
         var schemaRes = await middleware.generateSchema(schemaId);
 
         console.log("schemaRes", schemaRes)
-        //return
+        
 
         var responseArray = []
 
         for (const iterator of payload.credentialSubject) {
 
             let studentId = iterator.studentId;
-
+            //console.log("studentId", studentId)
             const credRes = await middleware.generateDid(studentId);
 
-            console.log("credRes", credRes[0].verificationMethod[0].controller)
+            //console.log("credRes", credRes[0].verificationMethod[0].controller)
             let credId = credRes[0].verificationMethod[0].controller
 
             let credentialSubject = {
@@ -66,17 +66,19 @@ router.post('/upload', async (req, res) => {
             iterator.credId = credId
             iterator.credSchema = schemaRes
             iterator.credentialSubject = credentialSubject
-            console.log("iterator", iterator)
+            //console.log("iterator", iterator)
 
 
             const cred = await middleware.issueCredentials(iterator)
-            console.log("cred 34", cred)
+            //console.log("cred 34", cred)
 
             if (cred) {
                 responseArray.push(cred)
             }
 
         }
+
+        console.log("responseArray.length", responseArray.length)
         if (responseArray.length > 0) {
             resp.successGetResponse(res, responseArray, 'api response');
         } else {
