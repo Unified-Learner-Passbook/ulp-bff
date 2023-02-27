@@ -36,4 +36,11 @@ node() {
             '''
         }
     }
+    
+    stage('Start deploy job with latest tag') {
+         if (env.BRANCH_NAME == 'main' || env.BRANCH_NAME == 'master') { 
+                build job: 'ULP/deploy-staging/middleware/', parameters: [string(name: 'tag', value: 'latest')]
+         }
+    }
+    
 }
