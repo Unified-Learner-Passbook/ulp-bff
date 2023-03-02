@@ -12,17 +12,42 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.SSOController = void 0;
+exports.SSOController = exports.keycloakConfig = void 0;
 const common_1 = require("@nestjs/common");
 const sso_services_1 = require("./sso.services");
+const keycloak_admin_1 = require("keycloak-admin");
+exports.keycloakConfig = {
+    realm: 'sunbird-rc',
+    clientId: 'ulp-user',
+    clientSecret: '2630e6f7-4a40-4eb3-ad8b-f23a72114fa8',
+    baseUrl: 'https://ulp.uniteframework.io/auth',
+};
 let SSOController = class SSOController {
     constructor(ssoService) {
         this.ssoService = ssoService;
     }
+    getUser() {
+        return `${this.ssoService.getHello()} from user`;
+    }
     async registerStudent(username, name) {
+        const kcAdminClientLocal = new keycloak_admin_1.default({
+            baseUrl: exports.keycloakConfig.baseUrl,
+            realmName: exports.keycloakConfig.realm,
+        });
+        await kcAdminClientLocal.auth({
+            grantType: 'client_credentials',
+            clientId: exports.keycloakConfig.clientId,
+            clientSecret: exports.keycloakConfig.clientSecret,
+        });
         return this.ssoService.registerStudent(username, name);
     }
 };
+__decorate([
+    (0, common_1.Get)('/user'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], SSOController.prototype, "getUser", null);
 __decorate([
     (0, common_1.Post)('/student/register'),
     __param(0, (0, common_1.Body)('username')),

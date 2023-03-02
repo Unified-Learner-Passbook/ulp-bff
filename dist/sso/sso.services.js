@@ -9,6 +9,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.SSOService = void 0;
 const common_1 = require("@nestjs/common");
 let SSOService = class SSOService {
+    getHello() {
+        return 'hello ';
+    }
     registerStudent(username, name) {
         if (username && name) {
             return {

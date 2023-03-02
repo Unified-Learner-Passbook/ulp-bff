@@ -20,9 +20,11 @@
     "test:e2e": "jest --config ./test/jest-e2e.json"
   },
   "dependencies": {
+    "@keycloak/keycloak-admin-client": "^21.0.1",
     "@nestjs/common": "^9.0.0",
     "@nestjs/core": "^9.0.0",
     "@nestjs/platform-express": "^9.0.0",
+    "keycloak-admin": "^1.14.22",
     "keycloak-connect": "^20.0.5",
     "nest-keycloak-connect": "^1.9.1",
     "reflect-metadata": "^0.1.13",
