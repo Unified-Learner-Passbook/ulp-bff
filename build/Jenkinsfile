@@ -1,5 +1,5 @@
 node() {
-    withCredentials([string(credentialsId: 'docker_server', variable: 'docker_server')]) {
+    withCredentials([string(credentialsId: 'docker_server', variable: 'docker_server')]){
         properties([
             parameters([
                 string(name: 'docker_repo', defaultValue: 'samagragovernance/ulp-bff', description: 'Docker Image Name'),
