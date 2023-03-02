@@ -3,7 +3,11 @@ import { Injectable } from '@nestjs/common';
 @Injectable()
 export class TestAPIService {
   getAPI(): any {
-    return { statusCode: 200, message: 'Test API is working', error: '' };
+    return {
+      statusCode: 200,
+      message: 'new jenkins Test API is working',
+      error: '',
+    };
   }
   getAPIID(getId: string) {
     return { statusCode: 200, message: 'Get ID is ' + getId, error: '' };
