@@ -24,4 +24,11 @@ export class SSOController {
       phoneno,
     );
   }
+  @Post('/student/login')
+  async loginStudent(
+    @Body('username') username: string,
+    @Body('password') password: string,
+  ) {
+    return this.ssoService.loginStudent(username, password);
+  }
 }
