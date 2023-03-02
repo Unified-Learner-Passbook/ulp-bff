@@ -10,11 +10,12 @@ exports.AppModule = void 0;
 const common_1 = require("@nestjs/common");
 const testapi_module_1 = require("./testapi/testapi.module");
 const sso_module_1 = require("./sso/sso.module");
+const credentials_module_1 = require("./credentials/credentials.module");
 let AppModule = class AppModule {
 };
 AppModule = __decorate([
     (0, common_1.Module)({
-        imports: [testapi_module_1.TestAPIModule, sso_module_1.SSOModule],
+        imports: [testapi_module_1.TestAPIModule, sso_module_1.SSOModule, credentials_module_1.CredentialsModule],
     })
 ], AppModule);
 exports.AppModule = AppModule;
