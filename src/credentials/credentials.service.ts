@@ -1,7 +1,10 @@
 //import { HttpService } from '@nestjs/axios';
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import axios from 'axios';
+import { it } from 'node:test';
 import { CredentialDto } from './dto/credential-dto';
+import { SuccessResponse } from "../success-response";
+
 const cred_url = process.env.CRED_URL || 'http://64.227.185.154:3002';
 const did_url = process.env.DID_URL || 'http://64.227.185.154:3000';
 const schema_url = process.env.SCHEMA_URL || 'http://64.227.185.154:3001';
@@ -42,41 +45,58 @@ export class CredentialsService {
 
         for (const iterator of payload.credentialSubject) {
 
-            let studentId = iterator.studentId;
-            //console.log("studentId", studentId)
-            const credRes = await this.generateDid(studentId);
+            // let studentId = iterator.studentId;
+            // console.log("studentId", studentId)
+            // const credRes = await this.generateDid(studentId);
 
-            //console.log("credRes", credRes[0].verificationMethod[0].controller)
-            let credId = credRes[0].verificationMethod[0].controller
+            // console.log("credRes", credRes[0].verificationMethod[0].controller)
+            // let credId = credRes[0].verificationMethod[0].controller
 
-            let credentialSubject = {
-                "id": credId,
-                "grade": payload.grade,
-                "programme": iterator.programme ? iterator.programme : "",
-                "certifyingInstitute": iterator.certifyingInstitute ? iterator.certifyingInstitute : "",
-                "evaluatingInstitute": iterator.evaluatingInstitute ? iterator.evaluatingInstitute : "",
+            // let credentialSubject = {
+            //     "id": credId,
+            //     "studentName": iterator.studentName,
+            //     "fatherName": iterator.fatherName,
+            //     "motherName": iterator.motherName,
+            //     "guardianName": iterator.guardianName,
+            //     "age": iterator.age,
+            //     "class": iterator.class,
+            //     "gender": iterator.gender,
+            //     "mobile": iterator.mobile,
+            //     "email": iterator.email,
+            //     "aadhaarId": iterator.aadhaarId,
+            //     "districtId": iterator.districtId,
+            //     "blockId": iterator.blockId,
+            //     "villageId": iterator.villageId,
+            //     "schoolId": iterator.schoolId,
+            //     "status": iterator.status
+            // }
+            let obj = {
+                issuerId: issuerId,
+                credSchema: schemaRes,
+                credentialSubject: iterator
             }
-
-            iterator.issuerId = issuerId
-            iterator.grade = payload.grade
-            iterator.credId = credId
-            iterator.credSchema = schemaRes
-            iterator.credentialSubject = credentialSubject
-            //console.log("iterator", iterator)
+            console.log("obj", obj)
 
 
-            const cred = await this.issueCredentials(iterator)
+
+            const cred = await this.issueCredentials(obj)
             //console.log("cred 34", cred)
 
-            
-                responseArray.push(cred)
-            
+
+            responseArray.push(cred)
+
 
         }
 
         console.log("responseArray.length", responseArray.length)
         if (responseArray.length > 0) {
-            return responseArray;
+            //return responseArray;
+            return new SuccessResponse({
+                statusCode: 3,
+                success: true,
+                message: 'Success',
+                result: responseArray
+            });
             //this.successGetResponse(res, responseArray, 'api response');
         } else {
             //resp.errorResponse(res, "error", '500', "internl server error")
@@ -90,7 +110,7 @@ export class CredentialsService {
             url: `${schema_url}/schema/jsonld?id=${schemaId}`,
             headers: {}
         };
-    
+
         try {
             const response = await axios(config)
             console.log("response schema", response.data)
@@ -123,7 +143,7 @@ export class CredentialsService {
                 }
             ]
         });
-    
+
         var config = {
             method: 'post',
             maxBodyLength: Infinity,
@@ -133,7 +153,7 @@ export class CredentialsService {
             },
             data: data
         };
-    
+
         try {
             const response = await axios(config)
             //console.log("response did", response.data)
@@ -168,9 +188,9 @@ export class CredentialsService {
             },
             "credentialSchema": payload.credSchema
         });
-    
+
         console.log("data 99", JSON.parse(data))
-    
+
         var config = {
             method: 'post',
             maxBodyLength: Infinity,
@@ -180,18 +200,18 @@ export class CredentialsService {
             },
             data: data
         };
-    
+
         try {
-    
+
             const response = await axios(config)
             console.log("cred response")
             return response.data;
-    
+
         } catch (error) {
             console.log("cred error", error.data)
         }
     }
 
-    
+
 
 }

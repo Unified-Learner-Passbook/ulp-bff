@@ -3,10 +3,16 @@ import { CredentialsService } from './credentials.service';
 import { CredentialDto } from './dto/credential-dto';
 
 
+
 @Controller('/v1/credentials')
 export class CredentialsController {
 
     constructor(private readonly credentialsService: CredentialsService) {}
+
+    @Get('')
+    testMethod() {
+        return {message: "hi"}
+    }
 
     @Get('/upload/:id')
     getCredentialById(@Param() id: { id: string }) {
