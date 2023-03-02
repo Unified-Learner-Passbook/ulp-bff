@@ -5,7 +5,7 @@ export class TestAPIService {
   getAPI(): any {
     return {
       statusCode: 200,
-      message: 'new jenkins try 2 Test API is working',
+      message: 'Test API is working 2 March 23',
       error: '',
     };
   }
