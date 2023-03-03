@@ -226,7 +226,7 @@ export class SSOService {
         data: data,
       };
       let sb_rc_search = '';
-      let student_did = {};
+      let student_did = '';
       await axios(config)
         .then(function (response) {
           //console.log(JSON.stringify(response.data));
@@ -263,6 +263,114 @@ export class SSOService {
         statusCode: 200,
         success: false,
         message: 'invalid_body',
+      };
+    }
+  }
+
+  //credentialsStudent
+  async credentialsStudent(token: string) {
+    if (token) {
+      const studentUsername = await this.verifyStudentToken(token);
+      if (studentUsername === 'error') {
+        return {
+          statusCode: 200,
+          success: false,
+          message: 'keycloak_invalid_token',
+        };
+      } else {
+        let data = JSON.stringify({
+          filters: {
+            aadhaarID: {
+              eq: studentUsername,
+            },
+          },
+        });
+        let config = {
+          method: 'post',
+          url: process.env.REGISTRY_URL + 'api/v1/Student/search',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          data: data,
+        };
+        let sb_rc_search = '';
+        let student_did = '';
+        await axios(config)
+          .then(function (response) {
+            //console.log(JSON.stringify(response.data));
+            let data_count = response.data.length;
+            sb_rc_search = data_count === 1 ? 'did_success' : 'not_found';
+            student_did = response?.data[0]?.did ? response.data[0].did : '';
+          })
+          .catch(function (error) {
+            //console.log(error);
+            sb_rc_search = 'error';
+          });
+        if (sb_rc_search === 'error') {
+          return {
+            statusCode: 200,
+            success: false,
+            message: 'sb_rc_search_error',
+          };
+        } else if (sb_rc_search === 'not_found') {
+          return {
+            statusCode: 200,
+            success: false,
+            message: 'sb_rc_no_did_found',
+          };
+        } else {
+          let data = JSON.stringify({
+            subjectId: student_did,
+          });
+
+          let config = {
+            method: 'post',
+            url: process.env.CRED_URL + '/credentials',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            data: data,
+          };
+          let cred_search = '';
+          let cred_data = {};
+          await axios(config)
+            .then(function (response) {
+              //console.log(JSON.stringify(response.data));
+              let data_count = response.data.length;
+              cred_search = data_count === 0 ? 'not_found' : 'cred_success';
+              cred_data = data_count === 0 ? [] : response.data;
+            })
+            .catch(function (error) {
+              //console.log(error);
+              cred_search = 'error';
+            });
+          if (cred_search === 'error') {
+            return {
+              statusCode: 200,
+              success: false,
+              message: 'cred_search_error',
+            };
+          } else if (cred_search === 'not_found') {
+            return {
+              statusCode: 200,
+              success: false,
+              message: 'cred_search_no_found',
+            };
+          } else {
+            return {
+              statusCode: 200,
+              success: true,
+              message: cred_search,
+              credential: cred_data,
+            };
+          }
+        }
+      }
+    } else {
+      return {
+        statusCode: 200,
+        success: false,
+        message: 'invalid_token',
       };
     }
   }
@@ -314,7 +422,11 @@ export class SSOService {
     });
     let config = {
       method: 'post',
-      url: 'https://ulp.uniteframework.io/auth/realms/sunbird-rc/protocol/openid-connect/token',
+      url:
+        process.env.KEYCLOAK_URL +
+        'realms/' +
+        process.env.REALM_ID +
+        '/protocol/openid-connect/token',
       headers: {
         'content-type': 'application/x-www-form-urlencoded',
       },
@@ -376,5 +488,36 @@ export class SSOService {
       //console.log('error did', error);
       return [];
     }
+  }
+
+  //verify student token
+  async verifyStudentToken(token: string) {
+    let config = {
+      method: 'get',
+      url:
+        process.env.KEYCLOAK_URL +
+        'realms/' +
+        process.env.REALM_ID +
+        '/protocol/openid-connect/userinfo',
+      headers: {
+        'content-type': 'application/x-www-form-urlencoded',
+        Authorization: 'Bearer ' + token,
+      },
+    };
+
+    let response_text = '';
+    await axios(config)
+      .then(function (response) {
+        //console.log(JSON.stringify(response.data));
+        response_text = response?.data?.preferred_username
+          ? response.data.preferred_username
+          : 'error';
+      })
+      .catch(function (error) {
+        //console.log(error);
+        response_text = 'error';
+      });
+
+    return response_text;
   }
 }
