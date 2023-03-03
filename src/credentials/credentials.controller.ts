@@ -14,19 +14,19 @@ export class CredentialsController {
         return {message: "hi"}
     }
 
-    @Get('/upload/:id')
-    getCredentialById(@Param() id: { id: string }) {
-        console.log('id in getByIdController: ', id);
-        //return this.credentialsService.getCredentialById(id?.id);
-        return 'test cred'
-    }
+    // @Get('/upload/:id')
+    // getCredentialById(@Param() id: { id: string }) {
+    //     console.log('id in getByIdController: ', id);
+    //     //return this.credentialsService.getCredentialById(id?.id);
+    //     return 'test cred'
+    // }
 
-    @Get('query')
-    // 👇🏽 Using the `@Query()` decorator function to
-    // get all the query parameters in the request
-    getHello(@Query() query: { id: string }): string {
-        return `Hello ${query.id}`;
-    }
+    // @Get('query')
+    // // 👇🏽 Using the `@Query()` decorator function to
+    // // get all the query parameters in the request
+    // getHello(@Query() query: { id: string }): string {
+    //     return `Hello ${query.id}`;
+    // }
 
     @Post('/upload')
     bulkUpload(@Query() query: { type: string }, @Body() payload: CredentialDto) {
