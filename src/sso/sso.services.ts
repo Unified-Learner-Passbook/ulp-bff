@@ -32,7 +32,7 @@ export class SSOService {
         };
       } else {
         //register student
-        var data = JSON.stringify({
+        let data = JSON.stringify({
           enabled: 'true',
           username: aadhaarid,
           credentials: [
@@ -44,7 +44,7 @@ export class SSOService {
           ],
         });
 
-        var config = {
+        let config = {
           method: 'post',
           url:
             process.env.KEYCLOAK_URL +
@@ -74,8 +74,15 @@ export class SSOService {
             message: 'keycloak_register_duplicate',
           };
         } else {
-          var data = JSON.stringify({
-            did: aadhaarid,
+          const issuerRes = await this.generateDid(aadhaarid);
+          /*console.log('issuerRes', issuerRes);
+          console.log(
+            'issuerRes',
+            issuerRes[0].verificationMethod[0].controller,
+          );*/
+          let did = issuerRes[0].verificationMethod[0].controller;
+          let data = JSON.stringify({
+            did: did,
             aadhaarID: aadhaarid,
             studentName: studentname,
             schoolName: schoolname,
@@ -83,7 +90,7 @@ export class SSOService {
             phoneNo: phoneno,
           });
 
-          var config_sb_rc = {
+          let config_sb_rc = {
             method: 'post',
             url: process.env.REGISTRY_URL + 'api/v1/Student/invite',
             headers: {
@@ -103,7 +110,7 @@ export class SSOService {
             })
             .catch(function (error) {
               sb_rc_response_text = 'error';
-              //console.log(error);
+              console.log(error);
             });
           if (sb_rc_response_text === 'error') {
             return {
@@ -146,7 +153,7 @@ export class SSOService {
           message: 'keycloak_invalid_credentials',
         };
       } else {
-        var data = JSON.stringify({
+        let data = JSON.stringify({
           filters: {
             aadhaarID: {
               eq: username,
@@ -154,7 +161,7 @@ export class SSOService {
           },
         });
 
-        var config = {
+        let config = {
           method: 'post',
           url: process.env.REGISTRY_URL + 'api/v1/Student/search',
           headers: {
@@ -199,14 +206,76 @@ export class SSOService {
     }
   }
 
+  //getDIDStudent
+  async getDIDStudent(aadhaarid: string) {
+    if (aadhaarid) {
+      let data = JSON.stringify({
+        filters: {
+          aadhaarID: {
+            eq: aadhaarid,
+          },
+        },
+      });
+
+      let config = {
+        method: 'post',
+        url: process.env.REGISTRY_URL + 'api/v1/Student/search',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        data: data,
+      };
+      let sb_rc_search = '';
+      let student_did = {};
+      await axios(config)
+        .then(function (response) {
+          //console.log(JSON.stringify(response.data));
+          let data_count = response.data.length;
+          sb_rc_search = data_count === 1 ? 'did_success' : 'not_found';
+          student_did = response?.data[0]?.did ? response.data[0].did : '';
+        })
+        .catch(function (error) {
+          //console.log(error);
+          sb_rc_search = 'error';
+        });
+      if (sb_rc_search === 'error') {
+        return {
+          statusCode: 200,
+          success: false,
+          message: 'sb_rc_search_error',
+        };
+      } else if (sb_rc_search === 'not_found') {
+        return {
+          statusCode: 200,
+          success: false,
+          message: 'sb_rc_no_did_found',
+        };
+      } else {
+        return {
+          statusCode: 200,
+          success: true,
+          message: sb_rc_search,
+          did: student_did,
+        };
+      }
+    } else {
+      return {
+        statusCode: 200,
+        success: false,
+        message: 'invalid_body',
+      };
+    }
+  }
+
+  //helper function
   //get client token
   async getClientToken() {
-    var data = this.qs.stringify({
+    let data = this.qs.stringify({
       grant_type: this.keycloakCred.grant_type,
       client_id: this.keycloakCred.client_id,
       client_secret: this.keycloakCred.client_secret,
     });
-    var config = {
+    let config = {
       method: 'post',
       url:
         process.env.KEYCLOAK_URL +
@@ -236,14 +305,14 @@ export class SSOService {
 
   //get student token after login
   async getStudentToken(username: string, password: string) {
-    var data = this.qs.stringify({
+    let data = this.qs.stringify({
       client_id: this.keycloakCred.client_id,
       username: username,
       password: password,
       grant_type: 'password',
       client_secret: this.keycloakCred.client_secret,
     });
-    var config = {
+    let config = {
       method: 'post',
       url: 'https://ulp.uniteframework.io/auth/realms/sunbird-rc/protocol/openid-connect/token',
       headers: {
@@ -266,5 +335,46 @@ export class SSOService {
       });
 
     return response_text;
+  }
+
+  //generate did
+  async generateDid(aadhaarId: string) {
+    let data = JSON.stringify({
+      content: [
+        {
+          alsoKnownAs: [`did.${aadhaarId}`],
+          services: [
+            {
+              id: 'IdentityHub',
+              type: 'IdentityHub',
+              serviceEndpoint: {
+                '@context': 'schema.identity.foundation/hub',
+                '@type': 'UserServiceEndpoint',
+                instance: ['did:test:hub.id'],
+              },
+            },
+          ],
+        },
+      ],
+    });
+
+    let config = {
+      method: 'post',
+      maxBodyLength: Infinity,
+      url: `${process.env.DID_URL}/did/generate`,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      data: data,
+    };
+
+    try {
+      const response = await axios(config);
+      //console.log("response did", response.data)
+      return response.data;
+    } catch (error) {
+      //console.log('error did', error);
+      return [];
+    }
   }
 }

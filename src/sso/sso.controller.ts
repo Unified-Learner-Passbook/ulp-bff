@@ -31,4 +31,8 @@ export class SSOController {
   ) {
     return this.ssoService.loginStudent(username, password);
   }
+  @Post('/student/getdid')
+  async getDIDStudent(@Body('aadhaarid') aadhaarid: string) {
+    return this.ssoService.getDIDStudent(aadhaarid);
+  }
 }
