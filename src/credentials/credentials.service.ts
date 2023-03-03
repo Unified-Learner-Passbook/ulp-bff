@@ -4,16 +4,18 @@ import axios from 'axios';
 import { it } from 'node:test';
 import { CredentialDto } from './dto/credential-dto';
 import { SuccessResponse } from "../success-response";
+import { ErrorResponse } from 'src/error-response';
 
 const cred_url = process.env.CRED_URL || 'http://64.227.185.154:3002';
 const did_url = process.env.DID_URL || 'http://64.227.185.154:3000';
 const schema_url = process.env.SCHEMA_URL || 'http://64.227.185.154:3001';
+const AADHAAR_DID_URL = process.env.AADHAAR_DID_URL || 'https://ulp.uniteframework.io/ulp-bff/v1/sso/student/getdid'
 
 @Injectable()
 export class CredentialsService {
 
     //constructor(private readonly httpService: HttpService) { }
-    
+
 
     async issueCredential(credentialPlayload: CredentialDto, schemaId: string) {
         console.log('credentialPlayload: ', credentialPlayload);
@@ -41,36 +43,23 @@ export class CredentialsService {
 
         console.log("schemaRes", schemaRes)
 
+        //genrate did for each student
+        let generateDidPromises = payload.credentialSubject.map(iterator => this.generateAadharDid(iterator.aadhaarId))
+
+        console.log("generateDidPromises", generateDidPromises.length)
 
         var responseArray = []
 
         for (const iterator of payload.credentialSubject) {
 
-            // let studentId = iterator.studentId;
-            // console.log("studentId", studentId)
-            // const credRes = await this.generateDid(studentId);
+            let aadhaarId = iterator.aadhaarId;
+            console.log("aadhaarId", aadhaarId)
+            const didRes = await this.generateAadharDid(aadhaarId);
 
-            // console.log("credRes", credRes[0].verificationMethod[0].controller)
-            // let credId = credRes[0].verificationMethod[0].controller
+            console.log("didRes", didRes)
+            let did = didRes.did
+            iterator.id = did
 
-            // let credentialSubject = {
-            //     "id": credId,
-            //     "studentName": iterator.studentName,
-            //     "fatherName": iterator.fatherName,
-            //     "motherName": iterator.motherName,
-            //     "guardianName": iterator.guardianName,
-            //     "age": iterator.age,
-            //     "class": iterator.class,
-            //     "gender": iterator.gender,
-            //     "mobile": iterator.mobile,
-            //     "email": iterator.email,
-            //     "aadhaarId": iterator.aadhaarId,
-            //     "districtId": iterator.districtId,
-            //     "blockId": iterator.blockId,
-            //     "villageId": iterator.villageId,
-            //     "schoolId": iterator.schoolId,
-            //     "status": iterator.status
-            // }
             let obj = {
                 issuerId: issuerId,
                 credSchema: schemaRes,
@@ -78,13 +67,13 @@ export class CredentialsService {
             }
             console.log("obj", obj)
 
+            if (iterator.id) {
 
+                const cred = await this.issueCredentials(obj)
+                //console.log("cred 34", cred)
 
-            const cred = await this.issueCredentials(obj)
-            //console.log("cred 34", cred)
-
-
-            responseArray.push(cred)
+                responseArray.push(cred)
+            }
 
 
         }
@@ -92,14 +81,19 @@ export class CredentialsService {
         console.log("responseArray.length", responseArray.length)
         if (responseArray.length > 0) {
             //return responseArray;
-            return new SuccessResponse({
-                statusCode: 3,
+            return {
+                statusCode: 200,
                 success: true,
                 message: 'Success',
                 result: responseArray
-            });
+            };
             //this.successGetResponse(res, responseArray, 'api response');
         } else {
+            return {
+                statusCode: 200,
+                success: false,
+                message: 'unable to generate did',
+              };
             //resp.errorResponse(res, "error", '500', "internl server error")
         }
     }
@@ -208,11 +202,43 @@ export class CredentialsService {
             console.log("cred response")
             return response.data;
 
-        } catch (error) {
-            console.log("cred error", error.data)
+        } catch (e) {
+            var error = new ErrorResponse({
+                errorCode: e.response?.status,
+                errorMessage: e.response?.data?.params?.errmsg,
+              });
+            console.log("cred error", e.data)
         }
     }
 
+    async generateAadharDid(aadharId) {
+        var data = JSON.stringify({
+            "aadhaarid": aadharId
+        });
 
+        var config = {
+            method: 'post',
+            maxBodyLength: Infinity,
+            url: `${AADHAAR_DID_URL}`,
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            data: data
+        };
+
+        try {
+
+            let didRes = await axios(config)
+            console.log("adhar did", didRes.data)
+            return didRes.data
+
+        } catch (error) {
+
+            console.log(error)
+
+        }
+
+
+    }
 
 }
