@@ -11,7 +11,7 @@ export class CredentialsController {
 
     @Get('')
     testMethod() {
-        return {message: "hi"}
+        return {message: "welcome to version 1.0"}
     }
 
     // @Get('/upload/:id')
