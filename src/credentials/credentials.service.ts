@@ -44,9 +44,9 @@ export class CredentialsService {
         console.log("schemaRes", schemaRes)
 
         //genrate did for each student
-        let generateDidPromises = payload.credentialSubject.map(iterator => this.generateAadharDid(iterator.aadhaarId))
+        //let generateDidPromises = payload.credentialSubject.map(iterator => this.generateAadharDid(iterator.aadhaarId))
 
-        console.log("generateDidPromises", generateDidPromises.length)
+        //console.log("generateDidPromises", generateDidPromises.length)
 
         var responseArray = []
 
@@ -57,8 +57,10 @@ export class CredentialsService {
             const didRes = await this.generateAadharDid(aadhaarId);
 
             console.log("didRes", didRes)
-            let did = didRes.did
-            iterator.id = did
+            if (didRes) {
+                let did = didRes.did
+                iterator.id = did
+            }
 
             let obj = {
                 issuerId: issuerId,
@@ -93,7 +95,7 @@ export class CredentialsService {
                 statusCode: 200,
                 success: false,
                 message: 'unable to generate did',
-              };
+            };
             //resp.errorResponse(res, "error", '500', "internl server error")
         }
     }
@@ -206,37 +208,34 @@ export class CredentialsService {
             var error = new ErrorResponse({
                 errorCode: e.response?.status,
                 errorMessage: e.response?.data?.params?.errmsg,
-              });
+            });
             console.log("cred error", e.data)
         }
     }
 
     async generateAadharDid(aadharId) {
-        var data = JSON.stringify({
-            "aadhaarid": aadharId
-        });
 
         var config = {
-            method: 'post',
+            method: 'get',
             maxBodyLength: Infinity,
-            url: `${AADHAAR_DID_URL}`,
+            url: `https://ulp.uniteframework.io/ulp-bff/v1/sso/student/getdid/${aadharId}`,
             headers: {
                 'Content-Type': 'application/json'
-            },
-            data: data
+            }
         };
 
-        try {
-
+        try{
             let didRes = await axios(config)
-            console.log("adhar did", didRes.data)
+            console.log("didRes", didRes)
             return didRes.data
-
-        } catch (error) {
-
-            console.log(error)
-
+        }catch(err) {
+            console.log("err", err)
         }
+        
+
+
+
+
 
 
     }
