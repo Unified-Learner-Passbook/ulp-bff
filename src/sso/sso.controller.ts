@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Post, Body } from '@nestjs/common';
+import { Controller, Get, Post, Body, Headers } from '@nestjs/common';
 import { SSOService } from './sso.services';
 
 @Controller('v1/sso')
@@ -34,5 +34,10 @@ export class SSOController {
   @Post('/student/getdid')
   async getDIDStudent(@Body('aadhaarid') aadhaarid: string) {
     return this.ssoService.getDIDStudent(aadhaarid);
+  }
+  @Post('/student/credentials')
+  async credentialsStudent(@Headers('Authorization') auth: string) {
+    const jwt = auth.replace('Bearer ', '');
+    return this.ssoService.credentialsStudent(jwt);
   }
 }
