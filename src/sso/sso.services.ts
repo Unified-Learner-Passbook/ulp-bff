@@ -1,7 +1,9 @@
 import { Injectable } from '@nestjs/common';
 
 //custom imports
+import { Buffer } from 'node:buffer';
 import axios from 'axios';
+import { createWriteStream, writeFile } from 'fs';
 import { Response } from 'express';
 
 @Injectable()
@@ -452,6 +454,29 @@ export class SSOService {
         await axios(config)
           .then(function (response) {
             //console.log(JSON.stringify(response.data));
+            try {
+              /*let writeStream = createWriteStream('test.pdf');
+              writeStream.once('open', (fd) => {
+                writeStream.write(Buffer.from(response.data, 'binary'));
+                writeStream.on('finish', () => {
+                  console.log('wrote all data to file');
+                });
+                writeStream.end();
+              });*/
+              /*writeFile(
+                __dirname + '/test.pdf',
+                response.data,
+                'binary',
+                (err) => {
+                  if (err) {
+                    console.log(err);
+                  }
+                  console.log('The file was saved!');
+                },
+              );*/
+            } catch (e) {
+              console.log(e);
+            }
             render_response = response.data;
           })
           .catch(function (error) {
@@ -465,14 +490,14 @@ export class SSOService {
             message: 'Cred Render API Failed',
           };
         } else {
-          return render_response;
-          /*return {
+          //return render_response;
+          return {
             statusCode: 200,
             success: false,
-            status: 'render_api_failed',
+            status: 'render_api_success',
             message: 'Cred Render API',
             render_response: render_response,
-          };*/
+          };
         }
       }
     } else {

@@ -9,6 +9,7 @@ import {
 } from '@nestjs/common';
 
 //custom imports
+import axios from 'axios';
 import { Response } from 'express';
 import { SSOService } from './sso.services';
 
@@ -58,13 +59,12 @@ export class SSOController {
   async renderCredentials(
     @Res() res: Response,
     @Headers('Authorization') auth: string,
-    @Body('requestbody') requestbody: any,
+    @Body() requestbody: any,
   ) {
     const jwt = auth.replace('Bearer ', '');
     //return this.ssoService.renderCredentials(jwt, requestbody);
     return res
       .status(200)
-      .contentType('application/pdf')
       .send(await this.ssoService.renderCredentials(jwt, requestbody));
   }
 }
