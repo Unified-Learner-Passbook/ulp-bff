@@ -415,6 +415,65 @@ export class SSOService {
     }
   }
 
+  //renderCredentials
+  async renderCredentials(token: string, requestbody: any) {
+    if (token) {
+      const studentUsername = await this.verifyStudentToken(token);
+      if (studentUsername === 'error') {
+        return {
+          statusCode: 200,
+          success: false,
+          status: 'keycloak_student_token_error',
+          message: 'Keycloak Student Token Expired',
+        };
+      } else {
+        var data = JSON.stringify(requestbody);
+
+        var config = {
+          method: 'post',
+          url: process.env.CRED_URL + '/credentials/render',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          data: data,
+        };
+
+        let render_response = [];
+        await axios(config)
+          .then(function (response) {
+            //console.log(JSON.stringify(response.data));
+            render_response = response.data;
+          })
+          .catch(function (error) {
+            //console.log(error);
+          });
+        if (render_response.length === 0) {
+          return {
+            statusCode: 200,
+            success: false,
+            status: 'render_api_failed',
+            message: 'Cred Render API Failed',
+          };
+        } else {
+          return {
+            statusCode: 200,
+            success: true,
+            status: 'render_api_success',
+            message: 'Got Response From Cred Render API',
+            responsebody: render_response,
+          };
+        }
+      }
+    } else {
+      return {
+        statusCode: 200,
+        success: false,
+        status: 'student_token_no_found',
+        message: 'Student Token Not Received',
+      };
+    }
+  }
+
   //helper function
   //get client token
   async getClientToken() {
