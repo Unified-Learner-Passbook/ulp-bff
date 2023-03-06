@@ -20,10 +20,18 @@ export class SSOService {
     aadhaarid: string,
     studentname: string,
     schoolname: string,
+    schoolid: string,
     studentid: string,
     phoneno: string,
   ) {
-    if (aadhaarid && studentname && schoolname && studentid && phoneno) {
+    if (
+      aadhaarid &&
+      studentname &&
+      schoolname &&
+      schoolid &&
+      studentid &&
+      phoneno
+    ) {
       const clientToken = await this.getClientToken();
       if (clientToken === 'error') {
         return {
@@ -33,7 +41,7 @@ export class SSOService {
           message: 'Keycloak Client Token Expired',
         };
       } else {
-        const issuerRes = await this.generateDid(aadhaarid);
+        const issuerRes = await this.generateDid(studentid);
         if (issuerRes.length === 0) {
           return {
             statusCode: 200,
@@ -52,7 +60,7 @@ export class SSOService {
           //register student
           let data = JSON.stringify({
             enabled: 'true',
-            username: aadhaarid.toString(),
+            username: studentid.toString(),
             credentials: [
               {
                 type: 'password',
@@ -98,7 +106,8 @@ export class SSOService {
               aadhaarID: aadhaarid.toString(),
               studentName: studentname.toString(),
               schoolName: schoolname.toString(),
-              studentID: studentid.toString(),
+              schoolID: schoolid.toString(),
+              studentSchoolID: studentid.toString(),
               phoneNo: phoneno.toString(),
             });
 
@@ -122,7 +131,7 @@ export class SSOService {
               })
               .catch(function (error) {
                 sb_rc_response_text = 'error';
-                console.log(error);
+                //console.log(error);
               });
             if (sb_rc_response_text === 'error') {
               return {
@@ -174,7 +183,7 @@ export class SSOService {
       } else {
         let data = JSON.stringify({
           filters: {
-            aadhaarID: {
+            studentSchoolID: {
               eq: username.toString(),
             },
           },
@@ -237,12 +246,12 @@ export class SSOService {
   }
 
   //getDIDStudent
-  async getDIDStudent(aadhaarid: string) {
-    if (aadhaarid) {
+  async getDIDStudent(studentid: string) {
+    if (studentid) {
       let data = JSON.stringify({
         filters: {
-          aadhaarID: {
-            eq: aadhaarid.toString(),
+          studentSchoolID: {
+            eq: studentid.toString(),
           },
         },
       });
@@ -315,7 +324,7 @@ export class SSOService {
       } else {
         let data = JSON.stringify({
           filters: {
-            aadhaarID: {
+            studentSchoolID: {
               eq: studentUsername.toString(),
             },
           },
