@@ -531,6 +531,108 @@ export class SSOService {
     }
   }
 
+  //renderCredentialsHTML
+  async renderCredentialsHTML(token: string, requestbody: any) {
+    if (token) {
+      const studentUsername = await this.verifyStudentToken(token);
+      if (studentUsername === 'error') {
+        return {
+          statusCode: 200,
+          success: false,
+          status: 'keycloak_student_token_error',
+          message: 'Keycloak Student Token Expired',
+        };
+      } else {
+        var data = JSON.stringify(requestbody);
+
+        var config = {
+          method: 'post',
+          url: process.env.CRED_URL + '/credentials/render',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          data: data,
+        };
+
+        let render_response = null;
+        await axios(config)
+          .then(function (response) {
+            //console.log(JSON.stringify(response.data));
+            render_response = response.data;
+          })
+          .catch(function (error) {
+            //console.log(error);
+          });
+        if (render_response == null) {
+          return {
+            statusCode: 200,
+            success: false,
+            status: 'render_api_failed',
+            message: 'Cred Render API Failed',
+          };
+        } else {
+          return {
+            statusCode: 200,
+            success: true,
+            status: 'render_api_success',
+            message: 'Cred Render API Success',
+            render_response: render_response,
+          };
+        }
+      }
+    } else {
+      return {
+        statusCode: 200,
+        success: false,
+        status: 'student_token_no_found',
+        message: 'Student Token Not Received',
+      };
+    }
+  }
+
+  //renderTemplate
+  async renderTemplate(id: string) {
+    if (id) {
+      var config = {
+        method: 'get',
+        url: process.env.SCHEMA_URL + '/rendering-template?id=' + id,
+        headers: {},
+      };
+      let response_text = null;
+      await axios(config)
+        .then(function (response) {
+          //console.log(JSON.stringify(response.data));
+          response_text = response.data;
+        })
+        .catch(function (error) {
+          //console.log(error);
+        });
+      if (response_text == null) {
+        return {
+          statusCode: 200,
+          success: false,
+          status: 'render_template_api_failed',
+          message: 'Render Template API Failed',
+        };
+      } else {
+        return {
+          statusCode: 200,
+          success: true,
+          status: 'render_template_api_success',
+          message: 'Render Template API Success',
+          api_response: response_text,
+        };
+      }
+    } else {
+      return {
+        statusCode: 200,
+        success: false,
+        status: 'invalid_request',
+        message: 'Invalid Request. Not received All Parameters.',
+      };
+    }
+  }
+
   //helper function
   //get client token
   async getClientToken() {
