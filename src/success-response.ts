@@ -11,9 +11,6 @@ export class SuccessResponse {
   message: string;
 
   @Expose()
-  totalCount: any;
-
-  @Expose()
   result: object;
 
   constructor(partial: Partial<SuccessResponse>) {
