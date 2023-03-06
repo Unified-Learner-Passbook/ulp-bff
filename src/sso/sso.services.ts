@@ -507,8 +507,8 @@ export class SSOService {
             //return render_response;
             //return render_response;
             console.log('before sending file');
-            return await new StreamableFile(
-              wkhtmltopdf(render_response, {
+            return new StreamableFile(
+              await wkhtmltopdf(render_response, {
                 pageSize: 'A4',
                 disableExternalLinks: true,
                 disableInternalLinks: true,
