@@ -1,9 +1,22 @@
-import { Controller, Get, Post, Body, Headers, Param } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Headers,
+  Param,
+  Res,
+} from '@nestjs/common';
+
+//custom imports
+import { Response } from 'express';
 import { SSOService } from './sso.services';
 
 @Controller('v1/sso')
 export class SSOController {
   constructor(private readonly ssoService: SSOService) {}
+  res: Response;
+
   @Get('/student')
   getUser() {
     return `student api working`;
@@ -46,6 +59,10 @@ export class SSOController {
     @Body('requestbody') requestbody: any,
   ) {
     const jwt = auth.replace('Bearer ', '');
-    return this.ssoService.renderCredentials(jwt, requestbody);
+    //return this.ssoService.renderCredentials(jwt, requestbody);
+    return this.res
+      .status(200)
+      .contentType('application/pdf')
+      .send(await this.ssoService.renderCredentials(jwt, requestbody));
   }
 }

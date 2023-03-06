@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 
 //custom imports
 import axios from 'axios';
+import { Response } from 'express';
 
 @Injectable()
 export class SSOService {
@@ -438,22 +439,32 @@ export class SSOService {
           data: data,
         };
 
-        let render_response = [];
+        let render_response = null;
         await axios(config)
           .then(function (response) {
             //console.log(JSON.stringify(response.data));
-            //render_response = response.data;
-            return response.data;
+            render_response = response.data;
           })
           .catch(function (error) {
             //console.log(error);
-            return {
-              statusCode: 200,
-              success: false,
-              status: 'render_api_failed',
-              message: 'Cred Render API Failed',
-            };
           });
+        if (render_response == null) {
+          return {
+            statusCode: 200,
+            success: false,
+            status: 'render_api_failed',
+            message: 'Cred Render API Failed',
+          };
+        } else {
+          return render_response;
+          /*return {
+            statusCode: 200,
+            success: false,
+            status: 'render_api_failed',
+            message: 'Cred Render API',
+            render_response: render_response,
+          };*/
+        }
       }
     } else {
       return {
