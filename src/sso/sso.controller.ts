@@ -66,4 +66,16 @@ export class SSOController {
     response.header('Content-Type', 'application/pdf');
     return this.ssoService.renderCredentials(jwt, requestbody);
   }
+  @Post('/student/credentials/renderhtml')
+  async renderCredentialsHTML(
+    @Headers('Authorization') auth: string,
+    @Body() requestbody: any,
+  ) {
+    const jwt = auth.replace('Bearer ', '');
+    return this.ssoService.renderCredentialsHTML(jwt, requestbody);
+  }
+  @Get('/student/credentials/rendertemplate/:id')
+  async renderTemplate(@Param('id') id: string) {
+    return this.ssoService.renderTemplate(id);
+  }
 }
