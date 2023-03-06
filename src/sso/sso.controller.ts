@@ -40,4 +40,12 @@ export class SSOController {
     const jwt = auth.replace('Bearer ', '');
     return this.ssoService.credentialsStudent(jwt);
   }
+  @Post('/student/credentials/render')
+  async renderCredentials(
+    @Headers('Authorization') auth: string,
+    @Body('requestbody') requestbody: any,
+  ) {
+    const jwt = auth.replace('Bearer ', '');
+    return this.ssoService.renderCredentials(jwt, requestbody);
+  }
 }
