@@ -25,6 +25,7 @@ export class SSOController {
     @Body('aadhaarid') aadhaarid: string,
     @Body('studentname') studentname: string,
     @Body('schoolname') schoolname: string,
+    @Body('schoolid') schoolid: string,
     @Body('studentid') studentid: string,
     @Body('phoneno') phoneno: string,
   ) {
@@ -32,6 +33,7 @@ export class SSOController {
       aadhaarid,
       studentname,
       schoolname,
+      schoolid,
       studentid,
       phoneno,
     );
@@ -43,9 +45,9 @@ export class SSOController {
   ) {
     return this.ssoService.loginStudent(username, password);
   }
-  @Get('/student/getdid/:aadhaarid')
-  async getDIDStudent(@Param('aadhaarid') aadhaarid: string) {
-    return this.ssoService.getDIDStudent(aadhaarid);
+  @Get('/student/getdid/:studentid')
+  async getDIDStudent(@Param('studentid') studentid: string) {
+    return this.ssoService.getDIDStudent(studentid);
   }
   @Get('/student/credentials')
   async credentialsStudent(@Headers('Authorization') auth: string) {
