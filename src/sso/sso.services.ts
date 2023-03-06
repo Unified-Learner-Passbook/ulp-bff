@@ -28,108 +28,124 @@ export class SSOService {
         return {
           statusCode: 200,
           success: false,
-          message: 'keycloak_token_error',
+          status: 'keycloak_client_token_error',
+          message: 'Keycloak Client Token Expired',
         };
       } else {
-        //register student
-        let data = JSON.stringify({
-          enabled: 'true',
-          username: aadhaarid,
-          credentials: [
-            {
-              type: 'password',
-              value: '1234',
-              temporary: false,
-            },
-          ],
-        });
-
-        let config = {
-          method: 'post',
-          url:
-            process.env.KEYCLOAK_URL +
-            'admin/realms/' +
-            process.env.REALM_ID +
-            '/users',
-          headers: {
-            'content-type': 'application/json',
-            Authorization: 'Bearer ' + clientToken,
-          },
-          data: data,
-        };
-        let response_text = '';
-        await axios(config)
-          .then(function (response) {
-            response_text = response?.data?.errorMessage ? 'error' : 'added';
-            //console.log(JSON.stringify(response.data));
-          })
-          .catch(function (error) {
-            response_text = 'error';
-            //console.log(error);
-          });
-        if (response_text === 'error') {
+        const issuerRes = await this.generateDid(aadhaarid);
+        if (issuerRes.length === 0) {
           return {
             statusCode: 200,
             success: false,
-            message: 'keycloak_register_duplicate',
+            status: 'did_generate_error',
+            message: 'DID Generate Failed. Try Again.',
           };
         } else {
-          const issuerRes = await this.generateDid(aadhaarid);
           /*console.log('issuerRes', issuerRes);
-          console.log(
-            'issuerRes',
-            issuerRes[0].verificationMethod[0].controller,
-          );*/
+        console.log(
+          'issuerRes',
+          issuerRes[0].verificationMethod[0].controller,
+        );*/
           let did = issuerRes[0].verificationMethod[0].controller;
+
+          //register student
           let data = JSON.stringify({
-            did: did,
-            aadhaarID: aadhaarid,
-            studentName: studentname,
-            schoolName: schoolname,
-            studentID: studentid,
-            phoneNo: phoneno,
+            enabled: 'true',
+            username: aadhaarid.toString(),
+            credentials: [
+              {
+                type: 'password',
+                value: '1234',
+                temporary: false,
+              },
+            ],
           });
 
-          let config_sb_rc = {
+          let config = {
             method: 'post',
-            url: process.env.REGISTRY_URL + 'api/v1/Student/invite',
+            url:
+              process.env.KEYCLOAK_URL +
+              'admin/realms/' +
+              process.env.REALM_ID +
+              '/users',
             headers: {
               'content-type': 'application/json',
+              Authorization: 'Bearer ' + clientToken,
             },
             data: data,
           };
-
-          let sb_rc_response_text = '';
-          await axios(config_sb_rc)
+          let response_text = '';
+          await axios(config)
             .then(function (response) {
-              sb_rc_response_text =
-                response?.data?.params?.status === 'SUCCESSFUL'
-                  ? 'added'
-                  : 'duplicate';
+              response_text = response?.data?.errorMessage ? 'error' : 'added';
               //console.log(JSON.stringify(response.data));
             })
             .catch(function (error) {
-              sb_rc_response_text = 'error';
-              console.log(error);
+              response_text = 'error';
+              //console.log(error);
             });
-          if (sb_rc_response_text === 'error') {
+          if (response_text === 'error') {
             return {
               statusCode: 200,
               success: false,
-              message: 'sb_rc_register_error',
-            };
-          } else if (sb_rc_response_text === 'duplicate') {
-            return {
-              statusCode: 200,
-              success: false,
-              message: 'sb_rc_register_duplicate',
+              status: 'keycloak_register_duplicate',
+              message: 'Student Already Registered in Keycloak',
             };
           } else {
-            return {
-              statusCode: 200,
-              success: true,
-              message: 'got all body variable token : ' + response_text,
+            let data = JSON.stringify({
+              did: did,
+              aadhaarID: aadhaarid.toString(),
+              studentName: studentname.toString(),
+              schoolName: schoolname.toString(),
+              studentID: studentid.toString(),
+              phoneNo: phoneno.toString(),
+            });
+
+            let config_sb_rc = {
+              method: 'post',
+              url: process.env.REGISTRY_URL + 'api/v1/Student/invite',
+              headers: {
+                'content-type': 'application/json',
+              },
+              data: data,
             };
+
+            let sb_rc_response_text = '';
+            await axios(config_sb_rc)
+              .then(function (response) {
+                sb_rc_response_text =
+                  response?.data?.params?.status === 'SUCCESSFUL'
+                    ? 'added'
+                    : 'duplicate';
+                //console.log(JSON.stringify(response.data));
+              })
+              .catch(function (error) {
+                sb_rc_response_text = 'error';
+                console.log(error);
+              });
+            if (sb_rc_response_text === 'error') {
+              return {
+                statusCode: 200,
+                success: false,
+                status: 'sb_rc_register_error',
+                message: 'Sunbird RC Student Registration Failed',
+              };
+            } else if (sb_rc_response_text === 'duplicate') {
+              return {
+                statusCode: 200,
+                success: false,
+                status: 'sb_rc_register_duplicate',
+                message: 'Student Already Registered in Sunbird RC',
+              };
+            } else {
+              return {
+                statusCode: 200,
+                success: true,
+                status: 'registered',
+                message:
+                  'Student Account Created in Keycloak and Registered in Sunbird RC',
+              };
+            }
           }
         }
       }
@@ -137,7 +153,8 @@ export class SSOService {
       return {
         statusCode: 200,
         success: false,
-        message: 'invalid_body',
+        status: 'invalid_request',
+        message: 'Invalid Request. Not received All Parameters.',
       };
     }
   }
@@ -150,13 +167,14 @@ export class SSOService {
         return {
           statusCode: 200,
           success: false,
-          message: 'keycloak_invalid_credentials',
+          status: 'keycloak_invalid_credentials',
+          message: 'Incorrect Username or Password',
         };
       } else {
         let data = JSON.stringify({
           filters: {
             aadhaarID: {
-              eq: username,
+              eq: username.toString(),
             },
           },
         });
@@ -174,7 +192,8 @@ export class SSOService {
         await axios(config)
           .then(function (response) {
             //console.log(JSON.stringify(response.data));
-            sb_rc_search = 'login_success';
+            let data_count = response.data.length;
+            sb_rc_search = data_count === 1 ? 'login_success' : 'not_found';
             student_data = response.data;
           })
           .catch(function (error) {
@@ -185,13 +204,22 @@ export class SSOService {
           return {
             statusCode: 200,
             success: false,
-            message: 'sb_rc_search_error',
+            status: 'sb_rc_search_error',
+            message: 'Sunbird RC Student Search Failed',
+          };
+        } else if (sb_rc_search === 'not_found') {
+          return {
+            statusCode: 200,
+            success: false,
+            status: 'sb_rc_no_found',
+            message: 'Student Not Found in Sunbird RC',
           };
         } else {
           return {
             statusCode: 200,
             success: true,
-            message: sb_rc_search,
+            status: sb_rc_search,
+            message: 'Login Success',
             data: student_data,
             token: studentToken,
           };
@@ -201,7 +229,8 @@ export class SSOService {
       return {
         statusCode: 200,
         success: false,
-        message: 'invalid_body',
+        status: 'invalid_request',
+        message: 'Invalid Request. Not received All Parameters.',
       };
     }
   }
@@ -212,7 +241,7 @@ export class SSOService {
       let data = JSON.stringify({
         filters: {
           aadhaarID: {
-            eq: aadhaarid,
+            eq: aadhaarid.toString(),
           },
         },
       });
@@ -242,19 +271,22 @@ export class SSOService {
         return {
           statusCode: 200,
           success: false,
-          message: 'sb_rc_search_error',
+          status: 'sb_rc_search_error',
+          message: 'Sunbird RC Student Search Failed',
         };
       } else if (sb_rc_search === 'not_found') {
         return {
           statusCode: 200,
           success: false,
-          message: 'sb_rc_no_did_found',
+          status: 'sb_rc_no_did_found',
+          message: 'Student DID not Found in Sunbird RC',
         };
       } else {
         return {
           statusCode: 200,
           success: true,
-          message: sb_rc_search,
+          status: sb_rc_search,
+          message: 'DID Found',
           did: student_did,
         };
       }
@@ -262,7 +294,8 @@ export class SSOService {
       return {
         statusCode: 200,
         success: false,
-        message: 'invalid_body',
+        status: 'invalid_request',
+        message: 'Invalid Request. Not received All Parameters.',
       };
     }
   }
@@ -275,13 +308,14 @@ export class SSOService {
         return {
           statusCode: 200,
           success: false,
-          message: 'keycloak_invalid_token',
+          status: 'keycloak_student_token_error',
+          message: 'Keycloak Student Token Expired',
         };
       } else {
         let data = JSON.stringify({
           filters: {
             aadhaarID: {
-              eq: studentUsername,
+              eq: studentUsername.toString(),
             },
           },
         });
@@ -310,13 +344,15 @@ export class SSOService {
           return {
             statusCode: 200,
             success: false,
-            message: 'sb_rc_search_error',
+            status: 'sb_rc_search_error',
+            message: 'Sunbird RC Student Search Failed',
           };
         } else if (sb_rc_search === 'not_found') {
           return {
             statusCode: 200,
             success: false,
-            message: 'sb_rc_no_did_found',
+            status: 'sb_rc_no_did_found',
+            message: 'Student DID not Found in Sunbird RC',
           };
         } else {
           let data = JSON.stringify({
@@ -348,19 +384,22 @@ export class SSOService {
             return {
               statusCode: 200,
               success: false,
-              message: 'cred_search_error',
+              status: 'cred_search_error',
+              message: 'Student Credentials Search Failed',
             };
           } else if (cred_search === 'not_found') {
             return {
               statusCode: 200,
               success: false,
-              message: 'cred_search_no_found',
+              status: 'cred_search_no_found',
+              message: 'Student Credentials Not Found',
             };
           } else {
             return {
               statusCode: 200,
               success: true,
-              message: cred_search,
+              status: cred_search,
+              message: 'Student Credentials Found',
               credential: cred_data,
             };
           }
@@ -370,7 +409,8 @@ export class SSOService {
       return {
         statusCode: 200,
         success: false,
-        message: 'invalid_token',
+        status: 'student_token_no_found',
+        message: 'Student Token Not Received',
       };
     }
   }
@@ -415,7 +455,7 @@ export class SSOService {
   async getStudentToken(username: string, password: string) {
     let data = this.qs.stringify({
       client_id: this.keycloakCred.client_id,
-      username: username,
+      username: username.toString(),
       password: password,
       grant_type: 'password',
       client_secret: this.keycloakCred.client_secret,
