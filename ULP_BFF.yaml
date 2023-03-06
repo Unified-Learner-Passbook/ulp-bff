@@ -1,0 +1,389 @@
+openapi: 3.0.3
+info:
+  title: ULP BFF - OpenAPI 3.0
+  description: |-
+    ULP Ewallet API design for Mobile BFF (Backend for Frontend)
+
+    You can find out more about
+    BFF at [https://medium.com/mobilepeople/backend-for-frontend-pattern-why-you-need-to-know-it-46f94ce420b0](https://medium.com/mobilepeople/backend-for-frontend-pattern-why-you-need-to-know-it-46f94ce420b0).
+
+    You can find out more about
+    Ewallet Mobile Design at [https://www.figma.com/file/5m2T5UDtkRj6UAkojdzGvJ/ULP?node-id=0%3A1&t=VxI9cvmjVKsfjIkr-0](https://www.figma.com/file/5m2T5UDtkRj6UAkojdzGvJ/ULP?node-id=0%3A1&t=VxI9cvmjVKsfjIkr-0)
+
+    editor.swagger.io
+  version: 1.0.11
+servers:
+  - url: https://ulp.uniteframework.io/ulp-bff/
+tags:
+  - name: credential
+    description: Bulk AAPI to generate credential of student
+  - name: student
+    description: Student Ewallet Profile Related Operations
+paths:
+  /credential/upload:
+    parameters:
+        - in: query
+          name: type
+          schema:
+            type: string
+            default: proofOfAssessment
+          required: true
+          description: The number of items to skip before starting to collect the result set.
+    post:
+      tags:
+        - credential
+      summary: bulk import student data to generate credetials
+      description: process all the student records and generate crdentials of it
+      operationId: importCredential
+      requestBody:
+        description: Create credentials for each student
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Credential'
+          application/xml:
+            schema:
+              $ref: '#/components/schemas/Credential'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Credential'
+        required: true
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Credential'          
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/Credential'
+        '405':
+          description: Invalid input
+  /student/register:
+    post:
+      tags:
+        - student
+      description: Student Register API. It create student account with username as aadhaar id in Keycloak and then add student record with generated DID in Sunbird RC 
+      requestBody:
+        description: post variable aadhaarid, studentname, schoolname, studentid, phoneno
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterStudent'
+          application/xml:
+            schema:
+              $ref: '#/components/schemas/RegisterStudent'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RegisterStudent'
+        required: true
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisterStudentSuccess'          
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/RegisterStudentSuccess'
+  /student/login:
+    post:
+      tags:
+        - student
+      description: Student Login API. It get access token from provided credentials from Keycloak and then search data of student record in Sunbird RC and sent as response 
+      requestBody:
+        description: post variable username, password
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginStudent'
+          application/xml:
+            schema:
+              $ref: '#/components/schemas/LoginStudent'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LoginStudent'
+        required: true
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginStudentSuccess'          
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/LoginStudentSuccess'
+  /student/getdid/{aadhaarid}:
+    get:
+      tags:
+        - student
+      description: get student DID from student aadhaar id 
+      parameters:
+        - name: aadhaarid
+          in: path
+          description: DID of student to return
+          required: true
+          schema:
+            type: string
+            format: test
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetDIDSuccess'          
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/GetDIDSuccess'
+  /student/credentials:
+    get:
+      tags:
+        - student
+      description: get student generated certificate from credentials 
+      parameters:
+        - name: token
+          in: header
+          description: student cerificate return from student token
+          required: true
+          schema:
+            type: string
+            format: test
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CredentialsSuccess'          
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/CredentialsSuccess'
+components:
+  schemas: 
+    Credential:
+      required:
+        - name
+        - photoUrls
+      type: object
+      properties:
+        schoolDid:
+          type: string
+          example: DID:ULP:289347329
+        schoolName:
+          type: string
+          example: Delhi public school
+        schoolDistrict:
+          type: string
+          example: Delhi
+        schoolState:
+          type: string
+          example: Delhi
+        grade:
+          type: string
+          example: class-8
+        academicYear:
+          type: string
+          example: 2022-2023
+        issuanceDate:
+          type: string
+          example: ""
+        expirationDate:
+          type: string
+          example: ""
+        credentialSubject:
+          type: array
+          xml:
+            wrapped: true
+          items:
+             $ref: '#/components/schemas/Credential'
+      xml:
+        name: credential
+    credentialSubject:
+      type: object
+      properties:
+        studentName:
+          type: string
+          example: ANAMIKA
+        guardianName:
+          type: string
+          example: Rakesh
+        studentId:
+          type: string
+          example: 236239
+      xml:
+        name: credentialSubject
+    RegisterStudent:
+      required:
+        - aadhaarid
+        - studentname
+        - schoolname
+        - studentid
+        - phoneno
+      type: object
+      properties:
+        aadhaarid:
+          type: string
+          format: text
+          example: 999999999999
+        studentname:
+          type: string
+          format: text
+          example: ABC
+        schoolname:
+          type: string
+          format: text
+          example: DEF
+        studentid:
+          type: string
+          format: text
+          example: 123ABC
+        phoneno:
+          type: string
+          format: text
+          example: 8888888888
+      xml:
+        name: RegisterStudent
+    RegisterStudentSuccess:
+      required:
+        - statusCode
+        - success
+        - status
+        - message
+      type: object
+      properties:
+        statusCode:
+          type: integer
+          format: integer
+          example: 200
+        success:
+          type: boolean
+          format: boolean
+          example: true
+        status:
+          type: string
+          format: text
+          example: registered
+        message:
+          type: string
+          format: text
+          example: Student Account Created in Keycloak and Registered in Sunbird RC
+      xml:
+        name: RegisterStudentSuccess
+    LoginStudent:
+      required:
+        - username
+        - password
+      type: object
+      properties:
+        username:
+          type: string
+          format: text
+          example: ABC123
+        password:
+          type: string
+          format: text
+          example: qwerty
+      xml:
+        name: LoginStudent
+    LoginStudentSuccess:
+      required:
+        - statusCode
+        - success
+        - status
+        - message
+        - data
+        - token
+      type: object
+      properties:
+        statusCode:
+          type: integer
+          format: integer
+          example: 200
+        success:
+          type: boolean
+          format: boolean
+          example: true
+        status:
+          type: string
+          format: text
+          example: login_success
+        message:
+          type: string
+          format: text
+          example: Login Success
+        data:
+          type: string
+          format: text
+          example: data_object
+        token:
+          type: string
+          format: text
+          example: token
+      xml:
+        name: LoginStudentSuccess
+    GetDIDSuccess:
+      required:
+        - statusCode
+        - success
+        - status
+        - message
+        - did
+      type: object
+      properties:
+        statusCode:
+          type: integer
+          format: integer
+          example: 200
+        success:
+          type: boolean
+          format: boolean
+          example: true
+        status:
+          type: string
+          format: text
+          example: did_success
+        message:
+          type: string
+          format: text
+          example: DID Found
+        did:
+          type: string
+          format: text
+          example: did:ulp:f89d3678-7a1d-41af-87dc-d9d7453894f6
+      xml:
+        name: GetDIDSuccess
+    CredentialsSuccess:
+      required:
+        - statusCode
+        - success
+        - status
+        - message
+        - did
+      type: object
+      properties:
+        statusCode:
+          type: integer
+          format: integer
+          example: 200
+        success:
+          type: boolean
+          format: boolean
+          example: true
+        status:
+          type: string
+          format: text
+          example: cred_success
+        message:
+          type: string
+          format: text
+          example: Student Credentials Found
+        credential:
+          type: string
+          format: text
+          example: credential object
+      xml:
+        name: CredentialsSuccess
