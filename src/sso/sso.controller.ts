@@ -15,7 +15,6 @@ import { SSOService } from './sso.services';
 @Controller('v1/sso')
 export class SSOController {
   constructor(private readonly ssoService: SSOService) {}
-  res: Response;
 
   @Get('/student')
   getUser() {
@@ -55,12 +54,13 @@ export class SSOController {
   }
   @Post('/student/credentials/render')
   async renderCredentials(
+    @Res() res: Response,
     @Headers('Authorization') auth: string,
     @Body('requestbody') requestbody: any,
   ) {
     const jwt = auth.replace('Bearer ', '');
     //return this.ssoService.renderCredentials(jwt, requestbody);
-    return this.res
+    return res
       .status(200)
       .contentType('application/pdf')
       .send(await this.ssoService.renderCredentials(jwt, requestbody));
