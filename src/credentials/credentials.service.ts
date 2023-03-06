@@ -52,9 +52,9 @@ export class CredentialsService {
 
         for (const iterator of payload.credentialSubject) {
 
-            let aadhaarId = iterator.aadhaarId;
-            console.log("aadhaarId", aadhaarId)
-            const didRes = await this.generateAadharDid(aadhaarId);
+            let studentId = iterator.studentId;
+            console.log("studentId", studentId)
+            const didRes = await this.generateAadharDid(studentId);
 
             console.log("didRes", didRes)
             if (didRes) {
