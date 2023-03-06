@@ -1,10 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, StreamableFile } from '@nestjs/common';
 
 //custom imports
-import { Buffer } from 'node:buffer';
 import axios from 'axios';
 import { createWriteStream, writeFile } from 'fs';
 import { Response } from 'express';
+import * as wkhtmltopdf from 'wkhtmltopdf';
 
 @Injectable()
 export class SSOService {
@@ -428,16 +428,20 @@ export class SSOService {
   }
 
   //renderCredentials
-  async renderCredentials(token: string, requestbody: any) {
+  async renderCredentials(
+    token: string,
+    requestbody: any,
+  ): Promise<string | StreamableFile> {
     if (token) {
       const studentUsername = await this.verifyStudentToken(token);
       if (studentUsername === 'error') {
-        return {
+        /*return {
           statusCode: 200,
           success: false,
           status: 'keycloak_student_token_error',
           message: 'Keycloak Student Token Expired',
-        };
+        };*/
+        return 'Keycloak Student Token Expired';
       } else {
         var data = JSON.stringify(requestbody);
 
@@ -483,30 +487,46 @@ export class SSOService {
             //console.log(error);
           });
         if (render_response == null) {
-          return {
+          /*return {
             statusCode: 200,
             success: false,
             status: 'render_api_failed',
             message: 'Cred Render API Failed',
-          };
+          };*/
+          return 'Cred Render API Failed';
         } else {
           //return render_response;
-          return {
-            statusCode: 200,
-            success: false,
-            status: 'render_api_success',
-            message: 'Cred Render API',
-            render_response: render_response,
-          };
+          try {
+            /*return {
+              statusCode: 200,
+              success: true,
+              status: 'render_api_success',
+              message: 'Cred Render API Success',
+              render_response: render_response,
+            };*/
+            //return render_response;
+            //return render_response;
+            return new StreamableFile(
+              wkhtmltopdf(render_response, {
+                pageSize: 'A4',
+                disableExternalLinks: true,
+                disableInternalLinks: true,
+                disableJavascript: true,
+              }),
+            );
+          } catch (e) {
+            console.log(e);
+          }
         }
       }
     } else {
-      return {
+      /*return {
         statusCode: 200,
         success: false,
         status: 'student_token_no_found',
         message: 'Student Token Not Received',
-      };
+      };*/
+      return 'Student Token Not Received';
     }
   }
 

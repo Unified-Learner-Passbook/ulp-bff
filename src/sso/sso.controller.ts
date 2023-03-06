@@ -6,6 +6,7 @@ import {
   Headers,
   Param,
   Res,
+  StreamableFile,
 } from '@nestjs/common';
 
 //custom imports
@@ -57,14 +58,12 @@ export class SSOController {
   }
   @Post('/student/credentials/render')
   async renderCredentials(
-    @Res() res: Response,
     @Headers('Authorization') auth: string,
     @Body() requestbody: any,
-  ) {
+    @Res({ passthrough: true }) response,
+  ): Promise<string | StreamableFile> {
     const jwt = auth.replace('Bearer ', '');
-    //return this.ssoService.renderCredentials(jwt, requestbody);
-    return res
-      .status(200)
-      .send(await this.ssoService.renderCredentials(jwt, requestbody));
+    response.header('Content-Type', 'application/pdf');
+    return this.ssoService.renderCredentials(jwt, requestbody);
   }
 }
