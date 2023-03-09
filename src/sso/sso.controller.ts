@@ -20,7 +20,7 @@ export class SSOController {
 
   @Get('/student')
   getUser() {
-    return `student api working`;
+    return `student api working 9 march`;
   }
   @Post('/student/register')
   async registerStudent(
