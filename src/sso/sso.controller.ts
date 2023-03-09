@@ -20,7 +20,7 @@ export class SSOController {
 
   @Get('/student')
   getUser() {
-    return `student api working 9 march docker updated`;
+    return `student api working 9 march docker updated new 2`;
   }
   @Post('/student/register')
   async registerStudent(
