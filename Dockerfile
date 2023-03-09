@@ -3,6 +3,6 @@ WORKDIR /app
 COPY . ./
 RUN npm i
 RUN apt-get update \
-    && apt-get install -y wkhtmltopdf
+RUN apt-get install -y wkhtmltopdf
 EXPOSE 3000
 CMD ["npm", "start"]
