@@ -25,6 +25,7 @@ export class SSOService {
     schoolid: string,
     studentid: string,
     phoneno: string,
+    response: Response,
   ) {
     if (
       aadhaarid &&
@@ -35,28 +36,23 @@ export class SSOService {
       phoneno
     ) {
       const clientToken = await this.getClientToken();
-      if (clientToken === 'error') {
-        return {
-          statusCode: 200,
+      if (clientToken?.error) {
+        return response.status(400).send({
           success: false,
           status: 'keycloak_client_token_error',
-          message: 'Keycloak Client Token Expired',
-        };
+          message: 'Bad Request for Keycloak Client Token',
+          log: clientToken?.error,
+        });
       } else {
         const issuerRes = await this.generateDid(studentid);
-        if (issuerRes.length === 0) {
-          return {
-            statusCode: 200,
+        if (issuerRes?.error) {
+          return response.status(400).send({
             success: false,
             status: 'did_generate_error',
             message: 'DID Generate Failed. Try Again.',
-          };
+            log: issuerRes?.error,
+          });
         } else {
-          /*console.log('issuerRes', issuerRes);
-        console.log(
-          'issuerRes',
-          issuerRes[0].verificationMethod[0].controller,
-        );*/
           let did = issuerRes[0].verificationMethod[0].controller;
 
           //register student
@@ -81,27 +77,28 @@ export class SSOService {
               '/users',
             headers: {
               'content-type': 'application/json',
-              Authorization: 'Bearer ' + clientToken,
+              Authorization: 'Bearer ' + clientToken?.access_token,
             },
             data: data,
           };
-          let response_text = '';
+          let response_text = null;
           await axios(config)
             .then(function (response) {
-              response_text = response?.data?.errorMessage ? 'error' : 'added';
               //console.log(JSON.stringify(response.data));
+              response_text = response.data;
             })
             .catch(function (error) {
-              response_text = 'error';
               //console.log(error);
+              response_text = { error: error };
             });
-          if (response_text === 'error') {
-            return {
-              statusCode: 200,
+
+          if (response_text?.error) {
+            return response.status(400).send({
               success: false,
               status: 'keycloak_register_duplicate',
               message: 'Student Already Registered in Keycloak',
-            };
+              log: response_text?.error,
+            });
           } else {
             let data = JSON.stringify({
               did: did,
@@ -122,253 +119,171 @@ export class SSOService {
               data: data,
             };
 
-            let sb_rc_response_text = '';
+            let sb_rc_response_text = null;
             await axios(config_sb_rc)
               .then(function (response) {
-                sb_rc_response_text =
-                  response?.data?.params?.status === 'SUCCESSFUL'
-                    ? 'added'
-                    : 'duplicate';
                 //console.log(JSON.stringify(response.data));
+                sb_rc_response_text = response.data;
               })
               .catch(function (error) {
-                sb_rc_response_text = 'error';
                 //console.log(error);
+                sb_rc_response_text = { error: error };
               });
-            if (sb_rc_response_text === 'error') {
-              return {
-                statusCode: 200,
+            if (sb_rc_response_text?.error) {
+              return response.status(400).send({
                 success: false,
                 status: 'sb_rc_register_error',
                 message: 'Sunbird RC Student Registration Failed',
-              };
-            } else if (sb_rc_response_text === 'duplicate') {
-              return {
-                statusCode: 200,
-                success: false,
-                status: 'sb_rc_register_duplicate',
-                message: 'Student Already Registered in Sunbird RC',
-              };
-            } else {
-              return {
-                statusCode: 200,
+                log: sb_rc_response_text?.error,
+              });
+            } else if (sb_rc_response_text?.params?.status === 'SUCCESSFUL') {
+              return response.status(201).send({
                 success: true,
                 status: 'registered',
                 message:
                   'Student Account Created in Keycloak and Registered in Sunbird RC',
-              };
+                log: sb_rc_response_text,
+              });
+            } else {
+              return response.status(400).send({
+                success: false,
+                status: 'sb_rc_register_duplicate',
+                message: 'Student Already Registered in Sunbird RC',
+                log: sb_rc_response_text,
+              });
             }
           }
         }
       }
     } else {
-      return {
-        statusCode: 200,
+      return response.status(400).send({
         success: false,
         status: 'invalid_request',
         message: 'Invalid Request. Not received All Parameters.',
-      };
+        log: 'Invalid Request. Not received All Parameters.',
+      });
     }
   }
 
   //loginStudent
-  async loginStudent(username: string, password: string) {
+  async loginStudent(username: string, password: string, response: Response) {
     if (username && password) {
       const studentToken = await this.getStudentToken(username, password);
-      if (studentToken === 'error') {
-        return {
-          statusCode: 200,
+      if (studentToken?.error) {
+        return response.status(400).send({
           success: false,
           status: 'keycloak_invalid_credentials',
           message: 'Incorrect Username or Password',
-        };
-      } else {
-        let data = JSON.stringify({
-          filters: {
-            studentSchoolID: {
-              eq: username.toString(),
-            },
-          },
+          log: studentToken?.error,
         });
-
-        let config = {
-          method: 'post',
-          url: process.env.REGISTRY_URL + 'api/v1/Student/search',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          data: data,
-        };
-        let sb_rc_search = '';
-        let student_data = {};
-        await axios(config)
-          .then(function (response) {
-            //console.log(JSON.stringify(response.data));
-            let data_count = response.data.length;
-            sb_rc_search = data_count === 1 ? 'login_success' : 'not_found';
-            student_data = response.data;
-          })
-          .catch(function (error) {
-            //console.log(error);
-            sb_rc_search = 'error';
-          });
-        if (sb_rc_search === 'error') {
-          return {
-            statusCode: 200,
+      } else {
+        const sb_rc_search = await this.searchStudent(username);
+        if (sb_rc_search?.error) {
+          return response.status(400).send({
             success: false,
             status: 'sb_rc_search_error',
             message: 'Sunbird RC Student Search Failed',
-          };
-        } else if (sb_rc_search === 'not_found') {
-          return {
-            statusCode: 200,
+            log: sb_rc_search?.error,
+          });
+        } else if (sb_rc_search.length !== 1) {
+          return response.status(404).send({
             success: false,
             status: 'sb_rc_no_found',
             message: 'Student Not Found in Sunbird RC',
-          };
+          });
         } else {
-          return {
-            statusCode: 200,
+          return response.status(302).send({
             success: true,
-            status: sb_rc_search,
+            status: 'login_success',
             message: 'Login Success',
-            data: student_data,
-            token: studentToken,
-          };
+            data: sb_rc_search,
+            token: studentToken?.access_token,
+          });
         }
       }
     } else {
-      return {
-        statusCode: 200,
+      return response.status(400).send({
         success: false,
         status: 'invalid_request',
         message: 'Invalid Request. Not received All Parameters.',
-      };
+        log: 'Invalid Request. Not received All Parameters.',
+      });
     }
   }
 
   //getDIDStudent
-  async getDIDStudent(studentid: string) {
+  async getDIDStudent(studentid: string, response: Response) {
     if (studentid) {
-      let data = JSON.stringify({
-        filters: {
-          studentSchoolID: {
-            eq: studentid.toString(),
-          },
-        },
-      });
-
-      let config = {
-        method: 'post',
-        url: process.env.REGISTRY_URL + 'api/v1/Student/search',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        data: data,
-      };
-      let sb_rc_search = '';
-      let student_did = '';
-      await axios(config)
-        .then(function (response) {
-          //console.log(JSON.stringify(response.data));
-          let data_count = response.data.length;
-          sb_rc_search = data_count === 1 ? 'did_success' : 'not_found';
-          student_did = response?.data[0]?.did ? response.data[0].did : '';
-        })
-        .catch(function (error) {
-          //console.log(error);
-          sb_rc_search = 'error';
-        });
-      if (sb_rc_search === 'error') {
-        return {
-          statusCode: 200,
+      const sb_rc_search = await this.searchStudent(studentid);
+      if (sb_rc_search?.error) {
+        return response.status(400).send({
           success: false,
           status: 'sb_rc_search_error',
           message: 'Sunbird RC Student Search Failed',
-        };
-      } else if (sb_rc_search === 'not_found') {
-        return {
-          statusCode: 200,
+          log: sb_rc_search?.error,
+        });
+      } else if (sb_rc_search.length !== 1) {
+        return response.status(404).send({
           success: false,
           status: 'sb_rc_no_did_found',
           message: 'Student DID not Found in Sunbird RC',
-        };
+        });
       } else {
-        return {
-          statusCode: 200,
+        return response.status(302).send({
           success: true,
-          status: sb_rc_search,
+          status: 'did_success',
           message: 'DID Found',
-          did: student_did,
-        };
+          data: sb_rc_search[0]?.did ? sb_rc_search[0].did : '',
+        });
       }
     } else {
-      return {
-        statusCode: 200,
+      return response.status(400).send({
         success: false,
         status: 'invalid_request',
         message: 'Invalid Request. Not received All Parameters.',
-      };
+        log: 'Invalid Request. Not received All Parameters.',
+      });
     }
   }
 
   //credentialsStudent
-  async credentialsStudent(token: string) {
+  async credentialsStudent(token: string, response: Response) {
     if (token) {
       const studentUsername = await this.verifyStudentToken(token);
-      if (studentUsername === 'error') {
-        return {
-          statusCode: 200,
+      if (studentUsername?.error) {
+        return response.status(400).send({
+          success: false,
+          status: 'keycloak_student_token_bad_request',
+          message: 'Bad Request for Keycloak Student Token',
+          log: studentUsername?.error,
+        });
+      } else if (!studentUsername?.preferred_username) {
+        return response.status(400).send({
           success: false,
           status: 'keycloak_student_token_error',
           message: 'Keycloak Student Token Expired',
-        };
-      } else {
-        let data = JSON.stringify({
-          filters: {
-            studentSchoolID: {
-              eq: studentUsername.toString(),
-            },
-          },
+          log: studentUsername,
         });
-        let config = {
-          method: 'post',
-          url: process.env.REGISTRY_URL + 'api/v1/Student/search',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          data: data,
-        };
-        let sb_rc_search = '';
-        let student_did = '';
-        await axios(config)
-          .then(function (response) {
-            //console.log(JSON.stringify(response.data));
-            let data_count = response.data.length;
-            sb_rc_search = data_count === 1 ? 'did_success' : 'not_found';
-            student_did = response?.data[0]?.did ? response.data[0].did : '';
-          })
-          .catch(function (error) {
-            //console.log(error);
-            sb_rc_search = 'error';
-          });
-        if (sb_rc_search === 'error') {
-          return {
-            statusCode: 200,
+      } else {
+        const sb_rc_search = await this.searchStudent(
+          studentUsername?.preferred_username,
+        );
+        if (sb_rc_search?.error) {
+          return response.status(400).send({
             success: false,
             status: 'sb_rc_search_error',
             message: 'Sunbird RC Student Search Failed',
-          };
-        } else if (sb_rc_search === 'not_found') {
-          return {
-            statusCode: 200,
+            log: sb_rc_search?.error,
+          });
+        } else if (sb_rc_search.length !== 1) {
+          return response.status(404).send({
             success: false,
             status: 'sb_rc_no_did_found',
             message: 'Student DID not Found in Sunbird RC',
-          };
+          });
         } else {
           let data = JSON.stringify({
-            subjectId: student_did,
+            subjectId: sb_rc_search[0]?.did ? sb_rc_search[0].did : '',
           });
 
           let config = {
@@ -379,51 +294,46 @@ export class SSOService {
             },
             data: data,
           };
-          let cred_search = '';
-          let cred_data = {};
+          let cred_search = null;
           await axios(config)
             .then(function (response) {
               //console.log(JSON.stringify(response.data));
-              let data_count = response.data.length;
-              cred_search = data_count === 0 ? 'not_found' : 'cred_success';
-              cred_data = data_count === 0 ? [] : response.data;
+              cred_search = response.data;
             })
             .catch(function (error) {
               //console.log(error);
-              cred_search = 'error';
+              cred_search = { error: error };
             });
-          if (cred_search === 'error') {
-            return {
-              statusCode: 200,
+          if (cred_search?.error) {
+            return response.status(400).send({
               success: false,
               status: 'cred_search_error',
               message: 'Student Credentials Search Failed',
-            };
-          } else if (cred_search === 'not_found') {
-            return {
-              statusCode: 200,
+              log: cred_search?.error,
+            });
+          } else if (cred_search.length === 0) {
+            return response.status(404).send({
               success: false,
               status: 'cred_search_no_found',
               message: 'Student Credentials Not Found',
-            };
+            });
           } else {
-            return {
-              statusCode: 200,
+            return response.status(302).send({
               success: true,
-              status: cred_search,
+              status: 'cred_success',
               message: 'Student Credentials Found',
-              credential: cred_data,
-            };
+              credential: cred_search,
+            });
           }
         }
       }
     } else {
-      return {
-        statusCode: 200,
+      return response.status(400).send({
         success: false,
-        status: 'student_token_no_found',
-        message: 'Student Token Not Received',
-      };
+        status: 'invalid_request',
+        message: 'Invalid Request. Not received token.',
+        log: 'Invalid Request. Not received token.',
+      });
     }
   }
 
@@ -434,13 +344,9 @@ export class SSOService {
   ): Promise<string | StreamableFile> {
     if (token) {
       const studentUsername = await this.verifyStudentToken(token);
-      if (studentUsername === 'error') {
-        /*return {
-          statusCode: 200,
-          success: false,
-          status: 'keycloak_student_token_error',
-          message: 'Keycloak Student Token Expired',
-        };*/
+      if (studentUsername?.error) {
+        return 'Keycloak Student Token Expired';
+      } else if (!studentUsername?.preferred_username) {
         return 'Keycloak Student Token Expired';
       } else {
         var data = JSON.stringify(requestbody);
@@ -457,56 +363,16 @@ export class SSOService {
         let render_response = null;
         await axios(config)
           .then(function (response) {
-            //console.log(JSON.stringify(response.data));
-            try {
-              /*let writeStream = createWriteStream('test.pdf');
-              writeStream.once('open', (fd) => {
-                writeStream.write(Buffer.from(response.data, 'binary'));
-                writeStream.on('finish', () => {
-                  console.log('wrote all data to file');
-                });
-                writeStream.end();
-              });*/
-              /*writeFile(
-                __dirname + '/test.pdf',
-                response.data,
-                'binary',
-                (err) => {
-                  if (err) {
-                    console.log(err);
-                  }
-                  console.log('The file was saved!');
-                },
-              );*/
-            } catch (e) {
-              console.log(e);
-            }
             render_response = response.data;
           })
           .catch(function (error) {
             //console.log(error);
           });
         if (render_response == null) {
-          /*return {
-            statusCode: 200,
-            success: false,
-            status: 'render_api_failed',
-            message: 'Cred Render API Failed',
-          };*/
           return 'Cred Render API Failed';
         } else {
           //return render_response;
           try {
-            /*return {
-              statusCode: 200,
-              success: true,
-              status: 'render_api_success',
-              message: 'Cred Render API Success',
-              render_response: render_response,
-            };*/
-            //return render_response;
-            //return render_response;
-            console.log('before sending file');
             return new StreamableFile(
               await wkhtmltopdf(render_response, {
                 pageSize: 'A4',
@@ -516,32 +382,38 @@ export class SSOService {
               }),
             );
           } catch (e) {
-            console.log(e);
+            //console.log(e);
+            return 'HTML to PDF Convert Fail';
           }
         }
       }
     } else {
-      /*return {
-        statusCode: 200,
-        success: false,
-        status: 'student_token_no_found',
-        message: 'Student Token Not Received',
-      };*/
       return 'Student Token Not Received';
     }
   }
 
   //renderCredentialsHTML
-  async renderCredentialsHTML(token: string, requestbody: any) {
+  async renderCredentialsHTML(
+    token: string,
+    requestbody: any,
+    response: Response,
+  ) {
     if (token) {
       const studentUsername = await this.verifyStudentToken(token);
-      if (studentUsername === 'error') {
-        return {
-          statusCode: 200,
+      if (studentUsername?.error) {
+        return response.status(400).send({
+          success: false,
+          status: 'keycloak_student_token_bad_request',
+          message: 'Bad Request for Keycloak Student Token',
+          log: studentUsername?.error,
+        });
+      } else if (!studentUsername?.preferred_username) {
+        return response.status(400).send({
           success: false,
           status: 'keycloak_student_token_error',
           message: 'Keycloak Student Token Expired',
-        };
+          log: studentUsername,
+        });
       } else {
         var data = JSON.stringify(requestbody);
 
@@ -564,34 +436,32 @@ export class SSOService {
             //console.log(error);
           });
         if (render_response == null) {
-          return {
-            statusCode: 200,
+          return response.status(400).send({
             success: false,
             status: 'render_api_failed',
             message: 'Cred Render API Failed',
-          };
+          });
         } else {
-          return {
-            statusCode: 200,
+          return response.status(200).send({
             success: true,
             status: 'render_api_success',
             message: 'Cred Render API Success',
             render_response: render_response,
-          };
+          });
         }
       }
     } else {
-      return {
-        statusCode: 200,
+      return response.status(400).send({
         success: false,
-        status: 'student_token_no_found',
-        message: 'Student Token Not Received',
-      };
+        status: 'invalid_request',
+        message: 'Invalid Request. Not received token.',
+        log: 'Invalid Request. Not received token.',
+      });
     }
   }
 
   //renderTemplate
-  async renderTemplate(id: string) {
+  async renderTemplate(id: string, response: Response) {
     if (id) {
       var config = {
         method: 'get',
@@ -608,28 +478,67 @@ export class SSOService {
           //console.log(error);
         });
       if (response_text == null) {
-        return {
-          statusCode: 200,
+        return response.status(400).send({
           success: false,
           status: 'render_template_api_failed',
           message: 'Render Template API Failed',
-        };
+        });
       } else {
-        return {
-          statusCode: 200,
+        return response.status(200).send({
           success: true,
           status: 'render_template_api_success',
           message: 'Render Template API Success',
           api_response: response_text,
-        };
+        });
       }
     } else {
-      return {
-        statusCode: 200,
+      return response.status(400).send({
         success: false,
         status: 'invalid_request',
         message: 'Invalid Request. Not received All Parameters.',
+        log: 'Invalid Request. Not received All Parameters.',
+      });
+    }
+  }
+
+  //renderTemplateSchema
+  async renderTemplateSchema(id: string, response: Response) {
+    if (id) {
+      var config = {
+        method: 'get',
+        url: process.env.SCHEMA_URL + '/rendering-template/' + id,
+        headers: {},
       };
+      let response_text = null;
+      await axios(config)
+        .then(function (response) {
+          //console.log(JSON.stringify(response.data));
+          response_text = response.data;
+        })
+        .catch(function (error) {
+          //console.log(error);
+        });
+      if (response_text == null) {
+        return response.status(400).send({
+          success: false,
+          status: 'render_template_schema_api_failed',
+          message: 'Render Template Schema API Failed',
+        });
+      } else {
+        return response.status(200).send({
+          success: true,
+          status: 'render_template_schema_api_success',
+          message: 'Render Template Schema API Success',
+          api_response: response_text,
+        });
+      }
+    } else {
+      return response.status(400).send({
+        success: false,
+        status: 'invalid_request',
+        message: 'Invalid Request. Not received All Parameters.',
+        log: 'Invalid Request. Not received All Parameters.',
+      });
     }
   }
 
@@ -654,17 +563,15 @@ export class SSOService {
       data: data,
     };
 
-    let response_text = '';
+    let response_text = null;
     await axios(config)
       .then(function (response) {
         //console.log(JSON.stringify(response.data));
-        response_text = response?.data?.access_token
-          ? response.data.access_token
-          : 'error';
+        response_text = response.data;
       })
       .catch(function (error) {
         //console.log(error);
-        response_text = 'error';
+        response_text = { error: error };
       });
     return response_text;
   }
@@ -691,28 +598,26 @@ export class SSOService {
       data: data,
     };
 
-    let response_text = '';
+    let response_text = null;
     await axios(config)
       .then(function (response) {
         //console.log(JSON.stringify(response.data));
-        response_text = response?.data?.access_token
-          ? response.data.access_token
-          : 'error';
+        response_text = response.data;
       })
       .catch(function (error) {
         //console.log(error);
-        response_text = 'error';
+        response_text = { error: error };
       });
 
     return response_text;
   }
 
   //generate did
-  async generateDid(aadhaarId: string) {
+  async generateDid(studentId: string) {
     let data = JSON.stringify({
       content: [
         {
-          alsoKnownAs: [`did.${aadhaarId}`],
+          alsoKnownAs: [`did.${studentId}`],
           services: [
             {
               id: 'IdentityHub',
@@ -737,15 +642,47 @@ export class SSOService {
       },
       data: data,
     };
-
+    let response_text = null;
     try {
       const response = await axios(config);
       //console.log("response did", response.data)
-      return response.data;
+      response_text = response.data;
     } catch (error) {
       //console.log('error did', error);
-      return [];
+      response_text = { error: error };
     }
+    return response_text;
+  }
+
+  //search student
+  async searchStudent(studentId: string) {
+    let data = JSON.stringify({
+      filters: {
+        studentSchoolID: {
+          eq: studentId.toString(),
+        },
+      },
+    });
+
+    let config = {
+      method: 'post',
+      url: process.env.REGISTRY_URL + 'api/v1/Student/search',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      data: data,
+    };
+    let sb_rc_search = null;
+    await axios(config)
+      .then(function (response) {
+        //console.log(JSON.stringify(response.data));
+        sb_rc_search = response.data;
+      })
+      .catch(function (error) {
+        //console.log(error);
+        sb_rc_search = { error: error };
+      });
+    return sb_rc_search;
   }
 
   //verify student token
@@ -763,17 +700,15 @@ export class SSOService {
       },
     };
 
-    let response_text = '';
+    let response_text = null;
     await axios(config)
       .then(function (response) {
         //console.log(JSON.stringify(response.data));
-        response_text = response?.data?.preferred_username
-          ? response.data.preferred_username
-          : 'error';
+        response_text = response?.data;
       })
       .catch(function (error) {
         //console.log(error);
-        response_text = 'error';
+        response_text = { error: error };
       });
 
     return response_text;
