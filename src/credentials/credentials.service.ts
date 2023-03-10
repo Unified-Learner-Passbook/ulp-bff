@@ -44,7 +44,7 @@ export class CredentialsService {
         console.log("schemaRes", schemaRes)
 
         //genrate did for each student
-        //let generateDidPromises = payload.credentialSubject.map(iterator => this.generateAadharDid(iterator.aadhaarId))
+        //let generateDidPromises = payload.credentialSubject.map(iterator => this.generateStudentDid(iterator.aadhaarId))
 
         //console.log("generateDidPromises", generateDidPromises.length)
 
@@ -54,7 +54,7 @@ export class CredentialsService {
 
             let studentId = iterator.studentId;
             console.log("studentId", studentId)
-            const didRes = await this.generateAadharDid(studentId);
+            const didRes = await this.generateStudentDid(studentId);
 
             console.log("didRes", didRes)
             if (didRes) {
@@ -213,12 +213,12 @@ export class CredentialsService {
         }
     }
 
-    async generateAadharDid(aadharId) {
+    async generateStudentDid(studentId) {
 
         var config = {
             method: 'get',
             maxBodyLength: Infinity,
-            url: `https://ulp.uniteframework.io/ulp-bff/v1/sso/student/getdid/${aadharId}`,
+            url: `https://ulp.uniteframework.io/ulp-bff/v1/sso/student/getdid/${studentId}`,
             headers: {
                 'Content-Type': 'application/json'
             }

@@ -35,13 +35,16 @@ export class CredentialsController {
 
 
         if (query.type === "proofOfAssessment") {
-            var schemaId = "did:ulpschema:098765";
+            //var schemaId = "did:ulpschema:098765";
+            var schemaId = "clf0qfvna0000tj154706406y"
         }
         if (query.type === "proofOfEnrollment") {
-            var schemaId = "did:ulpschema:098765";
+            //var schemaId = "did:ulpschema:098765";
+            var schemaId = "clf0rjgov0002tj15ml0fdest";
         }
         if (query.type === "proofOfBenifits") {
-            var schemaId = "did:ulpschema:098765";
+            //var schemaId = "did:ulpschema:098765";
+            var schemaId = "clf0wvyjs0008tj154rc071i1"
         }
 
         return this.credentialsService.issueCredential(payload, schemaId);
