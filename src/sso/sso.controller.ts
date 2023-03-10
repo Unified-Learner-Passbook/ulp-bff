@@ -19,8 +19,9 @@ export class SSOController {
   constructor(private readonly ssoService: SSOService) {}
 
   @Get('/student')
-  getUser() {
-    return `student api working 9 march docker updated new 2`;
+  getUser(@Res() response: Response) {
+    const result = { success: true, message: 'Student API Working 10 March' };
+    response.status(200).send(result);
   }
   @Post('/student/register')
   async registerStudent(
@@ -30,6 +31,7 @@ export class SSOController {
     @Body('schoolid') schoolid: string,
     @Body('studentid') studentid: string,
     @Body('phoneno') phoneno: string,
+    @Res() response: Response,
   ) {
     return this.ssoService.registerStudent(
       aadhaarid,
@@ -38,23 +40,31 @@ export class SSOController {
       schoolid,
       studentid,
       phoneno,
+      response,
     );
   }
   @Post('/student/login')
   async loginStudent(
     @Body('username') username: string,
     @Body('password') password: string,
+    @Res() response: Response,
   ) {
-    return this.ssoService.loginStudent(username, password);
+    return this.ssoService.loginStudent(username, password, response);
   }
   @Get('/student/getdid/:studentid')
-  async getDIDStudent(@Param('studentid') studentid: string) {
-    return this.ssoService.getDIDStudent(studentid);
+  async getDIDStudent(
+    @Param('studentid') studentid: string,
+    @Res() response: Response,
+  ) {
+    return this.ssoService.getDIDStudent(studentid, response);
   }
   @Get('/student/credentials')
-  async credentialsStudent(@Headers('Authorization') auth: string) {
+  async credentialsStudent(
+    @Headers('Authorization') auth: string,
+    @Res() response: Response,
+  ) {
     const jwt = auth.replace('Bearer ', '');
-    return this.ssoService.credentialsStudent(jwt);
+    return this.ssoService.credentialsStudent(jwt, response);
   }
   @Post('/student/credentials/render')
   async renderCredentials(
@@ -70,12 +80,17 @@ export class SSOController {
   async renderCredentialsHTML(
     @Headers('Authorization') auth: string,
     @Body() requestbody: any,
+    @Res() response: Response,
   ) {
     const jwt = auth.replace('Bearer ', '');
-    return this.ssoService.renderCredentialsHTML(jwt, requestbody);
+    return this.ssoService.renderCredentialsHTML(jwt, requestbody, response);
   }
   @Get('/student/credentials/rendertemplate/:id')
-  async renderTemplate(@Param('id') id: string) {
-    return this.ssoService.renderTemplate(id);
+  async renderTemplate(@Param('id') id: string, @Res() response: Response) {
+    return this.ssoService.renderTemplate(id, response);
+  }
+  @Get('/student/credentials/rendertemplateschema/:id')
+  async renderTemplateSchema(@Param('id') id: string, @Res() response: Response) {
+    return this.ssoService.renderTemplateSchema(id, response);
   }
 }
