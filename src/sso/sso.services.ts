@@ -192,7 +192,7 @@ export class SSOService {
             message: 'Student Not Found in Sunbird RC',
           });
         } else {
-          return response.status(302).send({
+          return response.status(200).send({
             success: true,
             status: 'login_success',
             message: 'Login Success',
