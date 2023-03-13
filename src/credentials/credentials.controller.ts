@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Param, Post, Query, Res } from '@nestjs/common';
 import { CredentialsService } from './credentials.service';
 import { CredentialDto } from './dto/credential-dto';
-
+import { Response } from 'express';
 
 
 @Controller('/v1/credentials')
@@ -29,7 +29,7 @@ export class CredentialsController {
     // }
 
     @Post('/upload')
-    bulkUpload(@Query() query: { type: string }, @Body() payload: CredentialDto) {
+    bulkUpload(@Query() query: { type: string }, @Body() payload: CredentialDto, @Res() response: Response) {
         console.log("body", payload)
         console.log("query", query.type)
 
@@ -47,7 +47,7 @@ export class CredentialsController {
             var schemaId = "clf0wvyjs0008tj154rc071i1"
         }
 
-        return this.credentialsService.issueCredential(payload, schemaId);
+        return this.credentialsService.issueCredential(payload, schemaId, response);
         
     }
 }

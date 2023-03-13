@@ -37,11 +37,11 @@ export class SSOService {
     ) {
       const clientToken = await this.getClientToken();
       if (clientToken?.error) {
-        return response.status(400).send({
+        return response.status(401).send({
           success: false,
           status: 'keycloak_client_token_error',
           message: 'Bad Request for Keycloak Client Token',
-          log: clientToken?.error,
+          result: clientToken?.error,
         });
       } else {
         const issuerRes = await this.generateDid(studentid);
@@ -50,7 +50,7 @@ export class SSOService {
             success: false,
             status: 'did_generate_error',
             message: 'DID Generate Failed. Try Again.',
-            log: issuerRes?.error,
+            result: issuerRes?.error,
           });
         } else {
           let did = issuerRes[0].verificationMethod[0].controller;
@@ -97,7 +97,7 @@ export class SSOService {
               success: false,
               status: 'keycloak_register_duplicate',
               message: 'Student Already Registered in Keycloak',
-              log: response_text?.error,
+              result: response_text?.error,
             });
           } else {
             let data = JSON.stringify({
@@ -134,7 +134,7 @@ export class SSOService {
                 success: false,
                 status: 'sb_rc_register_error',
                 message: 'Sunbird RC Student Registration Failed',
-                log: sb_rc_response_text?.error,
+                result: sb_rc_response_text?.error,
               });
             } else if (sb_rc_response_text?.params?.status === 'SUCCESSFUL') {
               return response.status(201).send({
@@ -142,14 +142,14 @@ export class SSOService {
                 status: 'registered',
                 message:
                   'Student Account Created in Keycloak and Registered in Sunbird RC',
-                log: sb_rc_response_text,
+                  result: sb_rc_response_text,
               });
             } else {
               return response.status(400).send({
                 success: false,
                 status: 'sb_rc_register_duplicate',
                 message: 'Student Already Registered in Sunbird RC',
-                log: sb_rc_response_text,
+                result: sb_rc_response_text,
               });
             }
           }
@@ -160,7 +160,7 @@ export class SSOService {
         success: false,
         status: 'invalid_request',
         message: 'Invalid Request. Not received All Parameters.',
-        log: 'Invalid Request. Not received All Parameters.',
+        result: null,
       });
     }
   }
@@ -170,11 +170,11 @@ export class SSOService {
     if (username && password) {
       const studentToken = await this.getStudentToken(username, password);
       if (studentToken?.error) {
-        return response.status(400).send({
+        return response.status(401).send({
           success: false,
           status: 'keycloak_invalid_credentials',
           message: 'Incorrect Username or Password',
-          log: studentToken?.error,
+          result: null,
         });
       } else {
         const sb_rc_search = await this.searchStudent(username);
@@ -183,21 +183,21 @@ export class SSOService {
             success: false,
             status: 'sb_rc_search_error',
             message: 'Sunbird RC Student Search Failed',
-            log: sb_rc_search?.error,
+            result: sb_rc_search?.error,
           });
         } else if (sb_rc_search.length !== 1) {
           return response.status(404).send({
             success: false,
             status: 'sb_rc_no_found',
             message: 'Student Not Found in Sunbird RC',
+            result: null
           });
         } else {
           return response.status(200).send({
             success: true,
             status: 'login_success',
             message: 'Login Success',
-            data: sb_rc_search,
-            token: studentToken?.access_token,
+            result: {userData: sb_rc_search, token: studentToken?.access_token}
           });
         }
       }
@@ -206,7 +206,7 @@ export class SSOService {
         success: false,
         status: 'invalid_request',
         message: 'Invalid Request. Not received All Parameters.',
-        log: 'Invalid Request. Not received All Parameters.',
+        result: null,
       });
     }
   }
@@ -216,24 +216,25 @@ export class SSOService {
     if (studentid) {
       const sb_rc_search = await this.searchStudent(studentid);
       if (sb_rc_search?.error) {
-        return response.status(400).send({
+        return response.status(501).send({
           success: false,
           status: 'sb_rc_search_error',
           message: 'Sunbird RC Student Search Failed',
-          log: sb_rc_search?.error,
+          result: sb_rc_search?.error.message,
         });
       } else if (sb_rc_search.length !== 1) {
         return response.status(404).send({
           success: false,
           status: 'sb_rc_no_did_found',
           message: 'Student DID not Found in Sunbird RC',
+          result: null
         });
       } else {
-        return response.status(302).send({
+        return response.status(200).send({
           success: true,
           status: 'did_success',
           message: 'DID Found',
-          data: sb_rc_search[0]?.did ? sb_rc_search[0].did : '',
+          result: sb_rc_search[0]?.did ? sb_rc_search[0].did : '',
         });
       }
     } else {
@@ -241,7 +242,7 @@ export class SSOService {
         success: false,
         status: 'invalid_request',
         message: 'Invalid Request. Not received All Parameters.',
-        log: 'Invalid Request. Not received All Parameters.',
+        result: null,
       });
     }
   }
@@ -251,35 +252,36 @@ export class SSOService {
     if (token) {
       const studentUsername = await this.verifyStudentToken(token);
       if (studentUsername?.error) {
-        return response.status(400).send({
+        return response.status(401).send({
           success: false,
           status: 'keycloak_student_token_bad_request',
-          message: 'Bad Request for Keycloak Student Token',
-          log: studentUsername?.error,
+          message: "Unauthorized",
+          result: null,
         });
       } else if (!studentUsername?.preferred_username) {
-        return response.status(400).send({
+        return response.status(401).send({
           success: false,
           status: 'keycloak_student_token_error',
           message: 'Keycloak Student Token Expired',
-          log: studentUsername,
+          result: studentUsername,
         });
       } else {
         const sb_rc_search = await this.searchStudent(
           studentUsername?.preferred_username,
         );
         if (sb_rc_search?.error) {
-          return response.status(400).send({
+          return response.status(501).send({
             success: false,
             status: 'sb_rc_search_error',
             message: 'Sunbird RC Student Search Failed',
-            log: sb_rc_search?.error,
+            result: sb_rc_search?.error.message,
           });
         } else if (sb_rc_search.length !== 1) {
           return response.status(404).send({
             success: false,
             status: 'sb_rc_no_did_found',
             message: 'Student DID not Found in Sunbird RC',
+            result: null
           });
         } else {
           let data = JSON.stringify({
@@ -318,11 +320,11 @@ export class SSOService {
               message: 'Student Credentials Not Found',
             });
           } else {
-            return response.status(302).send({
+            return response.status(200).send({
               success: true,
               status: 'cred_success',
               message: 'Student Credentials Found',
-              credential: cred_search,
+              result: cred_search,
             });
           }
         }
@@ -332,7 +334,7 @@ export class SSOService {
         success: false,
         status: 'invalid_request',
         message: 'Invalid Request. Not received token.',
-        log: 'Invalid Request. Not received token.',
+        result: null,
       });
     }
   }
@@ -401,18 +403,18 @@ export class SSOService {
     if (token) {
       const studentUsername = await this.verifyStudentToken(token);
       if (studentUsername?.error) {
-        return response.status(400).send({
+        return response.status(401).send({
           success: false,
           status: 'keycloak_student_token_bad_request',
           message: 'Bad Request for Keycloak Student Token',
-          log: studentUsername?.error,
+          result: studentUsername?.error
         });
       } else if (!studentUsername?.preferred_username) {
         return response.status(400).send({
           success: false,
           status: 'keycloak_student_token_error',
           message: 'Keycloak Student Token Expired',
-          log: studentUsername,
+          result: studentUsername
         });
       } else {
         var data = JSON.stringify(requestbody);
@@ -440,13 +442,14 @@ export class SSOService {
             success: false,
             status: 'render_api_failed',
             message: 'Cred Render API Failed',
+            result: null
           });
         } else {
           return response.status(200).send({
             success: true,
             status: 'render_api_success',
             message: 'Cred Render API Success',
-            render_response: render_response,
+            result: render_response,
           });
         }
       }
@@ -455,7 +458,7 @@ export class SSOService {
         success: false,
         status: 'invalid_request',
         message: 'Invalid Request. Not received token.',
-        log: 'Invalid Request. Not received token.',
+        result: null,
       });
     }
   }
@@ -482,13 +485,14 @@ export class SSOService {
           success: false,
           status: 'render_template_api_failed',
           message: 'Render Template API Failed',
+          result: null
         });
       } else {
         return response.status(200).send({
           success: true,
           status: 'render_template_api_success',
           message: 'Render Template API Success',
-          api_response: response_text,
+          result: response_text,
         });
       }
     } else {
@@ -496,7 +500,7 @@ export class SSOService {
         success: false,
         status: 'invalid_request',
         message: 'Invalid Request. Not received All Parameters.',
-        log: 'Invalid Request. Not received All Parameters.',
+        result: null,
       });
     }
   }
@@ -523,13 +527,14 @@ export class SSOService {
           success: false,
           status: 'render_template_schema_api_failed',
           message: 'Render Template Schema API Failed',
+          result: null
         });
       } else {
         return response.status(200).send({
           success: true,
           status: 'render_template_schema_api_success',
           message: 'Render Template Schema API Success',
-          api_response: response_text,
+          result: response_text,
         });
       }
     } else {
@@ -537,7 +542,7 @@ export class SSOService {
         success: false,
         status: 'invalid_request',
         message: 'Invalid Request. Not received All Parameters.',
-        log: 'Invalid Request. Not received All Parameters.',
+        result: null
       });
     }
   }
