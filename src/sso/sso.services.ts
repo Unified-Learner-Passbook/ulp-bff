@@ -39,44 +39,10 @@ export class SSOService {
             result: issuerRes?.error,
           });
         } else {
-          let did = issuerRes[0].verificationMethod[0].controller;
+          var did = issuerRes[0].verificationMethod[0].controller;
 
-          //register student
-          let data = JSON.stringify({
-            enabled: 'true',
-            username: user.studentId,
-            credentials: [
-              {
-                type: 'password',
-                value: '1234',
-                temporary: false,
-              },
-            ],
-          });
-
-          let config = {
-            method: 'post',
-            url:
-              process.env.KEYCLOAK_URL +
-              'admin/realms/' +
-              process.env.REALM_ID +
-              '/users',
-            headers: {
-              'content-type': 'application/json',
-              Authorization: 'Bearer ' + clientToken?.access_token,
-            },
-            data: data,
-          };
-          let response_text = null;
-          await axios(config)
-            .then(function (response) {
-              //console.log(JSON.stringify(response.data));
-              response_text = response.data;
-            })
-            .catch(function (error) {
-              //console.log(error);
-              response_text = { error: error };
-            });
+          //register student keycloak
+          let response_text = await this.registerStudentKeycloak(user, clientToken)
 
           if (response_text?.error) {
             return response.status(400).send({
@@ -86,35 +52,9 @@ export class SSOService {
               result: response_text?.error,
             });
           } else {
-            let data = JSON.stringify({
-              did: did,
-              aadhaarID: user.aadhaarId,
-              studentName: user.studentName,
-              schoolName: user.schoolName,
-              schoolID: user.schoolId,
-              studentSchoolID: user.studentId,
-              phoneNo: user.phoneNo,
-            });
-
-            let config_sb_rc = {
-              method: 'post',
-              url: process.env.REGISTRY_URL + 'api/v1/Student/invite',
-              headers: {
-                'content-type': 'application/json',
-              },
-              data: data,
-            };
-
-            let sb_rc_response_text = null;
-            await axios(config_sb_rc)
-              .then(function (response) {
-                //console.log(JSON.stringify(response.data));
-                sb_rc_response_text = response.data;
-              })
-              .catch(function (error) {
-                //console.log(error);
-                sb_rc_response_text = { error: error };
-              });
+            // sunbird registery
+            let sb_rc_response_text = await this.sbrcRegistery(did, user);
+            
             if (sb_rc_response_text?.error) {
               return response.status(400).send({
                 success: false,
@@ -128,7 +68,7 @@ export class SSOService {
                 status: 'registered',
                 message:
                   'Student Account Created in Keycloak and Registered in Sunbird RC',
-                  result: sb_rc_response_text,
+                result: sb_rc_response_text,
               });
             } else {
               return response.status(400).send({
@@ -183,7 +123,7 @@ export class SSOService {
             success: true,
             status: 'login_success',
             message: 'Login Success',
-            result: {userData: sb_rc_search, token: studentToken?.access_token}
+            result: { userData: sb_rc_search, token: studentToken?.access_token }
           });
         }
       }
@@ -252,9 +192,7 @@ export class SSOService {
           result: studentUsername,
         });
       } else {
-        const sb_rc_search = await this.searchStudent(
-          studentUsername?.preferred_username,
-        );
+        const sb_rc_search = await this.searchStudent(studentUsername?.preferred_username);
         if (sb_rc_search?.error) {
           return response.status(501).send({
             success: false,
@@ -270,40 +208,21 @@ export class SSOService {
             result: null
           });
         } else {
-          let data = JSON.stringify({
-            subjectId: sb_rc_search[0]?.did ? sb_rc_search[0].did : '',
-          });
-
-          let config = {
-            method: 'post',
-            url: process.env.CRED_URL + '/credentials',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            data: data,
-          };
-          let cred_search = null;
-          await axios(config)
-            .then(function (response) {
-              //console.log(JSON.stringify(response.data));
-              cred_search = response.data;
-            })
-            .catch(function (error) {
-              //console.log(error);
-              cred_search = { error: error };
-            });
+          let cred_search = await this.credSearch(sb_rc_search);
+          
           if (cred_search?.error) {
-            return response.status(400).send({
+            return response.status(501).send({
               success: false,
               status: 'cred_search_error',
               message: 'Student Credentials Search Failed',
-              log: cred_search?.error,
+              result: cred_search?.error,
             });
           } else if (cred_search.length === 0) {
             return response.status(404).send({
               success: false,
               status: 'cred_search_no_found',
               message: 'Student Credentials Not Found',
+              result: null
             });
           } else {
             return response.status(200).send({
@@ -392,7 +311,7 @@ export class SSOService {
         return response.status(401).send({
           success: false,
           status: 'keycloak_student_token_bad_request',
-          message: 'Bad Request for Keycloak Student Token',
+          message: 'Unauthorized',
           result: studentUsername?.error
         });
       } else if (!studentUsername?.preferred_username) {
@@ -703,5 +622,110 @@ export class SSOService {
       });
 
     return response_text;
+  }
+
+  // register student keycloak
+  async registerStudentKeycloak(user, clientToken) {
+    let data = JSON.stringify({
+      enabled: 'true',
+      username: user.studentId,
+      credentials: [
+        {
+          type: 'password',
+          value: '1234',
+          temporary: false,
+        },
+      ],
+    });
+
+    let config = {
+      method: 'post',
+      url:
+        process.env.KEYCLOAK_URL +
+        'admin/realms/' +
+        process.env.REALM_ID +
+        '/users',
+      headers: {
+        'content-type': 'application/json',
+        Authorization: 'Bearer ' + clientToken?.access_token,
+      },
+      data: data,
+    };
+    var response_text = null;
+    await axios(config)
+      .then(function (response) {
+        //console.log(JSON.stringify(response.data));
+        response_text = response.data;
+      })
+      .catch(function (error) {
+        //console.log(error);
+        response_text = { error: error };
+      });
+
+    return response_text
+  }
+
+  // sbrc registery
+  async sbrcRegistery(did, user) {
+    let data = JSON.stringify({
+      did: did,
+      aadhaarID: user.aadhaarId,
+      studentName: user.studentName,
+      schoolName: user.schoolName,
+      schoolID: user.schoolId,
+      studentSchoolID: user.studentId,
+      phoneNo: user.phoneNo,
+    });
+
+    let config_sb_rc = {
+      method: 'post',
+      url: process.env.REGISTRY_URL + 'api/v1/Student/invite',
+      headers: {
+        'content-type': 'application/json',
+      },
+      data: data,
+    };
+
+    var sb_rc_response_text = null;
+    await axios(config_sb_rc)
+      .then(function (response) {
+        //console.log(JSON.stringify(response.data));
+        sb_rc_response_text = response.data;
+      })
+      .catch(function (error) {
+        //console.log(error);
+        sb_rc_response_text = { error: error };
+      });
+
+    return sb_rc_response_text
+  }
+
+  // cred search
+
+  async credSearch(sb_rc_search) {
+    let data = JSON.stringify({
+      subjectId: sb_rc_search[0]?.did ? sb_rc_search[0].did : '',
+    });
+
+    let config = {
+      method: 'post',
+      url: process.env.CRED_URL + '/credentials',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      data: data,
+    };
+    let cred_search = null;
+    await axios(config)
+      .then(function (response) {
+        //console.log(JSON.stringify(response.data));
+        cred_search = response.data;
+      })
+      .catch(function (error) {
+        //console.log(error);
+        cred_search = { error: error };
+      });
+
+      return cred_search
   }
 }
