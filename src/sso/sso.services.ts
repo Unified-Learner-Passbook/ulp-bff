@@ -96,16 +96,16 @@ export class SSOService {
     if (username && password) {
       const studentToken = await this.getStudentToken(username, password);
       if (studentToken?.error) {
-        return response.status(401).send({
+        return response.status(501).send({
           success: false,
           status: 'keycloak_invalid_credentials',
-          message: 'Incorrect Username or Password',
+          message: studentToken?.error.message,
           result: null,
         });
       } else {
         const sb_rc_search = await this.searchStudent(username);
         if (sb_rc_search?.error) {
-          return response.status(400).send({
+          return response.status(501).send({
             success: false,
             status: 'sb_rc_search_error',
             message: 'Sunbird RC Student Search Failed',
@@ -495,6 +495,7 @@ export class SSOService {
       grant_type: 'password',
       client_secret: this.keycloakCred.client_secret,
     });
+
     let config = {
       method: 'post',
       url:
@@ -508,14 +509,14 @@ export class SSOService {
       data: data,
     };
 
-    let response_text = null;
+    var response_text = null;
     await axios(config)
       .then(function (response) {
-        //console.log(JSON.stringify(response.data));
+        //console.log("data 516", JSON.stringify(response.data));
         response_text = response.data;
       })
       .catch(function (error) {
-        //console.log(error);
+        //console.log("error 520");
         response_text = { error: error };
       });
 
