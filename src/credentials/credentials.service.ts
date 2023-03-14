@@ -3,8 +3,6 @@ import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import axios from 'axios';
 import { it } from 'node:test';
 import { CredentialDto } from './dto/credential-dto';
-import { SuccessResponse } from "../success-response";
-import { ErrorResponse } from 'src/error-response';
 import { Response } from 'express';
 
 
@@ -58,9 +56,9 @@ export class CredentialsService {
             console.log("studentId", studentId)
             const didRes = await this.generateStudentDid(studentId);
 
-            console.log("didRes", didRes)
+            console.log("didRes 59", didRes)
             if (didRes) {
-                let did = didRes.did
+                let did = didRes.result
                 iterator.id = did
             }
 
@@ -219,15 +217,13 @@ export class CredentialsService {
             return response.data;
 
         } catch (e) {
-            var error = new ErrorResponse({
-                errorCode: e.response?.status,
-                errorMessage: e.response?.data?.params?.errmsg,
-            });
             console.log("cred error", e.data)
         }
     }
 
     async generateStudentDid(studentId) {
+
+        console.log("studentId", studentId)
 
         var config = {
             method: 'get',
@@ -240,7 +236,7 @@ export class CredentialsService {
 
         try{
             let didRes = await axios(config)
-            console.log("didRes", didRes)
+            console.log("didRes 239", didRes.data)
             return didRes.data
         }catch(err) {
             console.log("err", err)
