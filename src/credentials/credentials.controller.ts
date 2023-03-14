@@ -28,25 +28,25 @@ export class CredentialsController {
     //     return `Hello ${query.id}`;
     // }
 
-    @Post('/upload')
-    bulkUpload(@Query() query: { type: string }, @Body() payload: CredentialDto, @Res() response: Response) {
+    @Post('/upload/:type')
+    bulkUpload(@Query() query: { type: string },@Param('type') type: string, @Body() payload: CredentialDto, @Res() response: Response) {
         console.log("body", payload)
         console.log("query", query.type)
+        console.log("params", type)
 
 
-        if (query.type === "proofOfAssessment") {
+        if (type === "proofOfAssessment") {
             //var schemaId = "did:ulpschema:098765";
             var schemaId = "clf0qfvna0000tj154706406y"
         }
-        if (query.type === "proofOfEnrollment") {
+        if (type === "proofOfEnrollment") {
             //var schemaId = "did:ulpschema:098765";
             var schemaId = "clf0rjgov0002tj15ml0fdest";
         }
-        if (query.type === "proofOfBenifits") {
+        if (type === "proofOfBenifits") {
             //var schemaId = "did:ulpschema:098765";
             var schemaId = "clf0wvyjs0008tj154rc071i1"
         }
-
         return this.credentialsService.issueCredential(payload, schemaId, response);
         
     }
