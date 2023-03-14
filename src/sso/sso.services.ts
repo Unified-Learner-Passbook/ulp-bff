@@ -5,6 +5,7 @@ import axios from 'axios';
 import { createWriteStream, writeFile } from 'fs';
 import { Response } from 'express';
 import * as wkhtmltopdf from 'wkhtmltopdf';
+import { UserDto } from './dto/user-dto'
 
 @Injectable()
 export class SSOService {
@@ -18,23 +19,8 @@ export class SSOService {
   };
 
   //registerStudent
-  async registerStudent(
-    aadhaarid: string,
-    studentname: string,
-    schoolname: string,
-    schoolid: string,
-    studentid: string,
-    phoneno: string,
-    response: Response,
-  ) {
-    if (
-      aadhaarid &&
-      studentname &&
-      schoolname &&
-      schoolid &&
-      studentid &&
-      phoneno
-    ) {
+  async registerStudent(user: UserDto, response: Response) {
+    if (user) {
       const clientToken = await this.getClientToken();
       if (clientToken?.error) {
         return response.status(401).send({
@@ -44,7 +30,7 @@ export class SSOService {
           result: clientToken?.error,
         });
       } else {
-        const issuerRes = await this.generateDid(studentid);
+        const issuerRes = await this.generateDid(user.studentId);
         if (issuerRes?.error) {
           return response.status(400).send({
             success: false,
@@ -58,7 +44,7 @@ export class SSOService {
           //register student
           let data = JSON.stringify({
             enabled: 'true',
-            username: studentid.toString(),
+            username: user.studentId,
             credentials: [
               {
                 type: 'password',
@@ -102,12 +88,12 @@ export class SSOService {
           } else {
             let data = JSON.stringify({
               did: did,
-              aadhaarID: aadhaarid.toString(),
-              studentName: studentname.toString(),
-              schoolName: schoolname.toString(),
-              schoolID: schoolid.toString(),
-              studentSchoolID: studentid.toString(),
-              phoneNo: phoneno.toString(),
+              aadhaarID: user.aadhaarId,
+              studentName: user.studentName,
+              schoolName: user.schoolName,
+              schoolID: user.schoolId,
+              studentSchoolID: user.studentId,
+              phoneNo: user.phoneNo,
             });
 
             let config_sb_rc = {

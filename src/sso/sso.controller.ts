@@ -13,6 +13,7 @@ import {
 import axios from 'axios';
 import { Response } from 'express';
 import { SSOService } from './sso.services';
+import { UserDto } from './dto/user-dto'
 
 @Controller('v1/sso')
 export class SSOController {
@@ -25,23 +26,10 @@ export class SSOController {
   }
   @Post('/student/register')
   async registerStudent(
-    @Body('aadhaarid') aadhaarid: string,
-    @Body('studentname') studentname: string,
-    @Body('schoolname') schoolname: string,
-    @Body('schoolid') schoolid: string,
-    @Body('studentid') studentid: string,
-    @Body('phoneno') phoneno: string,
+    @Body() user: UserDto,
     @Res() response: Response,
   ) {
-    return this.ssoService.registerStudent(
-      aadhaarid,
-      studentname,
-      schoolname,
-      schoolid,
-      studentid,
-      phoneno,
-      response,
-    );
+    return this.ssoService.registerStudent(user, response);
   }
   @Post('/student/login')
   async loginStudent(
