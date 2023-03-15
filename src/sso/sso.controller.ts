@@ -24,7 +24,7 @@ export class SSOController {
   getUser(@Res() response: Response) {
     const result = {
       success: true,
-      message: 'Student API Working 16 March v3',
+      message: 'Student API Working 16 March v4',
     };
     response.status(200).send(result);
   }
