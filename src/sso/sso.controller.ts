@@ -24,7 +24,7 @@ export class SSOController {
   getUser(@Res() response: Response) {
     const result = {
       success: true,
-      message: 'Student API Working 16 March v4',
+      message: 'Student API Working 16 March New Update',
     };
     response.status(200).send(result);
   }
@@ -100,6 +100,6 @@ export class SSOController {
     @Body('digiacc') digiacc: string,
     @Body('auth_code') auth_code: string,
   ) {
-    return this.ssoService.digilockerToken(response,digiacc, auth_code);
+    return this.ssoService.digilockerToken(response, digiacc, auth_code);
   }
 }
