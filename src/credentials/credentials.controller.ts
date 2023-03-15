@@ -1,17 +1,18 @@
 import { Body, Controller, Get, Param, Post, Query, Res } from '@nestjs/common';
 import { CredentialsService } from './credentials.service';
 import { CredentialDto } from './dto/credential-dto';
+import { SingleCredentialDto } from './dto/singlecred-dto'
 import { Response } from 'express';
 
 
 @Controller('/v1/credentials')
 export class CredentialsController {
 
-    constructor(private readonly credentialsService: CredentialsService) {}
+    constructor(private readonly credentialsService: CredentialsService) { }
 
     @Get('')
     testMethod() {
-        return {message: "welcome to version 1.0"}
+        return { message: "welcome to version 1.0" }
     }
 
     // @Get('/upload/:id')
@@ -29,7 +30,7 @@ export class CredentialsController {
     // }
 
     @Post('/upload/:type')
-    bulkUpload(@Query() query: { type: string },@Param('type') type: string, @Body() payload: CredentialDto, @Res() response: Response) {
+    bulkUpload(@Query() query: { type: string }, @Param('type') type: string, @Body() payload: CredentialDto, @Res() response: Response) {
         console.log("body", payload)
         console.log("query", query.type)
         console.log("params", type)
@@ -47,7 +48,17 @@ export class CredentialsController {
             //var schemaId = "did:ulpschema:098765";
             var schemaId = "clf0wvyjs0008tj154rc071i1"
         }
-        return this.credentialsService.issueCredential(payload, schemaId, response);
-        
+        return this.credentialsService.issueBulkCredential(payload, schemaId, response);
+
+    }
+
+    @Post('/approveStudent')
+    approveStudent(@Body() payload: SingleCredentialDto, @Res() response: Response) {
+        console.log("body", payload)
+
+        let schemaId = "clf0rjgov0002tj15ml0fdest";
+
+        return this.credentialsService.issueSingleCredential(payload, schemaId, response);
+
     }
 }
