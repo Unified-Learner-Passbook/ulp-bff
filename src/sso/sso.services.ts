@@ -462,22 +462,47 @@ export class SSOService {
   }
 
   //digilockerAuthorize
-  async digilockerAuthorize(response: Response) {
+  async digilockerAuthorize(digiacc: string, response: Response) {
     //console.log(request);
+    let digi_client_id = '';
+    let digi_url_call_back_uri = '';
+    if (digiacc === 'ewallet') {
+      digi_client_id = process.env.EWA_CLIENT_ID;
+      digi_url_call_back_uri = process.env.EWA_CALL_BACK_URL;
+    } else if (digiacc === 'portal') {
+      digi_client_id = process.env.URP_CLIENT_ID;
+      digi_url_call_back_uri = process.env.URP_CALL_BACK_URL;
+    }
     response.status(200).send({
-      digiauthurl: `https://digilocker.meripehchaan.gov.in/public/oauth2/1/authorize?client_id=${process.env.CLIENT_ID}&response_type=code&redirect_uri=${process.env.DIGI_CALL_BACK_URL}&state=ulp`,
+      digiauthurl: `https://digilocker.meripehchaan.gov.in/public/oauth2/1/authorize?client_id=${digi_client_id}&response_type=code&redirect_uri=${digi_url_call_back_uri}&state=${digiacc}`,
     });
   }
 
   //digilockerToken
-  async digilockerToken(response: Response, auth_code: string) {
-    if (auth_code) {
+  async digilockerToken(
+    response: Response,
+    digiacc: string,
+    auth_code: string,
+  ) {
+    if (digiacc && auth_code) {
+      let digi_client_id = '';
+      let digi_client_secret = '';
+      let digi_url_call_back_uri = '';
+      if (digiacc === 'ewallet') {
+        digi_client_id = process.env.EWA_CLIENT_ID;
+        digi_client_secret = process.env.EWA_CLIENT_SECRET;
+        digi_url_call_back_uri = process.env.EWA_CALL_BACK_URL;
+      } else if (digiacc === 'portal') {
+        digi_client_id = process.env.URP_CLIENT_ID;
+        digi_client_secret = process.env.URP_CLIENT_SECRET;
+        digi_url_call_back_uri = process.env.URP_CALL_BACK_URL;
+      }
       var data = this.qs.stringify({
         code: auth_code,
         grant_type: 'authorization_code',
-        client_id: process.env.CLIENT_ID,
-        client_secret: process.env.CLIENT_SECRET,
-        redirect_uri: process.env.DIGI_CALL_BACK_URL,
+        client_id: digi_client_id,
+        client_secret: digi_client_secret,
+        redirect_uri: digi_url_call_back_uri,
       });
       var config = {
         method: 'post',
@@ -522,12 +547,34 @@ export class SSOService {
               name: token_data[0]?.given_name,
               mobile: token_data[0]?.phone_number,
             };
-            return response.status(200).send({
-              success: true,
-              status: 'digilocker_login_success',
-              message: 'Digilocker Login Success',
-              result: response_data,
-            });
+            const sb_rc_search = await this.searchDigiEntity(
+              digiacc === 'ewallet' ? 'Student' : 'Teacher',
+              response_data?.meripehchanid,
+            );
+            if (sb_rc_search?.error) {
+              return response.status(501).send({
+                success: false,
+                status: 'sb_rc_search_error',
+                message: 'Sunbird RC Search Failed',
+                result: sb_rc_search?.error.message,
+              });
+            } else if (sb_rc_search.length !== 1) {
+              return response.status(200).send({
+                success: true,
+                status: 'digilocker_login_success',
+                message: 'Digilocker Login Success',
+                result: response_data,
+                user: 'NO_FOUND',
+              });
+            } else {
+              return response.status(200).send({
+                success: true,
+                status: 'digilocker_login_success',
+                message: 'Digilocker Login Success',
+                result: response_data,
+                user: 'FOUND',
+              });
+            }
           }
         } else {
           return response.status(401).send({
@@ -667,6 +714,37 @@ export class SSOService {
       response_text = { error: error };
     }
     return response_text;
+  }
+
+  //search entity meripehchan
+  async searchDigiEntity(entity: string, searchkey: string) {
+    let data = JSON.stringify({
+      filters: {
+        meripehchanLoginId: {
+          eq: searchkey.toString(),
+        },
+      },
+    });
+
+    let config = {
+      method: 'post',
+      url: process.env.REGISTRY_URL + 'api/v1/' + entity + '/search',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      data: data,
+    };
+    let sb_rc_search = null;
+    await axios(config)
+      .then(function (response) {
+        //console.log(JSON.stringify(response.data));
+        sb_rc_search = response.data;
+      })
+      .catch(function (error) {
+        //console.log(error);
+        sb_rc_search = { error: error };
+      });
+    return sb_rc_search;
   }
 
   //search student
