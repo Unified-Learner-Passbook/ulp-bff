@@ -22,7 +22,10 @@ export class SSOController {
 
   @Get('/student')
   getUser(@Res() response: Response) {
-    const result = { success: true, message: 'Student API Working 16 March' };
+    const result = {
+      success: true,
+      message: 'Student API Working 16 March v2',
+    };
     response.status(200).send(result);
   }
   @Post('/student/register')

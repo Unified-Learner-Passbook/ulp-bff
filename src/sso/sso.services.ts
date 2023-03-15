@@ -495,7 +495,7 @@ export class SSOService {
           response_digi = { data: response.data };
         })
         .catch(function (error) {
-          //console.log(error);
+          console.log(error);
           response_digi = { error: error };
         });
       if (response_digi?.error) {
