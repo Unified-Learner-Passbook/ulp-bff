@@ -3,8 +3,8 @@ import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import axios from 'axios';
 import { it } from 'node:test';
 import { CredentialDto } from './dto/credential-dto';
-import { SuccessResponse } from "../success-response";
-import { ErrorResponse } from 'src/error-response';
+import { Response } from 'express';
+
 
 const cred_url = process.env.CRED_URL || 'http://64.227.185.154:3002';
 const did_url = process.env.DID_URL || 'http://64.227.185.154:3000';
@@ -17,7 +17,7 @@ export class CredentialsService {
     //constructor(private readonly httpService: HttpService) { }
 
 
-    async issueCredential(credentialPlayload: CredentialDto, schemaId: string) {
+    async issueCredential(credentialPlayload: CredentialDto, schemaId: string, response: Response) {
         console.log('credentialPlayload: ', credentialPlayload);
         console.log('schemaId: ', schemaId);
 
@@ -56,9 +56,9 @@ export class CredentialsService {
             console.log("studentId", studentId)
             const didRes = await this.generateStudentDid(studentId);
 
-            console.log("didRes", didRes)
+            console.log("didRes 59", didRes)
             if (didRes) {
-                let did = didRes.did
+                let did = didRes.result
                 iterator.id = did
             }
 
@@ -83,20 +83,32 @@ export class CredentialsService {
         console.log("responseArray.length", responseArray.length)
         if (responseArray.length > 0) {
             //return responseArray;
-            return {
-                statusCode: 200,
-                success: true,
-                message: 'Success',
-                result: responseArray
-            };
+            // return {
+            //     statusCode: 200,
+            //     success: true,
+            //     message: 'Success',
+            //     result: responseArray
+            // };
             //this.successGetResponse(res, responseArray, 'api response');
+            return response.status(200).send({
+                success: true,
+                status: 'Success',
+                message: 'Bulk Credentials generated successfully!',
+                result: responseArray
+              })
         } else {
-            return {
-                statusCode: 200,
-                success: false,
-                message: 'unable to generate did',
-            };
+            // return {
+            //     statusCode: 200,
+            //     success: false,
+            //     message: 'unable to generate did',
+            // };
             //resp.errorResponse(res, "error", '500', "internl server error")
+            return response.status(200).send({
+                success: false,
+                status: 'Success',
+                message: 'Unable to generate did',
+                result: null
+              })
         }
     }
 
@@ -205,15 +217,13 @@ export class CredentialsService {
             return response.data;
 
         } catch (e) {
-            var error = new ErrorResponse({
-                errorCode: e.response?.status,
-                errorMessage: e.response?.data?.params?.errmsg,
-            });
             console.log("cred error", e.data)
         }
     }
 
     async generateStudentDid(studentId) {
+
+        console.log("studentId", studentId)
 
         var config = {
             method: 'get',
@@ -226,7 +236,7 @@ export class CredentialsService {
 
         try{
             let didRes = await axios(config)
-            console.log("didRes", didRes)
+            console.log("didRes 239", didRes.data)
             return didRes.data
         }catch(err) {
             console.log("err", err)

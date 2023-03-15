@@ -20,13 +20,13 @@ tags:
   - name: student
     description: Student Ewallet Profile Related Operations
 paths:
-  /credential/upload:
+  /credential/upload/{type}:
     parameters:
-        - in: query
+        - in: path
           name: type
           schema:
             type: string
-            default: proofOfAssessment
+            default: proofOfEnrollment
           required: true
           description: The number of items to skip before starting to collect the result set.
     post:
@@ -218,30 +218,35 @@ components:
         name: credentialSubject
     RegisterStudent:
       required:
-        - aadhaarid
-        - studentname
-        - schoolname
-        - studentid
-        - phoneno
+        - aadhaarId
+        - studentName
+        - schoolName
+        - schoolId
+        - studentId
+        - phoneNo
       type: object
       properties:
-        aadhaarid:
+        aadhaarId:
           type: string
           format: text
           example: 999999999999
-        studentname:
+        studentName:
           type: string
           format: text
           example: ABC
-        schoolname:
+        schoolName:
           type: string
           format: text
           example: DEF
-        studentid:
+        schoolId:
+          type: string
+          format: text
+          example: 123XYZ
+        studentId:
           type: string
           format: text
           example: 123ABC
-        phoneno:
+        phoneNo:
           type: string
           format: text
           example: 8888888888
@@ -255,10 +260,6 @@ components:
         - message
       type: object
       properties:
-        statusCode:
-          type: integer
-          format: integer
-          example: 200
         success:
           type: boolean
           format: boolean
@@ -271,6 +272,10 @@ components:
           type: string
           format: text
           example: Student Account Created in Keycloak and Registered in Sunbird RC
+        result:
+          type: string
+          format: text
+          example: data_obj
       xml:
         name: RegisterStudentSuccess
     LoginStudent:
@@ -291,18 +296,12 @@ components:
         name: LoginStudent
     LoginStudentSuccess:
       required:
-        - statusCode
         - success
         - status
         - message
-        - data
-        - token
+        - result
       type: object
       properties:
-        statusCode:
-          type: integer
-          format: integer
-          example: 200
         success:
           type: boolean
           format: boolean
@@ -315,29 +314,23 @@ components:
           type: string
           format: text
           example: Login Success
-        data:
+        result:
           type: string
           format: text
-          example: data_object
-        token:
-          type: string
-          format: text
-          example: token
+          example: {
+            userData: {},
+            token: token
+          }
       xml:
         name: LoginStudentSuccess
     GetDIDSuccess:
       required:
-        - statusCode
         - success
         - status
         - message
-        - did
+        - result
       type: object
       properties:
-        statusCode:
-          type: integer
-          format: integer
-          example: 200
         success:
           type: boolean
           format: boolean
@@ -350,7 +343,7 @@ components:
           type: string
           format: text
           example: DID Found
-        did:
+        result:
           type: string
           format: text
           example: did:ulp:f89d3678-7a1d-41af-87dc-d9d7453894f6
@@ -358,17 +351,12 @@ components:
         name: GetDIDSuccess
     CredentialsSuccess:
       required:
-        - statusCode
         - success
         - status
         - message
-        - did
+        - result
       type: object
       properties:
-        statusCode:
-          type: integer
-          format: integer
-          example: 200
         success:
           type: boolean
           format: boolean
@@ -381,7 +369,7 @@ components:
           type: string
           format: text
           example: Student Credentials Found
-        credential:
+        result:
           type: string
           format: text
           example: credential object
