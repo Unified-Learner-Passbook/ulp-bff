@@ -3,7 +3,7 @@ import { Injectable, StreamableFile } from '@nestjs/common';
 //custom imports
 import axios from 'axios';
 import { createWriteStream, writeFile } from 'fs';
-import { response, Response } from 'express';
+import { Response, Request } from 'express';
 import * as wkhtmltopdf from 'wkhtmltopdf';
 import { UserDto } from './dto/user-dto';
 
@@ -461,8 +461,11 @@ export class SSOService {
   }
 
   //digilockerAuthorize
-  async digilockerAuthorize(response: Response, headers) {
-    response.status(200).send({ header: headers.host });
+  async digilockerAuthorize(response: Response, headers, request: Request) {
+    //console.log(request);
+    response
+      .status(200)
+      .send({ header: headers.host, request: request.hostname });
   }
 
   //digilockerToken

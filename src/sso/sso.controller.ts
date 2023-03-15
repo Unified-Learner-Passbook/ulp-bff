@@ -7,11 +7,12 @@ import {
   Param,
   Res,
   StreamableFile,
+  Req,
 } from '@nestjs/common';
 
 //custom imports
 import axios from 'axios';
-import { Response } from 'express';
+import { Response, Request } from 'express';
 import { SSOService } from './sso.services';
 import { UserDto } from './dto/user-dto';
 
@@ -83,8 +84,12 @@ export class SSOController {
   }
   //digilocker authorize
   @Get('/digilocker/authorize')
-  async digilockerAuthorize(@Res() response: Response, @Headers() headers) {
-    return this.ssoService.digilockerAuthorize(response,headers);
+  async digilockerAuthorize(
+    @Res() response: Response,
+    @Headers() headers,
+    @Req() request: Request,
+  ) {
+    return this.ssoService.digilockerAuthorize(response, headers, request);
   }
   //digilocker token
   @Post('/digilocker/token')
