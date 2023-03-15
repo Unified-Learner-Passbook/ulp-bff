@@ -152,7 +152,7 @@ export class SSOService {
           success: false,
           status: 'sb_rc_search_error',
           message: 'Sunbird RC Student Search Failed',
-          result: sb_rc_search?.error.message,
+          result: null,
         });
       } else if (sb_rc_search.length !== 1) {
         return response.status(404).send({

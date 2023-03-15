@@ -74,9 +74,9 @@ export class CredentialsService {
 
                 const cred = await this.issueCredentials(obj)
                 //console.log("cred 34", cred)
-                if(cred) {
+                if (cred) {
                     responseArray.push(cred)
-                } 
+                }
             }
         }
 
@@ -87,14 +87,14 @@ export class CredentialsService {
                 status: 'Success',
                 message: 'Bulk Credentials generated successfully!',
                 result: responseArray
-              })
+            })
         } else {
             return response.status(200).send({
                 success: false,
                 status: 'Success',
                 message: 'Unable to generate did or crdentials',
                 result: null
-              })
+            })
         }
     }
 
@@ -114,59 +114,59 @@ export class CredentialsService {
 
         console.log("schemaRes", schemaRes)
 
-        
 
-            let studentId = payload.credentialSubject.studentId;
-            console.log("studentId", studentId)
-            const didRes = await this.generateDid(studentId);
 
-            console.log("didRes 59", didRes)
-            if (didRes) {
-                var did = didRes[0].verificationMethod[0].controller
-                payload.credentialSubject.id = did
-            }
+        let studentId = payload.credentialSubject.studentId;
+        console.log("studentId", studentId)
+        const didRes = await this.generateDid(studentId);
 
-            let obj = {
-                issuerId: issuerId,
-                credSchema: schemaRes,
-                credentialSubject: payload.credentialSubject
-            }
-            console.log("obj", obj)
+        console.log("didRes 59", didRes)
+        if (didRes) {
+            var did = didRes[0].verificationMethod[0].controller
+            payload.credentialSubject.id = did
+        }
 
-            if (payload.credentialSubject.id) {
+        let obj = {
+            issuerId: issuerId,
+            credSchema: schemaRes,
+            credentialSubject: payload.credentialSubject
+        }
+        console.log("obj", obj)
 
-                const cred = await this.issueCredentials(obj)
-                //console.log("cred 34", cred)
-                if(cred) {
+        if (payload.credentialSubject.id) {
 
-                    return response.status(200).send({
-                        success: true,
-                        status: 'Success',
-                        message: 'Credentials generated successfully!',
-                        result: cred
-                      })
+            const cred = await this.issueCredentials(obj)
+            //console.log("cred 34", cred)
+            if (cred) {
 
-                } else {
+                return response.status(200).send({
+                    success: true,
+                    status: 'Success',
+                    message: 'Credentials generated successfully!',
+                    result: cred
+                })
 
-                    return response.status(200).send({
-                        success: false,
-                        status: 'Success',
-                        message: 'Unable to generate Credentials',
-                        result: null
-                      })
-
-                }
-                
             } else {
+
                 return response.status(200).send({
                     success: false,
                     status: 'Success',
-                    message: 'Unable to generate did',
+                    message: 'Unable to generate Credentials',
                     result: null
-                  })
+                })
+
             }
+
+        } else {
+            return response.status(200).send({
+                success: false,
+                status: 'Success',
+                message: 'Unable to generate did',
+                result: null
+            })
+        }
     }
-    
+
 
     //helper function
     async generateSchema(schemaId) {
@@ -229,7 +229,7 @@ export class CredentialsService {
         }
     }
 
-    async issueCredentials(payload) {
+    async issueCredentials1(payload) {
         var data = JSON.stringify({
             "credential": {
                 "@context": [
@@ -278,6 +278,60 @@ export class CredentialsService {
         }
     }
 
+    async issueCredentials(payload) {
+        
+        var data = JSON.stringify({
+            "credential": {
+                "@context": [
+                    "https://www.w3.org/2018/credentials/v1",
+                    "https://www.w3.org/2018/credentials/examples/v1"
+                ],
+                "id": "did:ulp:b4a191af-d86e-453c-9d0e-dd4771067235",
+                "type": [
+                    "VerifiableCredential",
+                    "UniversityDegreeCredential"
+                ],
+                "issuer": `${payload.issuerId}`,
+                "issuanceDate": "2023-02-06T11:56:27.259Z",
+                "expirationDate": "2023-02-08T11:56:27.259Z",
+                "credentialSubject": payload.credentialSubject,
+                "options": {
+                    "created": "2020-04-02T18:48:36Z",
+                    "credentialStatus": {
+                        "type": "RevocationList2020Status"
+                    }
+                }
+            },
+            "credentialSchemaId": payload.credSchema.id,
+            "tags": [
+                "tag1",
+                "tag2",
+                "tag3"
+            ]
+        });
+
+        var config = {
+            method: 'post',
+            maxBodyLength: Infinity,
+            url: 'http://64.227.185.154:3002/credentials/issue',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            data: data
+        };
+
+        try {
+
+            const response = await axios(config)
+            console.log("cred response")
+            return response.data;
+
+        } catch (e) {
+            console.log("cred error", e.message)
+        }
+
+    }
+
     async generateStudentDid(studentId) {
 
         console.log("studentId", studentId)
@@ -291,14 +345,14 @@ export class CredentialsService {
             }
         };
 
-        try{
+        try {
             let didRes = await axios(config)
             console.log("didRes 239", didRes.data)
             return didRes.data
-        }catch(err) {
+        } catch (err) {
             console.log("err", err)
         }
-        
+
 
 
 
