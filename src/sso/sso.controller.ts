@@ -90,7 +90,15 @@ export class SSOController {
     return this.ssoService.renderTemplate(id, response);
   }
   @Get('/student/credentials/rendertemplateschema/:id')
-  async renderTemplateSchema(@Param('id') id: string, @Res() response: Response) {
+  async renderTemplateSchema(
+    @Param('id') id: string,
+    @Res() response: Response,
+  ) {
     return this.ssoService.renderTemplateSchema(id, response);
+  }
+  //digilocker api
+  @Get('/digilocker')
+  async digilockertoken(@Res() response: Response) {
+    return this.ssoService.digilockertoken(response);
   }
 }

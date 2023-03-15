@@ -3,7 +3,7 @@ import { Injectable, StreamableFile } from '@nestjs/common';
 //custom imports
 import axios from 'axios';
 import { createWriteStream, writeFile } from 'fs';
-import { Response } from 'express';
+import { response, Response } from 'express';
 import * as wkhtmltopdf from 'wkhtmltopdf';
 
 @Injectable()
@@ -542,6 +542,40 @@ export class SSOService {
     }
   }
 
+  //digilockertoken
+  async digilockertoken(response: Response) {
+    var data = this.qs.stringify({
+      code: 'd06c336fe3ec04960553e96a13460adc33f7bd3e',
+      grant_type: 'authorization_code',
+      client_id: 'SWE24A2AF7',
+      client_secret: 'e128b4f612658cdb80fe',
+      redirect_uri:
+        'https://ulp-registration-portal.netlify.app/digilocker-callback',
+    });
+    var config = {
+      method: 'post',
+      url: 'https://digilocker.meripehchaan.gov.in/public/oauth2/2/token',
+      headers: {
+        client_id: 'SWE24A2AF7',
+        client_secret: 'e128b4f612658cdb80fe',
+        'Content-Type': 'application/x-www-form-urlencoded',
+        Cookie: 'c_name=141a716db662c0b5fb81e476080cc6bd',
+      },
+      data: data,
+    };
+    let response_digi = null;
+    await axios(config)
+      .then(function (response) {
+        //console.log(JSON.stringify(response.data));
+        response_digi = { data: response.data };
+      })
+      .catch(function (error) {
+        //console.log(error);
+        response_digi = { error: error };
+      });
+
+    response.status(200).send(response_digi);
+  }
   //helper function
   //get client token
   async getClientToken() {
