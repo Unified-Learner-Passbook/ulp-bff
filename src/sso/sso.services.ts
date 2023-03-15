@@ -2,6 +2,7 @@ import { Injectable, StreamableFile } from '@nestjs/common';
 
 //custom imports
 import axios from 'axios';
+import jwt_decode from 'jwt-decode';
 import { createWriteStream, writeFile } from 'fs';
 import { Response, Request } from 'express';
 import * as wkhtmltopdf from 'wkhtmltopdf';
@@ -461,48 +462,101 @@ export class SSOService {
   }
 
   //digilockerAuthorize
-  async digilockerAuthorize(response: Response, headers, request: Request) {
+  async digilockerAuthorize(response: Response) {
     //console.log(request);
-    response
-      .status(200)
-      .send({ header_host: headers.host, request_host: request.hostname });
+    response.status(200).send({
+      digiauthurl: `https://digilocker.meripehchaan.gov.in/public/oauth2/1/authorize?client_id=${process.env.CLIENT_ID}&response_type=code&redirect_uri=${process.env.DIGI_CALL_BACK_URL}&state=ulp`,
+    });
   }
 
   //digilockerToken
-  async digilockerToken(response: Response) {
-    var data = this.qs.stringify({
-      code: 'd06c336fe3ec04960553e96a13460adc33f7bd3e',
-      grant_type: 'authorization_code',
-      client_id: 'SWE24A2AF7',
-      client_secret: 'e128b4f612658cdb80fe',
-      redirect_uri:
-        'https://ulp-registration-portal.netlify.app/digilocker-callback',
-    });
-    var config = {
-      method: 'post',
-      url: 'https://digilocker.meripehchaan.gov.in/public/oauth2/2/token',
-      headers: {
-        client_id: 'SWE24A2AF7',
-        client_secret: 'e128b4f612658cdb80fe',
-        'Content-Type': 'application/x-www-form-urlencoded',
-        Cookie: 'c_name=141a716db662c0b5fb81e476080cc6bd',
-      },
-      data: data,
-    };
-    let response_digi = null;
-    await axios(config)
-      .then(function (response) {
-        //console.log(JSON.stringify(response.data));
-        response_digi = { data: response.data };
-      })
-      .catch(function (error) {
-        //console.log(error);
-        response_digi = { error: error };
+  async digilockerToken(response: Response, auth_code: string) {
+    if (auth_code) {
+      var data = this.qs.stringify({
+        code: auth_code,
+        grant_type: 'authorization_code',
+        client_id: process.env.CLIENT_ID,
+        client_secret: process.env.CLIENT_SECRET,
+        redirect_uri: process.env.DIGI_CALL_BACK_URL,
       });
+      var config = {
+        method: 'post',
+        url: 'https://digilocker.meripehchaan.gov.in/public/oauth2/2/token',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        data: data,
+      };
 
-    response.status(200).send(response_digi);
+      let response_digi = null;
+      await axios(config)
+        .then(function (response) {
+          //console.log(JSON.stringify(response.data));
+          response_digi = { data: response.data };
+        })
+        .catch(function (error) {
+          //console.log(error);
+          response_digi = { error: error };
+        });
+      if (response_digi?.error) {
+        return response.status(401).send({
+          success: false,
+          status: 'digilocker_token_bad_request',
+          message: 'Unauthorized',
+          result: response_digi?.error,
+        });
+      } else {
+        let id_token = response_digi?.data?.id_token;
+        if (id_token) {
+          let token_data: Object = await this.parseJwt(id_token);
+          if (!token_data[0]?.sub) {
+            return response.status(401).send({
+              success: false,
+              status: 'digilocker_token_bad_request',
+              message: 'Unauthorized',
+              result: response_digi?.error,
+            });
+          } else {
+            let response_data = {
+              meripehchanid: token_data[0]?.sub,
+              name: token_data[0]?.given_name,
+              mobile: token_data[0]?.phone_number,
+            };
+            return response.status(200).send({
+              success: true,
+              status: 'digilocker_login_success',
+              message: 'Digilocker Login Success',
+              result: response_data,
+            });
+          }
+        } else {
+          return response.status(401).send({
+            success: false,
+            status: 'digilocker_token_bad_request',
+            message: 'Unauthorized',
+            result: response_digi?.error,
+          });
+        }
+      }
+    } else {
+      return response.status(400).send({
+        success: false,
+        status: 'invalid_request',
+        message: 'Invalid Request. Not received All Parameters.',
+        result: null,
+      });
+    }
   }
   //helper function
+  //get jwt token information
+  async parseJwt(token) {
+    if (!token) {
+      return [];
+    }
+    const decoded = jwt_decode(token);
+    return [decoded];
+  }
+
   //get client token
   async getClientToken() {
     let data = this.qs.stringify({
