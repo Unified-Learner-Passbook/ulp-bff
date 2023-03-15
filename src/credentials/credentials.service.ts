@@ -74,23 +74,14 @@ export class CredentialsService {
 
                 const cred = await this.issueCredentials(obj)
                 //console.log("cred 34", cred)
-
-                responseArray.push(cred)
+                if(cred) {
+                    responseArray.push(cred)
+                } 
             }
-
-
         }
 
         console.log("responseArray.length", responseArray.length)
         if (responseArray.length > 0) {
-            //return responseArray;
-            // return {
-            //     statusCode: 200,
-            //     success: true,
-            //     message: 'Success',
-            //     result: responseArray
-            // };
-            //this.successGetResponse(res, responseArray, 'api response');
             return response.status(200).send({
                 success: true,
                 status: 'Success',
@@ -98,16 +89,10 @@ export class CredentialsService {
                 result: responseArray
               })
         } else {
-            // return {
-            //     statusCode: 200,
-            //     success: false,
-            //     message: 'unable to generate did',
-            // };
-            //resp.errorResponse(res, "error", '500', "internl server error")
             return response.status(200).send({
                 success: false,
                 status: 'Success',
-                message: 'Unable to generate did',
+                message: 'Unable to generate did or crdentials',
                 result: null
               })
         }
@@ -289,7 +274,7 @@ export class CredentialsService {
             return response.data;
 
         } catch (e) {
-            console.log("cred error", e.data)
+            console.log("cred error", e.message)
         }
     }
 
