@@ -84,16 +84,15 @@ export class SSOController {
   }
   //digilocker authorize
   @Get('/digilocker/authorize')
-  async digilockerAuthorize(
-    @Res() response: Response,
-    @Headers() headers,
-    @Req() request: Request,
-  ) {
-    return this.ssoService.digilockerAuthorize(response, headers, request);
+  async digilockerAuthorize(@Res() response: Response) {
+    return this.ssoService.digilockerAuthorize(response);
   }
   //digilocker token
   @Post('/digilocker/token')
-  async digilockerToken(@Res() response: Response) {
-    return this.ssoService.digilockerToken(response);
+  async digilockerToken(
+    @Res() response: Response,
+    @Body('auth_code') auth_code: string,
+  ) {
+    return this.ssoService.digilockerToken(response, auth_code);
   }
 }
