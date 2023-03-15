@@ -503,7 +503,7 @@ export class SSOService {
           success: false,
           status: 'digilocker_token_bad_request',
           message: 'Unauthorized',
-          result: response_digi?.error,
+          result: null,
         });
       } else {
         let id_token = response_digi?.data?.id_token;
@@ -514,7 +514,7 @@ export class SSOService {
               success: false,
               status: 'digilocker_token_bad_request',
               message: 'Unauthorized',
-              result: response_digi?.error,
+              result: null,
             });
           } else {
             let response_data = {
@@ -534,7 +534,7 @@ export class SSOService {
             success: false,
             status: 'digilocker_token_bad_request',
             message: 'Unauthorized',
-            result: response_digi?.error,
+            result: null,
           });
         }
       }
