@@ -3,6 +3,7 @@ import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import axios from 'axios';
 import { it } from 'node:test';
 import { CredentialDto } from './dto/credential-dto';
+import { SingleCredentialDto } from './dto/singlecred-dto';
 import { Response } from 'express';
 
 
@@ -17,7 +18,7 @@ export class CredentialsService {
     //constructor(private readonly httpService: HttpService) { }
 
 
-    async issueCredential(credentialPlayload: CredentialDto, schemaId: string, response: Response) {
+    async issueBulkCredential(credentialPlayload: CredentialDto, schemaId: string, response: Response) {
         console.log('credentialPlayload: ', credentialPlayload);
         console.log('schemaId: ', schemaId);
 
@@ -73,23 +74,14 @@ export class CredentialsService {
 
                 const cred = await this.issueCredentials(obj)
                 //console.log("cred 34", cred)
-
-                responseArray.push(cred)
+                if(cred) {
+                    responseArray.push(cred)
+                } 
             }
-
-
         }
 
         console.log("responseArray.length", responseArray.length)
         if (responseArray.length > 0) {
-            //return responseArray;
-            // return {
-            //     statusCode: 200,
-            //     success: true,
-            //     message: 'Success',
-            //     result: responseArray
-            // };
-            //this.successGetResponse(res, responseArray, 'api response');
             return response.status(200).send({
                 success: true,
                 status: 'Success',
@@ -97,21 +89,86 @@ export class CredentialsService {
                 result: responseArray
               })
         } else {
-            // return {
-            //     statusCode: 200,
-            //     success: false,
-            //     message: 'unable to generate did',
-            // };
-            //resp.errorResponse(res, "error", '500', "internl server error")
             return response.status(200).send({
                 success: false,
                 status: 'Success',
-                message: 'Unable to generate did',
+                message: 'Unable to generate did or crdentials',
                 result: null
               })
         }
     }
 
+    async issueSingleCredential(credentialPlayload: SingleCredentialDto, schemaId: string, response: Response) {
+        console.log('credentialPlayload: ', credentialPlayload);
+        console.log('schemaId: ', schemaId);
+
+        var payload = credentialPlayload
+
+
+        var issuerId = "did:ulp:f08f7782-0d09-4c47-aacb-9092113bc33e"
+        console.log("issuerId", issuerId)
+        //generate schema
+        console.log("schemaId", schemaId)
+
+        var schemaRes = await this.generateSchema(schemaId);
+
+        console.log("schemaRes", schemaRes)
+
+        
+
+            let studentId = payload.credentialSubject.studentId;
+            console.log("studentId", studentId)
+            const didRes = await this.generateDid(studentId);
+
+            console.log("didRes 59", didRes)
+            if (didRes) {
+                var did = didRes[0].verificationMethod[0].controller
+                payload.credentialSubject.id = did
+            }
+
+            let obj = {
+                issuerId: issuerId,
+                credSchema: schemaRes,
+                credentialSubject: payload.credentialSubject
+            }
+            console.log("obj", obj)
+
+            if (payload.credentialSubject.id) {
+
+                const cred = await this.issueCredentials(obj)
+                //console.log("cred 34", cred)
+                if(cred) {
+
+                    return response.status(200).send({
+                        success: true,
+                        status: 'Success',
+                        message: 'Credentials generated successfully!',
+                        result: cred
+                      })
+
+                } else {
+
+                    return response.status(200).send({
+                        success: false,
+                        status: 'Success',
+                        message: 'Unable to generate Credentials',
+                        result: null
+                      })
+
+                }
+                
+            } else {
+                return response.status(200).send({
+                    success: false,
+                    status: 'Success',
+                    message: 'Unable to generate did',
+                    result: null
+                  })
+            }
+    }
+    
+
+    //helper function
     async generateSchema(schemaId) {
         var config = {
             method: 'get',
@@ -217,7 +274,7 @@ export class CredentialsService {
             return response.data;
 
         } catch (e) {
-            console.log("cred error", e.data)
+            console.log("cred error", e.message)
         }
     }
 
