@@ -13,7 +13,7 @@ import {
 import axios from 'axios';
 import { Response } from 'express';
 import { SSOService } from './sso.services';
-import { UserDto } from './dto/user-dto'
+import { UserDto } from './dto/user-dto';
 
 @Controller('v1/sso')
 export class SSOController {
@@ -25,10 +25,7 @@ export class SSOController {
     response.status(200).send(result);
   }
   @Post('/student/register')
-  async registerStudent(
-    @Body() user: UserDto,
-    @Res() response: Response,
-  ) {
+  async registerStudent(@Body() user: UserDto, @Res() response: Response) {
     return this.ssoService.registerStudent(user, response);
   }
   @Post('/student/login')
@@ -84,9 +81,14 @@ export class SSOController {
   ) {
     return this.ssoService.renderTemplateSchema(id, response);
   }
-  //digilocker api
-  @Get('/digilocker')
-  async digilockertoken(@Res() response: Response) {
-    return this.ssoService.digilockertoken(response);
+  //digilocker authorize
+  @Get('/digilocker/authorize')
+  async digilockerAuthorize(@Res() response: Response, @Headers() headers) {
+    return this.ssoService.digilockerAuthorize(response,headers);
+  }
+  //digilocker token
+  @Post('/digilocker/token')
+  async digilockerToken(@Res() response: Response) {
+    return this.ssoService.digilockerToken(response);
   }
 }

@@ -5,7 +5,7 @@ import axios from 'axios';
 import { createWriteStream, writeFile } from 'fs';
 import { response, Response } from 'express';
 import * as wkhtmltopdf from 'wkhtmltopdf';
-import { UserDto } from './dto/user-dto'
+import { UserDto } from './dto/user-dto';
 
 @Injectable()
 export class SSOService {
@@ -14,8 +14,8 @@ export class SSOService {
   //keycloak config
   keycloakCred = {
     grant_type: 'client_credentials',
-    client_id: process.env.CLIENT_ID,
-    client_secret: process.env.CLIENT_SECRET,
+    client_id: process.env.KEYCLOAK_CLIENT_ID,
+    client_secret: process.env.KEYCLOAK_CLIENT_SECRET,
   };
 
   //registerStudent
@@ -42,7 +42,10 @@ export class SSOService {
           var did = issuerRes[0].verificationMethod[0].controller;
 
           //register student keycloak
-          let response_text = await this.registerStudentKeycloak(user, clientToken)
+          let response_text = await this.registerStudentKeycloak(
+            user,
+            clientToken,
+          );
 
           if (response_text?.error) {
             return response.status(400).send({
@@ -54,7 +57,7 @@ export class SSOService {
           } else {
             // sunbird registery
             let sb_rc_response_text = await this.sbrcRegistery(did, user);
-            
+
             if (sb_rc_response_text?.error) {
               return response.status(400).send({
                 success: false,
@@ -116,14 +119,17 @@ export class SSOService {
             success: false,
             status: 'sb_rc_no_found',
             message: 'Student Not Found in Sunbird RC',
-            result: null
+            result: null,
           });
         } else {
           return response.status(200).send({
             success: true,
             status: 'login_success',
             message: 'Login Success',
-            result: { userData: sb_rc_search, token: studentToken?.access_token }
+            result: {
+              userData: sb_rc_search,
+              token: studentToken?.access_token,
+            },
           });
         }
       }
@@ -153,7 +159,7 @@ export class SSOService {
           success: false,
           status: 'sb_rc_no_did_found',
           message: 'Student DID not Found in Sunbird RC',
-          result: null
+          result: null,
         });
       } else {
         return response.status(200).send({
@@ -181,7 +187,7 @@ export class SSOService {
         return response.status(401).send({
           success: false,
           status: 'keycloak_student_token_bad_request',
-          message: "Unauthorized",
+          message: 'Unauthorized',
           result: null,
         });
       } else if (!studentUsername?.preferred_username) {
@@ -192,7 +198,9 @@ export class SSOService {
           result: studentUsername,
         });
       } else {
-        const sb_rc_search = await this.searchStudent(studentUsername?.preferred_username);
+        const sb_rc_search = await this.searchStudent(
+          studentUsername?.preferred_username,
+        );
         if (sb_rc_search?.error) {
           return response.status(501).send({
             success: false,
@@ -205,11 +213,11 @@ export class SSOService {
             success: false,
             status: 'sb_rc_no_did_found',
             message: 'Student DID not Found in Sunbird RC',
-            result: null
+            result: null,
           });
         } else {
           let cred_search = await this.credSearch(sb_rc_search);
-          
+
           if (cred_search?.error) {
             return response.status(501).send({
               success: false,
@@ -222,7 +230,7 @@ export class SSOService {
               success: false,
               status: 'cred_search_no_found',
               message: 'Student Credentials Not Found',
-              result: null
+              result: null,
             });
           } else {
             return response.status(200).send({
@@ -312,14 +320,14 @@ export class SSOService {
           success: false,
           status: 'keycloak_student_token_bad_request',
           message: 'Unauthorized',
-          result: studentUsername?.error
+          result: studentUsername?.error,
         });
       } else if (!studentUsername?.preferred_username) {
         return response.status(400).send({
           success: false,
           status: 'keycloak_student_token_error',
           message: 'Keycloak Student Token Expired',
-          result: studentUsername
+          result: studentUsername,
         });
       } else {
         var data = JSON.stringify(requestbody);
@@ -347,7 +355,7 @@ export class SSOService {
             success: false,
             status: 'render_api_failed',
             message: 'Cred Render API Failed',
-            result: null
+            result: null,
           });
         } else {
           return response.status(200).send({
@@ -390,7 +398,7 @@ export class SSOService {
           success: false,
           status: 'render_template_api_failed',
           message: 'Render Template API Failed',
-          result: null
+          result: null,
         });
       } else {
         return response.status(200).send({
@@ -432,7 +440,7 @@ export class SSOService {
           success: false,
           status: 'render_template_schema_api_failed',
           message: 'Render Template Schema API Failed',
-          result: null
+          result: null,
         });
       } else {
         return response.status(200).send({
@@ -447,13 +455,18 @@ export class SSOService {
         success: false,
         status: 'invalid_request',
         message: 'Invalid Request. Not received All Parameters.',
-        result: null
+        result: null,
       });
     }
   }
 
-  //digilockertoken
-  async digilockertoken(response: Response) {
+  //digilockerAuthorize
+  async digilockerAuthorize(response: Response, headers) {
+    response.status(200).send({ header: headers.host });
+  }
+
+  //digilockerToken
+  async digilockerToken(response: Response) {
     var data = this.qs.stringify({
       code: 'd06c336fe3ec04960553e96a13460adc33f7bd3e',
       grant_type: 'authorization_code',
@@ -697,7 +710,7 @@ export class SSOService {
         response_text = { error: error };
       });
 
-    return response_text
+    return response_text;
   }
 
   // sbrc registery
@@ -732,7 +745,7 @@ export class SSOService {
         sb_rc_response_text = { error: error };
       });
 
-    return sb_rc_response_text
+    return sb_rc_response_text;
   }
 
   // cred search
@@ -761,6 +774,6 @@ export class SSOService {
         cred_search = { error: error };
       });
 
-      return cred_search
+    return cred_search;
   }
 }
