@@ -465,7 +465,7 @@ export class SSOService {
     //console.log(request);
     response
       .status(200)
-      .send({ header: headers.host, request: request.hostname });
+      .send({ header_host: headers.host, request_host: request.hostname });
   }
 
   //digilockerToken
