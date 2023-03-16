@@ -54,7 +54,7 @@ export class SSOService {
           } else {
             // sunbird registery
             let sb_rc_response_text = await this.sbrcRegistery(did, user);
-            
+
             if (sb_rc_response_text?.error) {
               return response.status(400).send({
                 success: false,
@@ -209,7 +209,7 @@ export class SSOService {
           });
         } else {
           let cred_search = await this.credSearch(sb_rc_search);
-          
+
           if (cred_search?.error) {
             return response.status(501).send({
               success: false,
@@ -452,6 +452,27 @@ export class SSOService {
     }
   }
 
+  async getStudentDetail(response: Response) {
+    console.log("456")
+    let studentDetails = await this.studentDetails();
+    console.log("studentDetails", studentDetails)
+    if (studentDetails) {
+      return response.status(200).send({
+        success: true,
+        status: 'Success',
+        message: 'Student details fetched successfully!',
+        result: studentDetails
+      })
+    } else {
+      return response.status(200).send({
+        success: false,
+        status: 'Success',
+        message: 'Unable to fetch student details!',
+        result: null
+      })
+    }
+  }
+
   //helper function
   //get client token
   async getClientToken() {
@@ -680,7 +701,7 @@ export class SSOService {
 
     let config_sb_rc = {
       method: 'post',
-      url: process.env.REGISTRY_URL + 'api/v1/Student/invite',
+      url: process.env.REGISTRY_URL + 'api/v1/StudentDetail/invite',
       headers: {
         'content-type': 'application/json',
       },
@@ -704,7 +725,7 @@ export class SSOService {
   // cred search
 
   async credSearch(sb_rc_search) {
-    
+
     console.log("sb_rc_search", sb_rc_search)
 
     let data = JSON.stringify({
@@ -735,6 +756,32 @@ export class SSOService {
         cred_search = { error: error };
       });
 
-      return cred_search
+    return cred_search
   }
+
+  // student details
+  async studentDetails() {
+    var data = JSON.stringify({
+      "filters": {}
+    });
+
+    var config = {
+      method: 'post',
+      maxBodyLength: Infinity,
+      url: `${process.env.REGISTRY_URL}api/v1/StudentDetail/search`,
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      data: data
+    };
+
+    try {
+      let stdentDetailRes = await axios(config)
+      return stdentDetailRes.data;
+    } catch (err) {
+      console.log("err")
+    }
+    
+  }
+
 }

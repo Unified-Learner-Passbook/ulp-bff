@@ -11,6 +11,7 @@ const cred_url = process.env.CRED_URL || 'http://64.227.185.154:3002';
 const did_url = process.env.DID_URL || 'http://64.227.185.154:3000';
 const schema_url = process.env.SCHEMA_URL || 'http://64.227.185.154:3001';
 const AADHAAR_DID_URL = process.env.AADHAAR_DID_URL || 'https://ulp.uniteframework.io/ulp-bff/v1/sso/student/getdid'
+const registry_url =  process.env.REGISTRY_URL || 'https://ulp.uniteframework.io/registry/'
 
 @Injectable()
 export class CredentialsService {
@@ -119,44 +120,49 @@ export class CredentialsService {
         let studentId = payload.credentialSubject.studentId;
         console.log("studentId", studentId)
         const didRes = await this.generateDid(studentId);
-
         console.log("didRes 59", didRes)
+
+
         if (didRes) {
             var did = didRes[0].verificationMethod[0].controller
             payload.credentialSubject.id = did
-        }
 
-        let obj = {
-            issuerId: issuerId,
-            credSchema: schemaRes,
-            credentialSubject: payload.credentialSubject
-        }
-        console.log("obj", obj)
+            //update did inside sbrc
+            let osid = payload.credentialSubject.osid;
+            const updateRes = await this.updateStudentDetails(osid, did);
+            console.log("updateRes", updateRes)
 
-        if (payload.credentialSubject.id) {
-
-            const cred = await this.issueCredentials(obj)
-            //console.log("cred 34", cred)
-            if (cred) {
-
-                return response.status(200).send({
-                    success: true,
-                    status: 'Success',
-                    message: 'Credentials generated successfully!',
-                    result: cred
-                })
-
+            if(updateRes) {
+                let obj = {
+                    issuerId: issuerId,
+                    credSchema: schemaRes,
+                    credentialSubject: payload.credentialSubject
+                }
+                console.log("obj", obj)
+                const cred = await this.issueCredentials(obj)
+                if (cred) {
+                    return response.status(200).send({
+                        success: true,
+                        status: 'Success',
+                        message: 'Credentials generated successfully!',
+                        result: cred
+                    })
+                } else {
+                    return response.status(200).send({
+                        success: false,
+                        status: 'Success',
+                        message: 'Unable to generate Credentials',
+                        result: null
+                    })
+                }
             } else {
-
                 return response.status(200).send({
                     success: false,
                     status: 'Success',
-                    message: 'Unable to generate Credentials',
+                    message: 'Unable to update did inside Registry',
                     result: null
                 })
-
             }
-
         } else {
             return response.status(200).send({
                 success: false,
@@ -403,7 +409,34 @@ export class CredentialsService {
         } catch (err) {
             console.log("schemaRes err", err)
         }
-            
+
+
+    }
+
+    async updateStudentDetails(osid, did) {
+        console.log("osid", osid)
+        console.log("did", did)
+        var data = JSON.stringify({
+            "did": did
+        });
+
+        var config = {
+            method: 'put',
+            maxBodyLength: Infinity,
+            url: `${registry_url}api/v1/StudentDetail/${osid}`,
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            data: data
+        };
+
+        try {
+            let res = await axios(config)
+            return res
+        } catch(err) {
+            console.log("update api err", err)
+        }
+        
 
     }
 

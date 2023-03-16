@@ -81,4 +81,10 @@ export class SSOController {
   async renderTemplateSchema(@Param('id') id: string, @Res() response: Response) {
     return this.ssoService.renderTemplateSchema(id, response);
   }
+
+  @Get('/studentDetail')
+  async getStudentDetail(@Res() response: Response) {
+    console.log("87")
+    return this.ssoService.getStudentDetail(response);
+  }
 }
