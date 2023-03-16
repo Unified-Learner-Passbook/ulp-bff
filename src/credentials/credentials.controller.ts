@@ -61,4 +61,12 @@ export class CredentialsController {
         return this.credentialsService.issueSingleCredential(payload, schemaId, response);
 
     }
+
+    @Get('/getSchema/:id')
+    getSchema(@Param('id') id: string, @Res() response: Response) {
+        console.log("id 67", id)
+
+        return this.credentialsService.getSchema(id, response);
+
+    }
 }
