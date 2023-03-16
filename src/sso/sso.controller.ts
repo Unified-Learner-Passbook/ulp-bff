@@ -117,4 +117,12 @@ export class SSOController {
       digimpid,
     );
   }
+  //udise verify
+  @Get('/udise/verify/:udiseid')
+  async udiseVerify(
+    @Param('udiseid') udiseid: string,
+    @Res() response: Response,
+  ) {
+    return this.ssoService.udiseVerify(udiseid, response);
+  }
 }
