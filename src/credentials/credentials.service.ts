@@ -167,6 +167,32 @@ export class CredentialsService {
         }
     }
 
+    async getSchema(id: string, response: Response) {
+
+        console.log('id: 172', id);
+        var schemaRes = await this.getCredSchema(id);
+
+        console.log("schemaRes", schemaRes)
+
+
+        if (schemaRes) {
+            return response.status(200).send({
+                success: true,
+                status: 'Success',
+                message: 'Credentials fetched successfully!',
+                result: schemaRes
+            })
+
+        } else {
+            return response.status(200).send({
+                success: false,
+                status: 'Success',
+                message: 'Unable to fetch Credentials schema',
+                result: null
+            })
+        }
+    }
+
 
     //helper function
     async generateSchema(schemaId) {
@@ -279,7 +305,7 @@ export class CredentialsService {
     }
 
     async issueCredentials(payload) {
-        
+
         var data = JSON.stringify({
             "credential": {
                 "@context": [
@@ -358,6 +384,27 @@ export class CredentialsService {
 
 
 
+
+    }
+
+    async getCredSchema(id) {
+        var axios = require('axios');
+
+        var config = {
+            method: 'get',
+            maxBodyLength: Infinity,
+            url: `${schema_url}/schema/jsonld?id=${id}`,
+            headers: {}
+        };
+
+        try {
+            let schemaRes = await axios(config)
+            console.log("schemaRes 402", schemaRes.data)
+            return schemaRes.data
+        } catch (err) {
+            console.log("schemaRes err", err)
+        }
+            
 
     }
 
