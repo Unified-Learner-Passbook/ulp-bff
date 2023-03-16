@@ -706,7 +706,7 @@ export class SSOService {
   async credSearch(sb_rc_search) {
 
     let data = JSON.stringify({
-      "subjectId": {
+      "subject": {
         "id": sb_rc_search[0]?.did ? sb_rc_search[0].did : ''
       }
     });
