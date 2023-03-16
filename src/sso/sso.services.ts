@@ -549,7 +549,7 @@ export class SSOService {
               mobile: token_data[0]?.phone_number,
             };
             const sb_rc_search = await this.searchDigiEntity(
-              digiacc === 'ewallet' ? 'Student' : 'Teacher',
+              digiacc === 'ewallet' ? 'StudentDetail' : 'Teacher',
               response_data?.meripehchanid,
             );
             if (sb_rc_search?.error) {
@@ -559,7 +559,7 @@ export class SSOService {
                 message: 'Sunbird RC Search Failed',
                 result: sb_rc_search?.error.message,
               });
-            } else if (sb_rc_search.length !== 1) {
+            } else if (sb_rc_search.length === 0) {
               return response.status(200).send({
                 success: true,
                 status: 'digilocker_login_success',
@@ -662,7 +662,7 @@ export class SSOService {
             // sunbird registery student
             let sb_rc_response_text = await this.sbrcInvite(
               userdata.student,
-              'Student',
+              'StudentDetail',
             );
             if (sb_rc_response_text?.error) {
               return response.status(400).send({
@@ -892,7 +892,7 @@ export class SSOService {
     });
 
     let url = process.env.REGISTRY_URL + 'api/v1/' + entity + '/search';
-    //console.log(data + ' ' + url);
+    console.log(data + ' ' + url);
     let config = {
       method: 'post',
       url: url,
@@ -919,14 +919,14 @@ export class SSOService {
     let data = JSON.stringify({
       filters: {
         studentSchoolID: {
-          eq: studentId
+          eq: studentId,
         },
       },
     });
 
     let config = {
       method: 'post',
-      url: process.env.REGISTRY_URL + 'api/v1/Student/search',
+      url: process.env.REGISTRY_URL + 'api/v1/StudentDetail/search',
       headers: {
         'Content-Type': 'application/json',
       },
@@ -1029,7 +1029,7 @@ export class SSOService {
 
     let config_sb_rc = {
       method: 'post',
-      url: process.env.REGISTRY_URL + 'api/v1/Student/invite',
+      url: process.env.REGISTRY_URL + 'api/v1/StudentDetail/invite',
       headers: {
         'content-type': 'application/json',
       },
@@ -1121,13 +1121,12 @@ export class SSOService {
   // cred search
 
   async credSearch(sb_rc_search) {
-    
-    console.log("sb_rc_search", sb_rc_search)
+    console.log('sb_rc_search', sb_rc_search);
 
     let data = JSON.stringify({
-      "subject": {
-        "id": sb_rc_search[0]?.did ? sb_rc_search[0].did : ''
-      }
+      subject: {
+        id: sb_rc_search[0]?.did ? sb_rc_search[0].did : '',
+      },
     });
     // let data = JSON.stringify({
     //   subjectId: sb_rc_search[0]?.did ? sb_rc_search[0].did : '',
