@@ -759,6 +759,31 @@ export class SSOService {
       });
     }
   }
+
+  //digilockerAuthorize
+  async udiseVerify(udiseid: string, response: Response) {
+    //console.log(request);
+    response.status(200).send({
+      udiseCode: udiseid,
+      schoolName: 'SWAMI DYALANANDA J.B SCHOOL ' + udiseid,
+      schoolCategory: 1,
+      schoolManagementCenter: 1,
+      schoolManagementState: 11,
+      schoolType: 3,
+      classFrom: 1,
+      classTo: 5,
+      stateCode: '16',
+      stateName: 'Tripura',
+      districtName: 'WEST TRIPURA',
+      blockName: 'AGARTALA MUNICIPAL COORPORATION',
+      locationType: 2,
+      headOfSchoolMobile: '89******42',
+      respondentMobile: '88******96',
+      alternateMobile: '',
+      schoolEmail: '',
+    });
+  }
+
   //helper function
   //get jwt token information
   async parseJwt(token) {
