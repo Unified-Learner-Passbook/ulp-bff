@@ -11,6 +11,7 @@ import { UserDto } from './dto/user-dto';
 @Injectable()
 export class SSOService {
   //axios call
+  md5 = require('md5');
   qs = require('qs');
   //keycloak config
   keycloakCred = {
@@ -98,7 +99,7 @@ export class SSOService {
   //loginStudent
   async loginStudent(username: string, password: string, response: Response) {
     if (username && password) {
-      const studentToken = await this.getStudentToken(username, password);
+      const studentToken = await this.getKeycloakToken(username, password);
       if (studentToken?.error) {
         return response.status(501).send({
           success: false,
@@ -567,13 +568,35 @@ export class SSOService {
                 user: 'NO_FOUND',
               });
             } else {
-              return response.status(200).send({
-                success: true,
-                status: 'digilocker_login_success',
-                message: 'Digilocker Login Success',
-                result: response_data,
-                user: 'FOUND',
-              });
+              const auto_username =
+                digiacc === 'ewallet'
+                  ? response_data?.meripehchanid + '_student'
+                  : response_data?.meripehchanid + '_teacher';
+              const auto_password = await this.md5(
+                auto_username + 'MjQFlAJOQSlWIQJHOEDhod',
+              );
+              const userToken = await this.getKeycloakToken(
+                auto_username,
+                auto_password,
+              );
+              if (userToken?.error) {
+                return response.status(501).send({
+                  success: false,
+                  status: 'keycloak_invalid_credentials',
+                  message: userToken?.error.message,
+                  result: null,
+                });
+              } else {
+                return response.status(200).send({
+                  success: true,
+                  status: 'digilocker_login_success',
+                  message: 'Digilocker Login Success',
+                  result: response_data,
+                  user: 'FOUND',
+                  userData: sb_rc_search,
+                  token: userToken?.access_token,
+                });
+              }
             }
           }
         } else {
@@ -583,6 +606,168 @@ export class SSOService {
             message: 'Unauthorized',
             result: response_digi?.error,
           });
+        }
+      }
+    } else {
+      return response.status(400).send({
+        success: false,
+        status: 'invalid_request',
+        message: 'Invalid Request. Not received All Parameters.',
+        result: null,
+      });
+    }
+  }
+
+  //digilockerRegister
+  async digilockerRegister(
+    response: Response,
+    digiacc: string,
+    userdata: any,
+    digimpid: string,
+  ) {
+    if (digiacc && userdata && digimpid) {
+      const clientToken = await this.getClientToken();
+      if (clientToken?.error) {
+        return response.status(401).send({
+          success: false,
+          status: 'keycloak_client_token_error',
+          message: 'Bad Request for Keycloak Client Token',
+          result: clientToken?.error,
+        });
+      } else {
+        //register in keycloak
+        const auto_username =
+          digiacc === 'ewallet' ? digimpid + '_student' : digimpid + '_teacher';
+        const auto_password = await this.md5(
+          auto_username + 'MjQFlAJOQSlWIQJHOEDhod',
+        );
+        //register student keycloak
+        let response_text = await this.registerUserKeycloak(
+          auto_username,
+          auto_password,
+          clientToken,
+        );
+
+        if (response_text?.error) {
+          return response.status(400).send({
+            success: false,
+            status: 'keycloak_register_duplicate',
+            message: 'User Already Registered in Keycloak',
+            result: response_text?.error,
+          });
+        } else {
+          //ewallet registration student
+
+          if (digiacc === 'ewallet') {
+            // sunbird registery student
+            let sb_rc_response_text = await this.sbrcInvite(
+              userdata.student,
+              'Student',
+            );
+            if (sb_rc_response_text?.error) {
+              return response.status(400).send({
+                success: false,
+                status: 'sb_rc_register_error',
+                message: 'Sunbird RC Student Registration Failed',
+                result: sb_rc_response_text?.error,
+              });
+            } else if (sb_rc_response_text?.params?.status === 'SUCCESSFUL') {
+            } else {
+              return response.status(400).send({
+                success: false,
+                status: 'sb_rc_register_duplicate',
+                message: 'Student Already Registered in Sunbird RC',
+                result: sb_rc_response_text,
+              });
+            }
+          }
+          //portal registration teacher and school
+          else {
+            // sunbird registery teacher
+            let sb_rc_response_text = await this.sbrcInvite(
+              userdata.teacher,
+              'Teacher',
+            );
+            if (sb_rc_response_text?.error) {
+              return response.status(400).send({
+                success: false,
+                status: 'sb_rc_register_error',
+                message: 'Sunbird RC Teacher Registration Failed',
+                result: sb_rc_response_text?.error,
+              });
+            } else if (sb_rc_response_text?.params?.status === 'SUCCESSFUL') {
+              // sunbird registery school
+              let sb_rc_response_text = await this.sbrcInvite(
+                userdata.school,
+                'SchoolDetail',
+              );
+              if (sb_rc_response_text?.error) {
+                return response.status(400).send({
+                  success: false,
+                  status: 'sb_rc_register_error',
+                  message: 'Sunbird RC SchoolDetail Registration Failed',
+                  result: sb_rc_response_text?.error,
+                });
+              } else if (sb_rc_response_text?.params?.status === 'SUCCESSFUL') {
+              } else {
+                return response.status(400).send({
+                  success: false,
+                  status: 'sb_rc_register_duplicate',
+                  message: 'SchoolDetail Already Registered in Sunbird RC',
+                  result: sb_rc_response_text,
+                });
+              }
+            } else {
+              return response.status(400).send({
+                success: false,
+                status: 'sb_rc_register_duplicate',
+                message: 'Teacher Already Registered in Sunbird RC',
+                result: sb_rc_response_text,
+              });
+            }
+          }
+          //login and get token
+          const sb_rc_search = await this.searchDigiEntity(
+            digiacc === 'ewallet' ? 'Student' : 'Teacher',
+            digimpid,
+          );
+          if (sb_rc_search?.error) {
+            return response.status(501).send({
+              success: false,
+              status: 'sb_rc_search_error',
+              message: 'Sunbird RC Search Failed',
+              result: sb_rc_search?.error.message,
+            });
+          } else if (sb_rc_search.length !== 1) {
+            return response.status(501).send({
+              success: false,
+              status: 'sb_rc_search_no_found',
+              message: 'Sunbird RC Search Not Found',
+              result: sb_rc_search?.error.message,
+            });
+          } else {
+            const userToken = await this.getKeycloakToken(
+              auto_username,
+              auto_password,
+            );
+            if (userToken?.error) {
+              return response.status(501).send({
+                success: false,
+                status: 'keycloak_invalid_credentials',
+                message: userToken?.error.message,
+                result: null,
+              });
+            } else {
+              return response.status(200).send({
+                success: true,
+                status: 'digilocker_login_success',
+                message: 'Digilocker Login Success',
+                user: 'FOUND',
+                userData: sb_rc_search,
+                token: userToken?.access_token,
+              });
+            }
+          }
         }
       }
     } else {
@@ -637,8 +822,8 @@ export class SSOService {
     return response_text;
   }
 
-  //get student token after login
-  async getStudentToken(username: string, password: string) {
+  //get keycloak token after login
+  async getKeycloakToken(username: string, password: string) {
     let data = this.qs.stringify({
       client_id: this.keycloakCred.client_id,
       username: username.toString(),
@@ -863,6 +1048,74 @@ export class SSOService {
     let config_sb_rc = {
       method: 'post',
       url: process.env.REGISTRY_URL + 'api/v1/Student/invite',
+      headers: {
+        'content-type': 'application/json',
+      },
+      data: data,
+    };
+
+    var sb_rc_response_text = null;
+    await axios(config_sb_rc)
+      .then(function (response) {
+        //console.log(JSON.stringify(response.data));
+        sb_rc_response_text = response.data;
+      })
+      .catch(function (error) {
+        //console.log(error);
+        sb_rc_response_text = { error: error };
+      });
+
+    return sb_rc_response_text;
+  }
+
+  // register user in keycloak
+  async registerUserKeycloak(username, password, clientToken) {
+    let data = JSON.stringify({
+      enabled: 'true',
+      username: username,
+      credentials: [
+        {
+          type: 'password',
+          value: password,
+          temporary: false,
+        },
+      ],
+    });
+
+    let config = {
+      method: 'post',
+      url:
+        process.env.KEYCLOAK_URL +
+        'admin/realms/' +
+        process.env.REALM_ID +
+        '/users',
+      headers: {
+        'content-type': 'application/json',
+        Authorization: 'Bearer ' + clientToken?.access_token,
+      },
+      data: data,
+    };
+    var response_text = null;
+    await axios(config)
+      .then(function (response) {
+        //console.log(JSON.stringify(response.data));
+        response_text = response.data;
+      })
+      .catch(function (error) {
+        //console.log(error);
+        response_text = { error: error };
+      });
+
+    return response_text;
+  }
+
+  // invite entity in registery
+  async sbrcInvite(inviteSchema, entityName) {
+    let data = JSON.stringify(inviteSchema);
+
+    let config_sb_rc = {
+      method: 'post',
+      url: process.env.REGISTRY_URL + 'api/v1/' + entityName + '/invite',
       headers: {
         'content-type': 'application/json',
       },
