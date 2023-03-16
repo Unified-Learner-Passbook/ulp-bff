@@ -919,7 +919,7 @@ export class SSOService {
     let data = JSON.stringify({
       filters: {
         studentSchoolID: {
-          eq: studentId.toString(),
+          eq: studentId
         },
       },
     });
@@ -1121,13 +1121,21 @@ export class SSOService {
   // cred search
 
   async credSearch(sb_rc_search) {
+    
+    console.log("sb_rc_search", sb_rc_search)
+
     let data = JSON.stringify({
-      subjectId: sb_rc_search[0]?.did ? sb_rc_search[0].did : '',
+      "subject": {
+        "id": sb_rc_search[0]?.did ? sb_rc_search[0].did : ''
+      }
     });
+    // let data = JSON.stringify({
+    //   subjectId: sb_rc_search[0]?.did ? sb_rc_search[0].did : '',
+    // });
 
     let config = {
       method: 'post',
-      url: process.env.CRED_URL + '/credentials',
+      url: process.env.CRED_URL + '/credentials/search',
       headers: {
         'Content-Type': 'application/json',
       },
