@@ -102,4 +102,19 @@ export class SSOController {
   ) {
     return this.ssoService.digilockerToken(response, digiacc, auth_code);
   }
+  //digilocker keycloak sunbird rc register and get token
+  @Post('/digilocker/register')
+  async digilockerRegister(
+    @Res() response: Response,
+    @Body('digiacc') digiacc: string,
+    @Body('userdata') userdata: any,
+    @Body('digimpid') digimpid: string,
+  ) {
+    return this.ssoService.digilockerRegister(
+      response,
+      digiacc,
+      userdata,
+      digimpid,
+    );
+  }
 }
