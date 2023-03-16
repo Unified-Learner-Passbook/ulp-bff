@@ -727,46 +727,26 @@ export class SSOService {
             }
           }
           //login and get token
-          const sb_rc_search = await this.searchDigiEntity(
-            digiacc === 'ewallet' ? 'Student' : 'Teacher',
-            digimpid,
+          const userToken = await this.getKeycloakToken(
+            auto_username,
+            auto_password,
           );
-          if (sb_rc_search?.error) {
+          if (userToken?.error) {
             return response.status(501).send({
               success: false,
-              status: 'sb_rc_search_error',
-              message: 'Sunbird RC Search Failed',
-              result: sb_rc_search?.error.message,
-            });
-          } else if (sb_rc_search.length !== 1) {
-            return response.status(501).send({
-              success: false,
-              status: 'sb_rc_search_no_found',
-              message: 'Sunbird RC Search Not Found',
-              result: sb_rc_search?.error.message,
+              status: 'keycloak_invalid_credentials',
+              message: userToken?.error, //.message,
+              result: null,
             });
           } else {
-            const userToken = await this.getKeycloakToken(
-              auto_username,
-              auto_password,
-            );
-            if (userToken?.error) {
-              return response.status(501).send({
-                success: false,
-                status: 'keycloak_invalid_credentials',
-                message: userToken?.error.message,
-                result: null,
-              });
-            } else {
-              return response.status(200).send({
-                success: true,
-                status: 'digilocker_login_success',
-                message: 'Digilocker Login Success',
-                user: 'FOUND',
-                userData: sb_rc_search,
-                token: userToken?.access_token,
-              });
-            }
+            return response.status(200).send({
+              success: true,
+              status: 'digilocker_login_success',
+              message: 'Digilocker Login Success',
+              user: 'FOUND',
+              userData: userdata,
+              token: userToken?.access_token,
+            });
           }
         }
       }
@@ -911,9 +891,11 @@ export class SSOService {
       },
     });
 
+    let url = process.env.REGISTRY_URL + 'api/v1/' + entity + '/search';
+    //console.log(data + ' ' + url);
     let config = {
       method: 'post',
-      url: process.env.REGISTRY_URL + 'api/v1/' + entity + '/search',
+      url: url,
       headers: {
         'Content-Type': 'application/json',
       },
