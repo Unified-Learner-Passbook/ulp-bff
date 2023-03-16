@@ -704,6 +704,8 @@ export class SSOService {
   // cred search
 
   async credSearch(sb_rc_search) {
+    
+    console.log("sb_rc_search", sb_rc_search)
 
     let data = JSON.stringify({
       "subject": {
