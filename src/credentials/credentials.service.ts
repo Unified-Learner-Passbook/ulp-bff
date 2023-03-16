@@ -388,7 +388,6 @@ export class CredentialsService {
     }
 
     async getCredSchema(id) {
-        var axios = require('axios');
 
         var config = {
             method: 'get',
