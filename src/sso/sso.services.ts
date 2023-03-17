@@ -760,6 +760,26 @@ export class SSOService {
     }
   }
 
+  async getStudentDetail(requestbody, response: Response) {
+    console.log("456")
+    let studentDetails = await this.studentDetails(requestbody);
+    console.log("studentDetails", studentDetails)
+    if (studentDetails) {
+      return response.status(200).send({
+        success: true,
+        status: 'Success',
+        message: 'Student details fetched successfully!',
+        result: studentDetails
+      })
+    } else {
+      return response.status(200).send({
+        success: false,
+        status: 'Success',
+        message: 'Unable to fetch student details!',
+        result: null
+      })
+    }
+  }
   //digilockerAuthorize
   async udiseVerify(udiseid: string, response: Response) {
     //console.log(request);
@@ -1146,7 +1166,8 @@ export class SSOService {
   // cred search
 
   async credSearch(sb_rc_search) {
-    console.log('sb_rc_search', sb_rc_search);
+
+    console.log("sb_rc_search", sb_rc_search)
 
     let data = JSON.stringify({
       subject: {
@@ -1176,6 +1197,31 @@ export class SSOService {
         cred_search = { error: error };
       });
 
-    return cred_search;
+    return cred_search
   }
+
+  // student details
+  async studentDetails(requestbody) {
+    console.log("requestbody", requestbody)
+    var data = JSON.stringify(requestbody);
+
+    var config = {
+      method: 'post',
+      maxBodyLength: Infinity,
+      url: `${process.env.REGISTRY_URL}api/v1/StudentDetail/search`,
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      data: data
+    };
+
+    try {
+      let stdentDetailRes = await axios(config)
+      return stdentDetailRes.data;
+    } catch (err) {
+      console.log("err")
+    }
+    
+  }
+
 }

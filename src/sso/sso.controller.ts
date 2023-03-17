@@ -85,6 +85,13 @@ export class SSOController {
   ) {
     return this.ssoService.renderTemplateSchema(id, response);
   }
+
+  @Post('/studentDetail')
+  async getStudentDetail(@Body() requestbody: any, @Res() response: Response) {
+    console.log("87", requestbody)
+    return this.ssoService.getStudentDetail(requestbody, response);
+  }
+  
   //digilocker authorize
   @Get('/digilocker/authorize/:digiacc')
   async digilockerAuthorize(
