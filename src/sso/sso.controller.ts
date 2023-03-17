@@ -92,4 +92,44 @@ export class SSOController {
     return this.ssoService.getStudentDetail(requestbody, response);
   }
   
+  //digilocker authorize
+  @Get('/digilocker/authorize/:digiacc')
+  async digilockerAuthorize(
+    @Param('digiacc') digiacc: string,
+    @Res() response: Response,
+  ) {
+    return this.ssoService.digilockerAuthorize(digiacc, response);
+  }
+  //digilocker token
+  @Post('/digilocker/token')
+  async digilockerToken(
+    @Res() response: Response,
+    @Body('digiacc') digiacc: string,
+    @Body('auth_code') auth_code: string,
+  ) {
+    return this.ssoService.digilockerToken(response, digiacc, auth_code);
+  }
+  //digilocker keycloak sunbird rc register and get token
+  @Post('/digilocker/register')
+  async digilockerRegister(
+    @Res() response: Response,
+    @Body('digiacc') digiacc: string,
+    @Body('userdata') userdata: any,
+    @Body('digimpid') digimpid: string,
+  ) {
+    return this.ssoService.digilockerRegister(
+      response,
+      digiacc,
+      userdata,
+      digimpid,
+    );
+  }
+  //udise verify
+  @Get('/udise/verify/:udiseid')
+  async udiseVerify(
+    @Param('udiseid') udiseid: string,
+    @Res() response: Response,
+  ) {
+    return this.ssoService.udiseVerify(udiseid, response);
+  }
 }
