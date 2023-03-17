@@ -452,9 +452,9 @@ export class SSOService {
     }
   }
 
-  async getStudentDetail(response: Response) {
+  async getStudentDetail(requestbody, response: Response) {
     console.log("456")
-    let studentDetails = await this.studentDetails();
+    let studentDetails = await this.studentDetails(requestbody);
     console.log("studentDetails", studentDetails)
     if (studentDetails) {
       return response.status(200).send({
@@ -760,10 +760,9 @@ export class SSOService {
   }
 
   // student details
-  async studentDetails() {
-    var data = JSON.stringify({
-      "filters": {}
-    });
+  async studentDetails(requestbody) {
+    console.log("requestbody", requestbody)
+    var data = JSON.stringify(requestbody);
 
     var config = {
       method: 'post',

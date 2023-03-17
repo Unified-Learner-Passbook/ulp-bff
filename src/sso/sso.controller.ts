@@ -7,13 +7,14 @@ import {
   Param,
   Res,
   StreamableFile,
+  Req,
 } from '@nestjs/common';
 
 //custom imports
 import axios from 'axios';
-import { Response } from 'express';
+import { Response, Request } from 'express';
 import { SSOService } from './sso.services';
-import { UserDto } from './dto/user-dto'
+import { UserDto } from './dto/user-dto';
 
 @Controller('v1/sso')
 export class SSOController {
@@ -21,14 +22,14 @@ export class SSOController {
 
   @Get('/student')
   getUser(@Res() response: Response) {
-    const result = { success: true, message: 'Student API Working 10 March' };
+    const result = {
+      success: true,
+      message: 'Student API Working 16 March New Update 2',
+    };
     response.status(200).send(result);
   }
   @Post('/student/register')
-  async registerStudent(
-    @Body() user: UserDto,
-    @Res() response: Response,
-  ) {
+  async registerStudent(@Body() user: UserDto, @Res() response: Response) {
     return this.ssoService.registerStudent(user, response);
   }
   @Post('/student/login')
@@ -78,13 +79,17 @@ export class SSOController {
     return this.ssoService.renderTemplate(id, response);
   }
   @Get('/student/credentials/rendertemplateschema/:id')
-  async renderTemplateSchema(@Param('id') id: string, @Res() response: Response) {
+  async renderTemplateSchema(
+    @Param('id') id: string,
+    @Res() response: Response,
+  ) {
     return this.ssoService.renderTemplateSchema(id, response);
   }
 
-  @Get('/studentDetail')
-  async getStudentDetail(@Res() response: Response) {
-    console.log("87")
-    return this.ssoService.getStudentDetail(response);
+  @Post('/studentDetail')
+  async getStudentDetail(@Body() requestbody: any, @Res() response: Response) {
+    console.log("87", requestbody)
+    return this.ssoService.getStudentDetail(requestbody, response);
   }
+  
 }
