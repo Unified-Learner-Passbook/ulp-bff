@@ -13,6 +13,7 @@ export class SSOService {
   //axios call
   md5 = require('md5');
   qs = require('qs');
+  moment = require('moment');
   //keycloak config
   keycloakCred = {
     grant_type: 'client_credentials',
@@ -543,10 +544,18 @@ export class SSOService {
               result: response_digi?.error,
             });
           } else {
+            const dob = this.moment(token_data[0]?.birthdate).format(
+              'DD/MM/YYYY',
+            );
+            const username_name = token_data[0]?.given_name.split(' ')[0];
+            const username_dob = dob.replace('/', '');
+            const auto_username = username_name + '@' + username_dob;
             let response_data = {
               meripehchanid: token_data[0]?.sub,
               name: token_data[0]?.given_name,
               mobile: token_data[0]?.phone_number,
+              dob: dob,
+              username: auto_username,
             };
             const sb_rc_search = await this.searchDigiEntity(
               digiacc === 'ewallet' ? 'StudentDetail' : 'TeacherV1',
@@ -568,9 +577,11 @@ export class SSOService {
                 user: 'NO_FOUND',
               });
             } else {
+              const username_name = response_data?.name.split(' ')[0];
+              const username_dob = dob.replace('/', '');
               const auto_username =
                 digiacc === 'ewallet'
-                  ? response_data?.meripehchanid + '_student'
+                  ? username_name + '@' + username_dob
                   : response_data?.meripehchanid + '_teacher';
               const auto_password = await this.md5(
                 auto_username + 'MjQFlAJOQSlWIQJHOEDhod',
@@ -636,8 +647,12 @@ export class SSOService {
         });
       } else {
         //register in keycloak
+        const username_name = userdata?.student?.studentName.split(' ')[0];
+        const username_dob = userdata?.student?.dob.replace('/', '');
         const auto_username =
-          digiacc === 'ewallet' ? digimpid + '_student' : digimpid + '_teacher';
+          digiacc === 'ewallet'
+            ? username_name + '@' + username_dob
+            : digimpid + '_teacher';
         const auto_password = await this.md5(
           auto_username + 'MjQFlAJOQSlWIQJHOEDhod',
         );
@@ -659,6 +674,8 @@ export class SSOService {
           //ewallet registration student
 
           if (digiacc === 'ewallet') {
+            //find if student account present in sb rc or not
+
             // sunbird registery student
             let sb_rc_response_text = await this.sbrcInvite(
               userdata.student,
