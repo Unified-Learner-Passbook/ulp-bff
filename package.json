@@ -30,6 +30,7 @@
     "keycloak-admin": "^1.14.22",
     "keycloak-connect": "^20.0.5",
     "md5": "^2.3.0",
+    "moment": "^2.29.4",
     "nest-keycloak-connect": "^1.9.1",
     "reflect-metadata": "^0.1.13",
     "rxjs": "^7.2.0",
