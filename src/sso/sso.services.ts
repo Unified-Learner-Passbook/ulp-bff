@@ -546,7 +546,7 @@ export class SSOService {
           } else {
             const dob = await this.convertDate(token_data[0]?.birthdate);
             const username_name = token_data[0]?.given_name.split(' ')[0];
-            const username_dob = dob.replace('/', '');
+            const username_dob = await this.replaceChar(dob, '/', '');
             const auto_username = username_name + '@' + username_dob;
             let response_data = {
               meripehchanid: token_data[0]?.sub,
@@ -575,11 +575,9 @@ export class SSOService {
                 user: 'NO_FOUND',
               });
             } else {
-              const username_name = response_data?.name.split(' ')[0];
-              const username_dob = dob.replace('/', '');
               const auto_username =
                 digiacc === 'ewallet'
-                  ? username_name + '@' + username_dob
+                  ? response_data?.username
                   : response_data?.meripehchanid + '_teacher';
               const auto_password = await this.md5(
                 auto_username + 'MjQFlAJOQSlWIQJHOEDhod',
@@ -646,7 +644,11 @@ export class SSOService {
       } else {
         //register in keycloak
         const username_name = userdata?.student?.studentName.split(' ')[0];
-        const username_dob = userdata?.student?.dob.replace('/', '');
+        const username_dob = await this.replaceChar(
+          userdata?.student?.dob,
+          '/',
+          '',
+        );
         const auto_username =
           digiacc === 'ewallet'
             ? username_name + '@' + username_dob
@@ -832,7 +834,7 @@ export class SSOService {
   }
 
   //helper function
-  //get jwt token information
+  //get convert date and repalce character from string
   async convertDate(datetime) {
     if (!datetime) {
       return '';
@@ -842,6 +844,15 @@ export class SSOService {
       'DD/MM/YYYY',
     );
     return datetest;
+  }
+  async replaceChar(replaceString, found, replace) {
+    if (!replaceString) {
+      return '';
+    }
+    const search = found;
+    const replaceWith = replace;
+    const result = replaceString.split(search).join(replaceWith);
+    return result;
   }
   //get jwt token information
   async parseJwt(token) {
