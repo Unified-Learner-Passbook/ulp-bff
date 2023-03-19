@@ -549,7 +549,7 @@ export class SSOService {
               mobile: token_data[0]?.phone_number,
             };
             const sb_rc_search = await this.searchDigiEntity(
-              digiacc === 'ewallet' ? 'StudentDetail' : 'Teacher',
+              digiacc === 'ewallet' ? 'StudentDetail' : 'TeacherV1',
               response_data?.meripehchanid,
             );
             if (sb_rc_search?.error) {
@@ -684,46 +684,78 @@ export class SSOService {
           //portal registration teacher and school
           else {
             // sunbird registery teacher
-            let sb_rc_response_text = await this.sbrcInvite(
-              userdata.teacher,
-              'Teacher',
+            //get teacher did
+            const issuerRes = await this.generateDid(
+              userdata?.teacher?.meripehchanLoginId,
             );
-            if (sb_rc_response_text?.error) {
+            if (issuerRes?.error) {
               return response.status(400).send({
                 success: false,
-                status: 'sb_rc_register_error',
-                message: 'Sunbird RC Teacher Registration Failed',
-                result: sb_rc_response_text?.error,
+                status: 'did_generate_error_teacher',
+                message: 'DID Generate Failed for Teacher. Try Again.',
+                result: issuerRes?.error,
               });
-            } else if (sb_rc_response_text?.params?.status === 'SUCCESSFUL') {
-              // sunbird registery school
+            } else {
+              var did = issuerRes[0].verificationMethod[0].controller;
+              userdata.teacher.did = did;
               let sb_rc_response_text = await this.sbrcInvite(
-                userdata.school,
-                'SchoolDetail',
+                userdata.teacher,
+                'TeacherV1',
               );
               if (sb_rc_response_text?.error) {
                 return response.status(400).send({
                   success: false,
                   status: 'sb_rc_register_error',
-                  message: 'Sunbird RC SchoolDetail Registration Failed',
+                  message: 'Sunbird RC Teacher Registration Failed',
                   result: sb_rc_response_text?.error,
                 });
               } else if (sb_rc_response_text?.params?.status === 'SUCCESSFUL') {
+                // sunbird registery school
+                //get school did
+                const issuerRes = await this.generateDid(
+                  userdata?.school?.udiseCode,
+                );
+                if (issuerRes?.error) {
+                  return response.status(400).send({
+                    success: false,
+                    status: 'did_generate_error_school',
+                    message: 'DID Generate Failed for School. Try Again.',
+                    result: issuerRes?.error,
+                  });
+                } else {
+                  var did = issuerRes[0].verificationMethod[0].controller;
+                  userdata.school.did = did;
+                  let sb_rc_response_text = await this.sbrcInvite(
+                    userdata.school,
+                    'SchoolDetail',
+                  );
+                  if (sb_rc_response_text?.error) {
+                    return response.status(400).send({
+                      success: false,
+                      status: 'sb_rc_register_error',
+                      message: 'Sunbird RC SchoolDetail Registration Failed',
+                      result: sb_rc_response_text?.error,
+                    });
+                  } else if (
+                    sb_rc_response_text?.params?.status === 'SUCCESSFUL'
+                  ) {
+                  } else {
+                    return response.status(400).send({
+                      success: false,
+                      status: 'sb_rc_register_duplicate',
+                      message: 'SchoolDetail Already Registered in Sunbird RC',
+                      result: sb_rc_response_text,
+                    });
+                  }
+                }
               } else {
                 return response.status(400).send({
                   success: false,
                   status: 'sb_rc_register_duplicate',
-                  message: 'SchoolDetail Already Registered in Sunbird RC',
+                  message: 'Teacher Already Registered in Sunbird RC',
                   result: sb_rc_response_text,
                 });
               }
-            } else {
-              return response.status(400).send({
-                success: false,
-                status: 'sb_rc_register_duplicate',
-                message: 'Teacher Already Registered in Sunbird RC',
-                result: sb_rc_response_text,
-              });
             }
           }
           //login and get token
