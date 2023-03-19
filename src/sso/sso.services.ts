@@ -544,9 +544,7 @@ export class SSOService {
               result: response_digi?.error,
             });
           } else {
-            const dob = this.moment(token_data[0]?.birthdate).format(
-              'DD/MM/YYYY',
-            );
+            const dob = await this.convertDate(token_data[0]?.birthdate);
             const username_name = token_data[0]?.given_name.split(' ')[0];
             const username_dob = dob.replace('/', '');
             const auto_username = username_name + '@' + username_dob;
@@ -834,6 +832,17 @@ export class SSOService {
   }
 
   //helper function
+  //get jwt token information
+  async convertDate(datetime) {
+    if (!datetime) {
+      return '';
+    }
+    let date_string = datetime.substring(0, 10);
+    const datetest = this.moment(date_string, 'DD/MM/YYYY').format(
+      'DD/MM/YYYY',
+    );
+    return datetest;
+  }
   //get jwt token information
   async parseJwt(token) {
     if (!token) {
