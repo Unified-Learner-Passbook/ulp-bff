@@ -89,10 +89,10 @@ export class SSOController {
 
   @Post('/studentDetail')
   async getStudentDetail(@Body() requestbody: any, @Res() response: Response) {
-    console.log("87", requestbody)
+    console.log('87', requestbody);
     return this.ssoService.getStudentDetail(requestbody, response);
   }
-  
+
   //digilocker authorize
   @Get('/digilocker/authorize/:digiacc')
   async digilockerAuthorize(
@@ -125,6 +125,26 @@ export class SSOController {
       digimpid,
     );
   }
+  //token data response
+  @Get('/user/:digiacc')
+  async userData(
+    @Headers('Authorization') auth: string,
+    @Param('digiacc') digiacc: string,
+    @Res() response: Response,
+  ) {
+    const jwt = auth.replace('Bearer ', '');
+    return this.ssoService.userData(jwt, digiacc, response);
+  }
+  //token school data response
+  @Get('/school/:udise')
+  async schoolData(
+    @Headers('Authorization') auth: string,
+    @Param('udise') udise: string,
+    @Res() response: Response,
+  ) {
+    const jwt = auth.replace('Bearer ', '');
+    return this.ssoService.schoolData(jwt, udise, response);
+  }
   //udise verify
   @Get('/udise/verify/:udiseid')
   async udiseVerify(
@@ -151,7 +171,10 @@ export class SSOController {
   }
   //credentialsSchemaJSON
   @Get('/student/credentials/schema/json/:id')
-  async credentialsSchemaJSON(@Param('id') id: string, @Res() response: Response) {
+  async credentialsSchemaJSON(
+    @Param('id') id: string,
+    @Res() response: Response,
+  ) {
     return this.ssoService.credentialsSchemaJSON(id, response);
   }
 }

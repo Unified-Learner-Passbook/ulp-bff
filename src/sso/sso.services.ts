@@ -623,6 +623,126 @@ export class SSOService {
     }
   }
 
+  //userData
+  async userData(token: string, digiacc: string, response: Response) {
+    if (token && digiacc) {
+      const studentUsername = await this.verifyStudentToken(token);
+      if (studentUsername?.error) {
+        return response.status(401).send({
+          success: false,
+          status: 'keycloak_user_token_bad_request',
+          message: 'Unauthorized',
+          result: studentUsername?.error,
+        });
+      } else if (!studentUsername?.preferred_username) {
+        return response.status(400).send({
+          success: false,
+          status: 'keycloak_user_token_error',
+          message: 'Keycloak User Token Expired',
+          result: studentUsername,
+        });
+      } else {
+        //get user detail
+        //find if student account present in sb rc or not
+        const sb_rc_search = await this.searchUsernameEntity(
+          digiacc === 'ewallet' ? 'StudentDetail' : 'TeacherV1',
+          studentUsername?.preferred_username,
+        );
+        if (sb_rc_search?.error) {
+          return response.status(501).send({
+            success: false,
+            status: 'sb_rc_search_error',
+            message: 'Sunbird RC User Search Failed',
+            result: sb_rc_search?.error,
+          });
+        } else if (sb_rc_search.length === 0) {
+          // no student found then register
+          return response.status(501).send({
+            success: false,
+            status: 'sb_rc_search_no_found',
+            message: 'Sunbird RC User No Found',
+            result: sb_rc_search?.error,
+          });
+        } else {
+          //sent user value
+          return response.status(200).send({
+            success: true,
+            status: 'sb_rc_search_found',
+            message: 'Sunbird RC User Found',
+            result: sb_rc_search[0],
+          });
+        }
+      }
+    } else {
+      return response.status(400).send({
+        success: false,
+        status: 'invalid_request',
+        message: 'Invalid Request. Not received token or acc type.',
+        result: null,
+      });
+    }
+  }
+
+  //schoolData
+  async schoolData(token: string, udise: string, response: Response) {
+    if (token && udise) {
+      const studentUsername = await this.verifyStudentToken(token);
+      if (studentUsername?.error) {
+        return response.status(401).send({
+          success: false,
+          status: 'keycloak_user_token_bad_request',
+          message: 'Unauthorized',
+          result: studentUsername?.error,
+        });
+      } else if (!studentUsername?.preferred_username) {
+        return response.status(400).send({
+          success: false,
+          status: 'keycloak_user_token_error',
+          message: 'Keycloak User Token Expired',
+          result: studentUsername,
+        });
+      } else {
+        //get user detail
+        //find if student account present in sb rc or not
+        const sb_rc_search = await this.searchUdiseEntity(
+          'SchoolDetail',
+          udise,
+        );
+        if (sb_rc_search?.error) {
+          return response.status(501).send({
+            success: false,
+            status: 'sb_rc_search_error',
+            message: 'Sunbird RC School Search Failed',
+            result: sb_rc_search?.error,
+          });
+        } else if (sb_rc_search.length === 0) {
+          // no student found then register
+          return response.status(501).send({
+            success: false,
+            status: 'sb_rc_search_no_found',
+            message: 'Sunbird RC School No Found',
+            result: sb_rc_search?.error,
+          });
+        } else {
+          //sent user value
+          return response.status(200).send({
+            success: true,
+            status: 'sb_rc_search_found',
+            message: 'Sunbird RC School Found',
+            result: sb_rc_search[0],
+          });
+        }
+      }
+    } else {
+      return response.status(400).send({
+        success: false,
+        status: 'invalid_request',
+        message: 'Invalid Request. Not received token or udise.',
+        result: null,
+      });
+    }
+  }
+
   //digilockerAuthorize
   async digilockerAuthorize(digiacc: string, response: Response) {
     //console.log(request);
@@ -732,6 +852,7 @@ export class SSOService {
                 status: 'digilocker_login_success',
                 message: 'Digilocker Login Success',
                 result: response_data,
+                digi: response_digi?.data,
                 user: 'NO_FOUND',
               });
             } else {
@@ -759,6 +880,7 @@ export class SSOService {
                   status: 'digilocker_login_success',
                   message: 'Digilocker Login Success',
                   result: response_data,
+                  digi: response_digi?.data,
                   user: 'FOUND',
                   userData: sb_rc_search,
                   token: userToken?.access_token,
@@ -1009,23 +1131,23 @@ export class SSOService {
   }
 
   async getStudentDetail(requestbody, response: Response) {
-    console.log("456")
+    console.log('456');
     let studentDetails = await this.studentDetails(requestbody);
-    console.log("studentDetails", studentDetails)
+    console.log('studentDetails', studentDetails);
     if (studentDetails) {
       return response.status(200).send({
         success: true,
         status: 'Success',
         message: 'Student details fetched successfully!',
-        result: studentDetails
-      })
+        result: studentDetails,
+      });
     } else {
       return response.status(200).send({
         success: false,
         status: 'Success',
         message: 'Unable to fetch student details!',
-        result: null
-      })
+        result: null,
+      });
     }
   }
   //digilockerAuthorize
@@ -1292,6 +1414,72 @@ export class SSOService {
     return sb_rc_search;
   }
 
+  //search entity username
+  async searchUsernameEntity(entity: string, searchkey: string) {
+    let data = JSON.stringify({
+      filters: {
+        username: {
+          eq: searchkey.toString(),
+        },
+      },
+    });
+
+    let url = process.env.REGISTRY_URL + 'api/v1/' + entity + '/search';
+    console.log(data + ' ' + url);
+    let config = {
+      method: 'post',
+      url: url,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      data: data,
+    };
+    let sb_rc_search = null;
+    await axios(config)
+      .then(function (response) {
+        //console.log(JSON.stringify(response.data));
+        sb_rc_search = response.data;
+      })
+      .catch(function (error) {
+        //console.log(error);
+        sb_rc_search = { error: error };
+      });
+    return sb_rc_search;
+  }
+
+  //search entity udise
+  async searchUdiseEntity(entity: string, searchkey: string) {
+    let data = JSON.stringify({
+      filters: {
+        udiseCode: {
+          eq: searchkey.toString(),
+        },
+      },
+    });
+
+    let url = process.env.REGISTRY_URL + 'api/v1/' + entity + '/search';
+    console.log(data + ' ' + url);
+    let config = {
+      method: 'post',
+      url: url,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      data: data,
+    };
+    let sb_rc_search = null;
+    await axios(config)
+      .then(function (response) {
+        //console.log(JSON.stringify(response.data));
+        sb_rc_search = response.data;
+      })
+      .catch(function (error) {
+        //console.log(error);
+        sb_rc_search = { error: error };
+      });
+    return sb_rc_search;
+  }
+
   //verify student token
   async verifyStudentToken(token: string) {
     let config = {
@@ -1495,8 +1683,7 @@ export class SSOService {
   // cred search
 
   async credSearch(sb_rc_search) {
-
-    console.log("sb_rc_search", sb_rc_search)
+    console.log('sb_rc_search', sb_rc_search);
 
     let data = JSON.stringify({
       subject: {
@@ -1526,12 +1713,12 @@ export class SSOService {
         cred_search = { error: error };
       });
 
-    return cred_search
+    return cred_search;
   }
 
   // student details
   async studentDetails(requestbody) {
-    console.log("requestbody", requestbody)
+    console.log('requestbody', requestbody);
     var data = JSON.stringify(requestbody);
 
     var config = {
@@ -1539,18 +1726,16 @@ export class SSOService {
       maxBodyLength: Infinity,
       url: `${process.env.REGISTRY_URL}api/v1/StudentDetail/search`,
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
       },
-      data: data
+      data: data,
     };
 
     try {
-      let stdentDetailRes = await axios(config)
+      let stdentDetailRes = await axios(config);
       return stdentDetailRes.data;
     } catch (err) {
-      console.log("err")
+      console.log('err');
     }
-    
   }
-
 }
