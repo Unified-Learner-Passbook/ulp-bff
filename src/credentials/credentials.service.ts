@@ -11,7 +11,7 @@ const cred_url = process.env.CRED_URL || 'http://64.227.185.154:3002';
 const did_url = process.env.DID_URL || 'http://64.227.185.154:3000';
 const schema_url = process.env.SCHEMA_URL || 'http://64.227.185.154:3001';
 const AADHAAR_DID_URL = process.env.AADHAAR_DID_URL || 'https://ulp.uniteframework.io/ulp-bff/v1/sso/student/getdid'
-const registry_url =  process.env.REGISTRY_URL || 'https://ulp.uniteframework.io/registry/'
+const registry_url = process.env.REGISTRY_URL || 'https://ulp.uniteframework.io/registry/'
 
 @Injectable()
 export class CredentialsService {
@@ -20,29 +20,16 @@ export class CredentialsService {
 
 
     async issueBulkCredential(credentialPlayload: CredentialDto, schemaId: string, response: Response) {
+
         console.log('credentialPlayload: ', credentialPlayload);
         console.log('schemaId: ', schemaId);
-
-
-
         var payload = credentialPlayload
-
-        //let schoolDid = payload.schoolDid
-
-        //const issuerRes = await middleware.generateDid(schoolDid);
-
-        //console.log("issuerRes", issuerRes)
-
-        //console.log("issuerRes", issuerRes[0].verificationMethod[0].controller)
-        // var issuerId = issuerRes[0].verificationMethod[0].controller
 
         var issuerId = "did:ulp:f08f7782-0d09-4c47-aacb-9092113bc33e"
         console.log("issuerId", issuerId)
+
         //generate schema
-        console.log("schemaId", schemaId)
-
         var schemaRes = await this.generateSchema(schemaId);
-
         console.log("schemaRes", schemaRes)
 
         //genrate did for each student
@@ -52,38 +39,90 @@ export class CredentialsService {
 
         var responseArray = []
 
+        // bulk import
         for (const iterator of payload.credentialSubject) {
 
-            let studentId = iterator.studentId;
+            var studentId = iterator.studentId;
             console.log("studentId", studentId)
-            //const didRes = await this.generateStudentDid(studentId);
-            const didRes = await this.generateDid(studentId);
-            console.log("didRes 59", didRes)
-            if (didRes) {
-                let did = didRes.result
-                iterator.id = did
 
-                //registery
-                const registerStudent = this.registerStudent(iterator)
-            }
+            //generate did or find did
 
-            let obj = {
-                issuerId: issuerId,
-                credSchema: schemaRes,
-                credentialSubject: iterator
-            }
-            console.log("obj", obj)
+            // find student
+            let name = iterator.studentName
+            let dob = iterator.dob
+            const studentDetails = await this.sbrcStudentSearch(name, dob)
 
-            if (iterator.id) {
+            if (studentDetails) {
+                if (studentDetails.did) {
+                    iterator.id = studentDetails.did
+                    let obj = {
+                        issuerId: issuerId,
+                        credSchema: schemaRes,
+                        credentialSubject: iterator
+                    }
+                    console.log("obj", obj)
 
-                const cred = await this.issueCredentials(obj)
-                //console.log("cred 34", cred)
-                if (cred) {
-                    responseArray.push(cred)
+                    if (iterator.id) {
+
+                        const cred = await this.issueCredentials(obj)
+                        //console.log("cred 34", cred)
+                        if (cred) {
+                            responseArray.push(cred)
+                        }
+                    }
+                } else {
+                    let didRes = this.generateDid(studentId)
+
+                    if (didRes) {
+                        iterator.id = didRes[0].verificationMethod[0].controller
+                        let updateRes = await this.updateStudentDetails(studentDetails.osid, iterator.id)
+                        console.log("updateRes", updateRes)
+                        let obj = {
+                            issuerId: issuerId,
+                            credSchema: schemaRes,
+                            credentialSubject: iterator
+                        }
+                        console.log("obj", obj)
+    
+                        if (iterator.id) {
+    
+                            const cred = await this.issueCredentials(obj)
+                            //console.log("cred 34", cred)
+                            if (cred) {
+                                responseArray.push(cred)
+                            }
+                        }
+
+                    }
+
+                }
+            } else {
+                let didRes = this.generateDid(studentId)
+
+                if (didRes) {
+                    iterator.id = didRes[0].verificationMethod[0].controller
+                }
+                let registerStudentRes = await this.sbrcInvite(iterator, 'studentdetail')
+                console.log("registerStudent", registerStudentRes)
+                let obj = {
+                    issuerId: issuerId,
+                    credSchema: schemaRes,
+                    credentialSubject: iterator
+                }
+                console.log("obj", obj)
+
+                if (iterator.id) {
+
+                    const cred = await this.issueCredentials(obj)
+                    //console.log("cred 34", cred)
+                    if (cred) {
+                        responseArray.push(cred)
+                    }
                 }
             }
         }
 
+        //bulk import response
         console.log("responseArray.length", responseArray.length)
         if (responseArray.length > 0) {
             return response.status(200).send({
@@ -118,8 +157,6 @@ export class CredentialsService {
 
         console.log("schemaRes", schemaRes)
 
-
-
         let studentId = payload.credentialSubject.studentId;
         console.log("studentId", studentId)
         const didRes = await this.generateDid(studentId);
@@ -135,7 +172,7 @@ export class CredentialsService {
             const updateRes = await this.updateStudentDetails(osid, did);
             console.log("updateRes", updateRes)
 
-            if(updateRes) {
+            if (updateRes) {
                 let obj = {
                     issuerId: issuerId,
                     credSchema: schemaRes,
@@ -367,7 +404,7 @@ export class CredentialsService {
 
     }
 
-    async generateStudentDid(studentId) {
+    async findStudentDid(studentId) {
 
         console.log("studentId", studentId)
 
@@ -436,17 +473,77 @@ export class CredentialsService {
         try {
             let res = await axios(config)
             return res
-        } catch(err) {
+        } catch (err) {
             console.log("update api err", err)
         }
-        
+
 
     }
 
-    // register Student
+    //register Student
+    async sbrcInvite(studentData, entityName) {
 
-    async registerStudent(obj) {
+        let inviteSchema = {
+            "did": studentData.id,
+            "dob": studentData.dob,
+            "meripehchanLoginId": "",
+            "aadhaarID": studentData.aadhaarId,
+            "studentName": studentData.studentName,
+            "schoolName": "",
+            "studentSchoolID": studentData.studentId,
+            "phoneNo": studentData.mobile,
+            "grade": "",
+            "username": ""
+        }
+
+        let data = JSON.stringify(inviteSchema);
+
+        let config_sb_rc = {
+            method: 'post',
+            url: process.env.REGISTRY_URL + 'api/v1/' + entityName + '/invite',
+            headers: {
+                'content-type': 'application/json',
+            },
+            data: data,
+        };
+
+        try {
+            const response = await axios(config_sb_rc)
+            return response.data;
+        } catch(err) {
+            console.log("sbrcInvite err")
+        }
         
+    }
+
+    //search student
+    async sbrcStudentSearch(studentName: string, dob: string) {
+        let data = JSON.stringify({
+            filters: {
+                studentName: {
+                    eq: studentName,
+                },
+                dob: {
+                    eq: dob,
+                },
+            },
+        });
+
+        let config = {
+            method: 'post',
+            url: process.env.REGISTRY_URL + 'api/v1/StudentDetail/search',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            data: data,
+        };
+        try {
+            const response = await axios(config);
+            return response.data;
+        } catch (err) {
+            console.log("sb_rc_search err")
+        }
+
     }
 
 }

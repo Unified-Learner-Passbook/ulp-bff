@@ -25,6 +25,7 @@ export class CredentialDto {
             motherName: string;
             guardianName: string;
             age: string;
+            dob: string;
             class: string;
             gender: string;
             mobile: number,

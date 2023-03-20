@@ -13,6 +13,7 @@ export class SSOService {
   //axios call
   md5 = require('md5');
   qs = require('qs');
+  moment = require('moment');
   //keycloak config
   keycloakCred = {
     grant_type: 'client_credentials',
@@ -543,13 +544,19 @@ export class SSOService {
               result: response_digi?.error,
             });
           } else {
+            const dob = await this.convertDate(token_data[0]?.birthdate);
+            const username_name = token_data[0]?.given_name.split(' ')[0];
+            const username_dob = await this.replaceChar(dob, '/', '');
+            const auto_username = username_name + '@' + username_dob;
             let response_data = {
               meripehchanid: token_data[0]?.sub,
               name: token_data[0]?.given_name,
               mobile: token_data[0]?.phone_number,
+              dob: dob,
+              username: auto_username,
             };
             const sb_rc_search = await this.searchDigiEntity(
-              digiacc === 'ewallet' ? 'StudentDetail' : 'Teacher',
+              digiacc === 'ewallet' ? 'StudentDetail' : 'TeacherV1',
               response_data?.meripehchanid,
             );
             if (sb_rc_search?.error) {
@@ -570,7 +577,7 @@ export class SSOService {
             } else {
               const auto_username =
                 digiacc === 'ewallet'
-                  ? response_data?.meripehchanid + '_student'
+                  ? response_data?.username
                   : response_data?.meripehchanid + '_teacher';
               const auto_password = await this.md5(
                 auto_username + 'MjQFlAJOQSlWIQJHOEDhod',
@@ -637,7 +644,9 @@ export class SSOService {
       } else {
         //register in keycloak
         const auto_username =
-          digiacc === 'ewallet' ? digimpid + '_student' : digimpid + '_teacher';
+          digiacc === 'ewallet'
+            ? userdata?.student?.username
+            : digimpid + '_teacher';
         const auto_password = await this.md5(
           auto_username + 'MjQFlAJOQSlWIQJHOEDhod',
         );
@@ -657,55 +666,31 @@ export class SSOService {
           });
         } else {
           //ewallet registration student
-
           if (digiacc === 'ewallet') {
-            // sunbird registery student
-            let sb_rc_response_text = await this.sbrcInvite(
-              userdata.student,
-              'StudentDetail',
+            //find if student account present in sb rc or not
+            const sb_rc_search = await this.sbrcStudentSearch(
+              userdata?.student?.studentName,
+              userdata?.student?.dob,
             );
-            if (sb_rc_response_text?.error) {
-              return response.status(400).send({
+            if (sb_rc_search?.error) {
+              return response.status(501).send({
                 success: false,
-                status: 'sb_rc_register_error',
-                message: 'Sunbird RC Student Registration Failed',
-                result: sb_rc_response_text?.error,
+                status: 'sb_rc_search_error',
+                message: 'Sunbird RC Student Search Failed',
+                result: sb_rc_search?.error,
               });
-            } else if (sb_rc_response_text?.params?.status === 'SUCCESSFUL') {
-            } else {
-              return response.status(400).send({
-                success: false,
-                status: 'sb_rc_register_duplicate',
-                message: 'Student Already Registered in Sunbird RC',
-                result: sb_rc_response_text,
-              });
-            }
-          }
-          //portal registration teacher and school
-          else {
-            // sunbird registery teacher
-            let sb_rc_response_text = await this.sbrcInvite(
-              userdata.teacher,
-              'Teacher',
-            );
-            if (sb_rc_response_text?.error) {
-              return response.status(400).send({
-                success: false,
-                status: 'sb_rc_register_error',
-                message: 'Sunbird RC Teacher Registration Failed',
-                result: sb_rc_response_text?.error,
-              });
-            } else if (sb_rc_response_text?.params?.status === 'SUCCESSFUL') {
-              // sunbird registery school
+            } else if (sb_rc_search.length === 0) {
+              // no student found then register
+              // sunbird registery student
               let sb_rc_response_text = await this.sbrcInvite(
-                userdata.school,
-                'SchoolDetail',
+                userdata.student,
+                'StudentDetail',
               );
               if (sb_rc_response_text?.error) {
                 return response.status(400).send({
                   success: false,
                   status: 'sb_rc_register_error',
-                  message: 'Sunbird RC SchoolDetail Registration Failed',
+                  message: 'Sunbird RC Student Registration Failed',
                   result: sb_rc_response_text?.error,
                 });
               } else if (sb_rc_response_text?.params?.status === 'SUCCESSFUL') {
@@ -713,17 +698,120 @@ export class SSOService {
                 return response.status(400).send({
                   success: false,
                   status: 'sb_rc_register_duplicate',
-                  message: 'SchoolDetail Already Registered in Sunbird RC',
+                  message: 'Student Already Registered in Sunbird RC',
                   result: sb_rc_response_text,
                 });
               }
             } else {
+              //update value found id
+              const osid = sb_rc_search[0]?.osid;
+              // sunbird registery student
+              let sb_rc_response_text = await this.sbrcUpdate(
+                {
+                  meripehchanLoginId: userdata?.student?.meripehchanLoginId,
+                  aadhaarID: userdata?.student?.aadhaarID,
+                  schoolName: userdata?.student?.schoolName,
+                  studentSchoolID: userdata?.student?.studentSchoolID,
+                  phoneNo: userdata?.student?.phoneNo,
+                  grade: userdata?.student?.grade,
+                  username: userdata?.student?.username,
+                },
+                'StudentDetail',
+                osid,
+              );
+              if (sb_rc_response_text?.error) {
+                return response.status(400).send({
+                  success: false,
+                  status: 'sb_rc_update_error',
+                  message: 'Sunbird RC Student Update Failed',
+                  result: sb_rc_response_text?.error,
+                });
+              } else if (sb_rc_response_text?.params?.status === 'SUCCESSFUL') {
+              } else {
+                return response.status(400).send({
+                  success: false,
+                  status: 'sb_rc_update_error',
+                  message: 'Sunbird RC Student Update Failed',
+                  result: sb_rc_response_text,
+                });
+              }
+            }
+          }
+          //portal registration teacher and school
+          else {
+            // sunbird registery teacher
+            //get teacher did
+            const issuerRes = await this.generateDid(
+              userdata?.teacher?.meripehchanLoginId,
+            );
+            if (issuerRes?.error) {
               return response.status(400).send({
                 success: false,
-                status: 'sb_rc_register_duplicate',
-                message: 'Teacher Already Registered in Sunbird RC',
-                result: sb_rc_response_text,
+                status: 'did_generate_error_teacher',
+                message: 'DID Generate Failed for Teacher. Try Again.',
+                result: issuerRes?.error,
               });
+            } else {
+              var did = issuerRes[0].verificationMethod[0].controller;
+              userdata.teacher.did = did;
+              let sb_rc_response_text = await this.sbrcInvite(
+                userdata.teacher,
+                'TeacherV1',
+              );
+              if (sb_rc_response_text?.error) {
+                return response.status(400).send({
+                  success: false,
+                  status: 'sb_rc_register_error',
+                  message: 'Sunbird RC Teacher Registration Failed',
+                  result: sb_rc_response_text?.error,
+                });
+              } else if (sb_rc_response_text?.params?.status === 'SUCCESSFUL') {
+                // sunbird registery school
+                //get school did
+                const issuerRes = await this.generateDid(
+                  userdata?.school?.udiseCode,
+                );
+                if (issuerRes?.error) {
+                  return response.status(400).send({
+                    success: false,
+                    status: 'did_generate_error_school',
+                    message: 'DID Generate Failed for School. Try Again.',
+                    result: issuerRes?.error,
+                  });
+                } else {
+                  var did = issuerRes[0].verificationMethod[0].controller;
+                  userdata.school.did = did;
+                  let sb_rc_response_text = await this.sbrcInvite(
+                    userdata.school,
+                    'SchoolDetail',
+                  );
+                  if (sb_rc_response_text?.error) {
+                    return response.status(400).send({
+                      success: false,
+                      status: 'sb_rc_register_error',
+                      message: 'Sunbird RC SchoolDetail Registration Failed',
+                      result: sb_rc_response_text?.error,
+                    });
+                  } else if (
+                    sb_rc_response_text?.params?.status === 'SUCCESSFUL'
+                  ) {
+                  } else {
+                    return response.status(400).send({
+                      success: false,
+                      status: 'sb_rc_register_duplicate',
+                      message: 'SchoolDetail Already Registered in Sunbird RC',
+                      result: sb_rc_response_text,
+                    });
+                  }
+                }
+              } else {
+                return response.status(400).send({
+                  success: false,
+                  status: 'sb_rc_register_duplicate',
+                  message: 'Teacher Already Registered in Sunbird RC',
+                  result: sb_rc_response_text,
+                });
+              }
             }
           }
           //login and get token
@@ -805,6 +893,26 @@ export class SSOService {
   }
 
   //helper function
+  //get convert date and repalce character from string
+  async convertDate(datetime) {
+    if (!datetime) {
+      return '';
+    }
+    let date_string = datetime.substring(0, 10);
+    const datetest = this.moment(date_string, 'DD/MM/YYYY').format(
+      'DD/MM/YYYY',
+    );
+    return datetest;
+  }
+  async replaceChar(replaceString, found, replace) {
+    if (!replaceString) {
+      return '';
+    }
+    const search = found;
+    const replaceWith = replace;
+    const result = replaceString.split(search).join(replaceWith);
+    return result;
+  }
   //get jwt token information
   async parseJwt(token) {
     if (!token) {
@@ -990,6 +1098,40 @@ export class SSOService {
     return sb_rc_search;
   }
 
+  //search student
+  async sbrcStudentSearch(studentName: string, dob: string) {
+    let data = JSON.stringify({
+      filters: {
+        studentName: {
+          eq: studentName,
+        },
+        dob: {
+          eq: dob,
+        },
+      },
+    });
+
+    let config = {
+      method: 'post',
+      url: process.env.REGISTRY_URL + 'api/v1/StudentDetail/search',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      data: data,
+    };
+    let sb_rc_search = null;
+    await axios(config)
+      .then(function (response) {
+        //console.log(JSON.stringify(response.data));
+        sb_rc_search = response.data;
+      })
+      .catch(function (error) {
+        //console.log(error);
+        sb_rc_search = { error: error };
+      });
+    return sb_rc_search;
+  }
+
   //verify student token
   async verifyStudentToken(token: string) {
     let config = {
@@ -1143,6 +1285,33 @@ export class SSOService {
     let config_sb_rc = {
       method: 'post',
       url: process.env.REGISTRY_URL + 'api/v1/' + entityName + '/invite',
+      headers: {
+        'content-type': 'application/json',
+      },
+      data: data,
+    };
+
+    var sb_rc_response_text = null;
+    await axios(config_sb_rc)
+      .then(function (response) {
+        //console.log(JSON.stringify(response.data));
+        sb_rc_response_text = response.data;
+      })
+      .catch(function (error) {
+        //console.log(error);
+        sb_rc_response_text = { error: error };
+      });
+
+    return sb_rc_response_text;
+  }
+
+  // invite entity in registery
+  async sbrcUpdate(updateSchema, entityName, osid) {
+    let data = JSON.stringify(updateSchema);
+
+    let config_sb_rc = {
+      method: 'put',
+      url: process.env.REGISTRY_URL + 'api/v1/' + entityName + '/' + osid,
       headers: {
         'content-type': 'application/json',
       },

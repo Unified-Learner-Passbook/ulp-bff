@@ -10,6 +10,7 @@ export class SingleCredentialDto {
     expirationDate: string;
         credentialSubject: {
                 id: any;
+                did: any;
                 credentialSubject: { id: any; grade: string; programme: any; certifyingInstitute: any; evaluatingInstitute: any; };
                 credSchema: void;
                 grade: string;
