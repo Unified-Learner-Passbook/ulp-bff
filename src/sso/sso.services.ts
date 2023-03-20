@@ -678,7 +678,7 @@ export class SSOService {
       let response_digi = null;
       await axios(config)
         .then(function (response) {
-          //console.log(JSON.stringify(response.data));
+          console.log(JSON.stringify(response.data));
           response_digi = { data: response.data };
         })
         .catch(function (error) {
