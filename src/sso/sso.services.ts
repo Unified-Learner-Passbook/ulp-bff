@@ -873,7 +873,7 @@ export class SSOService {
                   success: false,
                   status: 'keycloak_invalid_credentials',
                   message: userToken?.error.message,
-                  result: null,
+                  result: userToken?.error,
                 });
               } else {
                 return response.status(200).send({
@@ -1284,7 +1284,7 @@ export class SSOService {
         response_text = response.data;
       })
       .catch(function (error) {
-        //console.log("error 520");
+        console.log('error 520', error);
         response_text = { error: error };
       });
 
