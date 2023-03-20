@@ -7,6 +7,7 @@ import { createWriteStream, writeFile } from 'fs';
 import { Response, Request } from 'express';
 import * as wkhtmltopdf from 'wkhtmltopdf';
 import { UserDto } from './dto/user-dto';
+import { schoolList } from './constlist/schoollist';
 
 @Injectable()
 export class SSOService {
@@ -20,7 +21,6 @@ export class SSOService {
     client_id: process.env.KEYCLOAK_CLIENT_ID,
     client_secret: process.env.KEYCLOAK_CLIENT_SECRET,
   };
-
   //registerStudent
   async registerStudent(user: UserDto, response: Response) {
     if (user) {
@@ -1176,6 +1176,21 @@ export class SSOService {
     });
   }
 
+  //getSchoolList
+  async getSchoolList(response: Response) {
+    //console.log('hi');
+    response.status(200).send(schoolList);
+  }
+  //getSchoolListUdise
+  async getSchoolListUdise(udise, response: Response) {
+    //console.log('hi');
+    let obj = schoolList.find((o) => o.udiseCode === udise);
+    if (obj) {
+      response.status(200).send({ success: true, status: 'found', data: obj });
+    } else {
+      response.status(400).send({ success: false, status: 'no_found' });
+    }
+  }
   //helper function
   //get convert date and repalce character from string
   async convertDate(datetime) {

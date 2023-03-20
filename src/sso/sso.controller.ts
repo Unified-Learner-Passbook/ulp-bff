@@ -153,6 +153,19 @@ export class SSOController {
   ) {
     return this.ssoService.udiseVerify(udiseid, response);
   }
+  //get school list
+  @Get('/udise/school/list')
+  async getSchoolList(@Res() response: Response) {
+    return this.ssoService.getSchoolList(response);
+  }
+  //get school list id
+  @Get('/udise/school/list/:udise')
+  async getSchoolListUdise(
+    @Param('udise') udise: string,
+    @Res() response: Response,
+  ) {
+    return this.ssoService.getSchoolListUdise(udise, response);
+  }
   //new credentials list schema id schema template
   //credentialsSearch
   @Post('/student/credentials/search')
