@@ -26,7 +26,7 @@ export class SingleCredentialDto {
                 age: string;
                 class: string;
                 gender: string;
-                mobile: number,
+                mobile: string,
                 email: string;
                 aadhaarId: string;
                 districtId: string;

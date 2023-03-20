@@ -51,10 +51,10 @@ export class CredentialsService {
             let name = iterator.studentName
             let dob = iterator.dob
             const studentDetails = await this.sbrcStudentSearch(name, dob)
-
-            if (studentDetails) {
-                if (studentDetails.did) {
-                    iterator.id = studentDetails.did
+            console.log("studentDetails", studentDetails)
+            if (studentDetails.length>0) {
+                if (studentDetails[0]?.did) {
+                    iterator.id = studentDetails[0].did
                     let obj = {
                         issuerId: issuerId,
                         credSchema: schemaRes,
@@ -75,7 +75,7 @@ export class CredentialsService {
                     console.log("didRes 75", didRes[0])
                     if (didRes) {
                         iterator.id = didRes[0].verificationMethod[0].controller
-                        let updateRes = await this.updateStudentDetails(studentDetails.osid, iterator.id)
+                        let updateRes = await this.sbrcUpdate({did: iterator.id}, 'StudentDetail', studentDetails[0].osid)
                         console.log("updateRes", updateRes)
                         let obj = {
                             issuerId: issuerId,
@@ -97,13 +97,36 @@ export class CredentialsService {
 
                 }
             } else {
-                let didRes = this.generateDid(studentId)
+                console.log("else 100")
+                let didRes = await this.generateDid(studentId)
 
                 if (didRes) {
                     iterator.id = didRes[0].verificationMethod[0].controller
                 }
-                let registerStudentRes = await this.sbrcInvite(iterator, 'studentdetail')
-                console.log("registerStudent", registerStudentRes)
+
+                let inviteSchema = {
+                    "did": iterator.id,
+                    "dob": iterator.dob,
+                    "meripehchanLoginId": "",
+                    "aadhaarID": iterator.aadhaarId,
+                    "studentName": iterator.studentName,
+                    "schoolName": "",
+                    "studentSchoolID": iterator.studentId,
+                    "phoneNo": iterator.mobile.toString(),
+                    "grade": "",
+                    "username": ""
+                }
+                let sb_rc_response_text = await this.sbrcInvite(inviteSchema, 'StudentDetail')
+                console.log("registerStudent", sb_rc_response_text)
+                if (sb_rc_response_text?.error) {
+                    console.log("err 122", sb_rc_response_text.error)
+                  } else if (
+                    sb_rc_response_text?.params?.status === 'SUCCESSFUL'
+                  ) {
+                    console.log("successfull")
+                  } else {
+                    console.log("err 128", sb_rc_response_text)
+                  }
                 let obj = {
                     issuerId: issuerId,
                     credSchema: schemaRes,
@@ -481,7 +504,7 @@ export class CredentialsService {
     }
 
     //register Student
-    async sbrcInvite(studentData, entityName) {
+    async sbrcInvite1(studentData, entityName) {
 
         let inviteSchema = {
             "did": studentData.id,
@@ -516,6 +539,32 @@ export class CredentialsService {
         
     }
 
+    async sbrcInvite(inviteSchema, entityName) {
+        let data = JSON.stringify(inviteSchema);
+    
+        let config_sb_rc = {
+          method: 'post',
+          url: process.env.REGISTRY_URL + 'api/v1/' + entityName + '/invite',
+          headers: {
+            'content-type': 'application/json',
+          },
+          data: data,
+        };
+    
+        var sb_rc_response_text = null;
+        await axios(config_sb_rc)
+          .then(function (response) {
+            //console.log(JSON.stringify(response.data));
+            sb_rc_response_text = response.data;
+          })
+          .catch(function (error) {
+            //console.log(error);
+            sb_rc_response_text = { error: error };
+          });
+    
+        return sb_rc_response_text;
+      }
+
     //search student
     async sbrcStudentSearch(studentName: string, dob: string) {
         let data = JSON.stringify({
@@ -545,5 +594,35 @@ export class CredentialsService {
         }
 
     }
+
+    //update
+    async sbrcUpdate(updateSchema, entityName, osid) {
+        console.log("updateSchema", updateSchema)
+        console.log("entityName", entityName)
+        console.log("osid", osid)
+        let data = JSON.stringify(updateSchema);
+    
+        let config_sb_rc = {
+          method: 'put',
+          url: process.env.REGISTRY_URL + 'api/v1/' + entityName + '/' + osid,
+          headers: {
+            'content-type': 'application/json',
+          },
+          data: data,
+        };
+    
+        var sb_rc_response_text = null;
+        await axios(config_sb_rc)
+          .then(function (response) {
+            //console.log(JSON.stringify(response.data));
+            sb_rc_response_text = response.data;
+          })
+          .catch(function (error) {
+            //console.log(error);
+            sb_rc_response_text = { error: error };
+          });
+    
+        return sb_rc_response_text;
+      }
 
 }
