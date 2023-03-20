@@ -22,6 +22,7 @@ export class SSOController {
 
   @Get('/student')
   getUser(@Res() response: Response) {
+    //console.log('hi');
     const result = {
       success: true,
       message: 'Student API Working 16 March New Update 2',
@@ -131,5 +132,26 @@ export class SSOController {
     @Res() response: Response,
   ) {
     return this.ssoService.udiseVerify(udiseid, response);
+  }
+  //new credentials list schema id schema template
+  //credentialsSearch
+  @Post('/student/credentials/search')
+  async credentialsSearch(
+    @Headers('Authorization') auth: string,
+    @Body('subjectId') subjectId: any,
+    @Res() response: Response,
+  ) {
+    const jwt = auth.replace('Bearer ', '');
+    return this.ssoService.credentialsSearch(jwt, subjectId, response);
+  }
+  //credentialsSchema
+  @Get('/student/credentials/schema/:id')
+  async credentialsSchema(@Param('id') id: string, @Res() response: Response) {
+    return this.ssoService.credentialsSchema(id, response);
+  }
+  //credentialsSchemaJSON
+  @Get('/student/credentials/schema/json/:id')
+  async credentialsSchemaJSON(@Param('id') id: string, @Res() response: Response) {
+    return this.ssoService.credentialsSchemaJSON(id, response);
   }
 }

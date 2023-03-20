@@ -463,6 +463,166 @@ export class SSOService {
     }
   }
 
+  //credentialsSearch
+  async credentialsSearch(
+    token: string,
+    subjectId: string,
+    response: Response,
+  ) {
+    if (token && subjectId) {
+      const studentUsername = await this.verifyStudentToken(token);
+      if (studentUsername?.error) {
+        return response.status(401).send({
+          success: false,
+          status: 'keycloak_student_token_bad_request',
+          message: 'Unauthorized',
+          result: studentUsername?.error,
+        });
+      } else if (!studentUsername?.preferred_username) {
+        return response.status(400).send({
+          success: false,
+          status: 'keycloak_student_token_error',
+          message: 'Keycloak Student Token Expired',
+          result: studentUsername,
+        });
+      } else {
+        var data = JSON.stringify({
+          subject: {
+            id: subjectId,
+          },
+        });
+        var config = {
+          method: 'post',
+          url: process.env.CRED_URL + '/credentials/search',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          data: data,
+        };
+
+        let render_response = null;
+        await axios(config)
+          .then(function (response) {
+            //console.log(JSON.stringify(response.data));
+            render_response = response.data;
+          })
+          .catch(function (error) {
+            //console.log(error);
+            render_response = { error: error };
+          });
+
+        if (render_response?.error) {
+          return response.status(400).send({
+            success: false,
+            status: 'cred_search_api_failed',
+            message: 'Cred Search API Failed',
+            result: render_response,
+          });
+        } else {
+          return response.status(200).send({
+            success: true,
+            status: 'cred_search_api_success',
+            message: 'Cred Search API Success',
+            result: render_response,
+          });
+        }
+      }
+    } else {
+      return response.status(400).send({
+        success: false,
+        status: 'invalid_request',
+        message: 'Invalid Request. Not received token or subject ID.',
+        result: null,
+      });
+    }
+  }
+
+  //credentialsSchema
+  async credentialsSchema(id: string, response: Response) {
+    if (id) {
+      var config = {
+        method: 'get',
+        url: process.env.CRED_URL + '/credentials/schema/' + id,
+        headers: {},
+      };
+      let response_text = null;
+      await axios(config)
+        .then(function (response) {
+          //console.log(JSON.stringify(response.data));
+          response_text = response.data;
+        })
+        .catch(function (error) {
+          //console.log(error);
+          response_text = { error: error };
+        });
+      if (response_text?.error) {
+        return response.status(400).send({
+          success: false,
+          status: 'cred_schema_api_failed',
+          message: 'Cred Schema API Failed',
+          result: response_text,
+        });
+      } else {
+        return response.status(200).send({
+          success: true,
+          status: 'cred_schema_api_success',
+          message: 'Cred Schema API Success',
+          result: response_text,
+        });
+      }
+    } else {
+      return response.status(400).send({
+        success: false,
+        status: 'invalid_request',
+        message: 'Invalid Request. Not received All Parameters.',
+        result: null,
+      });
+    }
+  }
+
+  //credentialsSchemaJSON
+  async credentialsSchemaJSON(id: string, response: Response) {
+    if (id) {
+      var config = {
+        method: 'get',
+        url: process.env.SCHEMA_URL + '/schema/jsonld?id=' + id,
+        headers: {},
+      };
+      let response_text = null;
+      await axios(config)
+        .then(function (response) {
+          //console.log(JSON.stringify(response.data));
+          response_text = response.data;
+        })
+        .catch(function (error) {
+          //console.log(error);
+          response_text = { error: error };
+        });
+      if (response_text?.error) {
+        return response.status(400).send({
+          success: false,
+          status: 'cred_schema_json_api_failed',
+          message: 'Cred Schema JSON API Failed',
+          result: response_text,
+        });
+      } else {
+        return response.status(200).send({
+          success: true,
+          status: 'cred_schema_json_api_success',
+          message: 'Cred Schema JSON API Success',
+          result: response_text,
+        });
+      }
+    } else {
+      return response.status(400).send({
+        success: false,
+        status: 'invalid_request',
+        message: 'Invalid Request. Not received All Parameters.',
+        result: null,
+      });
+    }
+  }
+
   //digilockerAuthorize
   async digilockerAuthorize(digiacc: string, response: Response) {
     //console.log(request);
@@ -518,7 +678,7 @@ export class SSOService {
       let response_digi = null;
       await axios(config)
         .then(function (response) {
-          //console.log(JSON.stringify(response.data));
+          console.log(JSON.stringify(response.data));
           response_digi = { data: response.data };
         })
         .catch(function (error) {
