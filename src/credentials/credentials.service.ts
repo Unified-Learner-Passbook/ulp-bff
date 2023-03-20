@@ -56,12 +56,15 @@ export class CredentialsService {
 
             let studentId = iterator.studentId;
             console.log("studentId", studentId)
-            const didRes = await this.generateStudentDid(studentId);
-
+            //const didRes = await this.generateStudentDid(studentId);
+            const didRes = await this.generateDid(studentId);
             console.log("didRes 59", didRes)
             if (didRes) {
                 let did = didRes.result
                 iterator.id = did
+
+                //registery
+                const registerStudent = this.registerStudent(iterator)
             }
 
             let obj = {
@@ -438,6 +441,12 @@ export class CredentialsService {
         }
         
 
+    }
+
+    // register Student
+
+    async registerStudent(obj) {
+        
     }
 
 }
