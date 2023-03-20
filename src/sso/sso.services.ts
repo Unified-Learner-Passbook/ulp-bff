@@ -648,6 +648,7 @@ export class SSOService {
           digiacc === 'ewallet' ? 'StudentDetail' : 'TeacherV1',
           studentUsername?.preferred_username,
         );
+        console.log(sb_rc_search);
         if (sb_rc_search?.error) {
           return response.status(501).send({
             success: false,
@@ -1036,6 +1037,7 @@ export class SSOService {
             } else {
               var did = issuerRes[0].verificationMethod[0].controller;
               userdata.teacher.did = did;
+              userdata.teacher.username = auto_username;
               let sb_rc_response_text = await this.sbrcInvite(
                 userdata.teacher,
                 'TeacherV1',

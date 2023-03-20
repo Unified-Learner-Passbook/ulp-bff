@@ -25,7 +25,7 @@ export class SSOController {
     //console.log('hi');
     const result = {
       success: true,
-      message: 'Student API Working 16 March New Update 2',
+      message: 'Student API Working 20 March',
     };
     response.status(200).send(result);
   }
