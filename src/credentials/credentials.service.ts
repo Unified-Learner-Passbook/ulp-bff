@@ -71,8 +71,8 @@ export class CredentialsService {
                         }
                     }
                 } else {
-                    let didRes = this.generateDid(studentId)
-
+                    let didRes = await this.generateDid(studentId)
+                    console.log("didRes 75", didRes[0])
                     if (didRes) {
                         iterator.id = didRes[0].verificationMethod[0].controller
                         let updateRes = await this.updateStudentDetails(studentDetails.osid, iterator.id)
@@ -294,7 +294,7 @@ export class CredentialsService {
 
         try {
             const response = await axios(config)
-            //console.log("response did", response.data)
+            console.log("response did", response.data)
             return response.data;
         } catch (error) {
             console.log("error did", error)
