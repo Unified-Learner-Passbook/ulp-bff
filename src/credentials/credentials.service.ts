@@ -188,7 +188,7 @@ export class CredentialsService {
         let studentId = payload.credentialSubject.studentId;
         console.log("studentId", studentId)
         const didRes = await this.generateDid(studentId);
-        console.log("didRes 59", didRes)
+        console.log("didRes 191", didRes)
 
 
         if (didRes) {
