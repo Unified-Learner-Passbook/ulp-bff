@@ -175,8 +175,9 @@ export class CredentialsService {
 
 
         //var issuerId = "did:ulp:f08f7782-0d09-4c47-aacb-9092113bc33e"
-        var issuerId = credentialPlayload.issuer;
+        var issuerId = credentialPlayload.credentialSubject.issuer;
         console.log("issuerId", issuerId)
+        
         //generate schema
         console.log("schemaId", schemaId)
 
@@ -196,8 +197,11 @@ export class CredentialsService {
 
             //update did inside sbrc
             let osid = payload.credentialSubject.osid;
-            const updateRes = await this.updateStudentDetails(osid, did);
-            console.log("updateRes", updateRes)
+            //const updateRes = await this.updateStudentDetails(osid, did);
+            
+
+            let updateRes = await this.sbrcUpdate({did: did}, 'StudentDetail', osid)
+            console.log("updateRes 199", updateRes)
 
             if (updateRes) {
                 let obj = {
