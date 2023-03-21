@@ -7,6 +7,7 @@ export class CredentialDto {
     grade: string;
     academicYear: string;
     issuanceDate: string;
+    issuer: string;
     expirationDate: string;
         credentialSubject:[
             {
@@ -14,6 +15,8 @@ export class CredentialDto {
             credentialSubject: { id: any; grade: string; programme: any; certifyingInstitute: any; evaluatingInstitute: any; };
             credSchema: void;
             grade: string;
+            schoolName: string;
+            academicYear: string;
             credId: any;
             issuerId: string;
             evaluatingInstitute: any;

@@ -25,7 +25,7 @@ export class CredentialsService {
         console.log('schemaId: ', schemaId);
         var payload = credentialPlayload
 
-        var issuerId = "did:ulp:f08f7782-0d09-4c47-aacb-9092113bc33e"
+        var issuerId = credentialPlayload.issuer;
         console.log("issuerId", issuerId)
 
         //generate schema
@@ -44,6 +44,9 @@ export class CredentialsService {
 
             var studentId = iterator.studentId;
             console.log("studentId", studentId)
+            iterator.schoolName = credentialPlayload.schoolName ? credentialPlayload.schoolName : '';
+            iterator.grade = credentialPlayload.grade;
+            iterator.academicYear = credentialPlayload.academicYear;
 
             //generate did or find did
 
