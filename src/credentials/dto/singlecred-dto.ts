@@ -8,6 +8,7 @@ export class SingleCredentialDto {
     academicYear: string;
     issuanceDate: string;
     expirationDate: string;
+    issuer: string;
     credentialSubject: {
         issuer: string;
         id: any;
