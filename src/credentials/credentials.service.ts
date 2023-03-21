@@ -174,7 +174,8 @@ export class CredentialsService {
         var payload = credentialPlayload
 
 
-        var issuerId = "did:ulp:f08f7782-0d09-4c47-aacb-9092113bc33e"
+        //var issuerId = "did:ulp:f08f7782-0d09-4c47-aacb-9092113bc33e"
+        var issuerId = credentialPlayload.issuer;
         console.log("issuerId", issuerId)
         //generate schema
         console.log("schemaId", schemaId)
