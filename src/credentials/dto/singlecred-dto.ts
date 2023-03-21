@@ -10,7 +10,6 @@ export class SingleCredentialDto {
     expirationDate: string;
     issuer: string;
     credentialSubject: {
-        issuer: string;
         id: any;
         credentialSubject: { id: any; grade: string; programme: any; certifyingInstitute: any; evaluatingInstitute: any; };
         credSchema: void;
@@ -36,7 +35,7 @@ export class SingleCredentialDto {
         districtId: string;
         blockId: string;
         villageId: string;
-        schoolId: number,
+        schoolId: string,
         status: string;
         osid: string
     }
