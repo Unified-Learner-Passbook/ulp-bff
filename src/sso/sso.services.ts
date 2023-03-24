@@ -464,33 +464,25 @@ export class SSOService {
   }
 
   //credentialsSearch
-  async credentialsSearch(
-    token: string,
-    subjectId: string,
-    response: Response,
-  ) {
-    if (token && subjectId) {
+  async credentialsSearch(token: string, requestbody: any, response: Response) {
+    if (token && requestbody) {
       const studentUsername = await this.verifyStudentToken(token);
       if (studentUsername?.error) {
         return response.status(401).send({
           success: false,
-          status: 'keycloak_student_token_bad_request',
+          status: 'keycloak_token_bad_request',
           message: 'Unauthorized',
-          result: studentUsername?.error,
+          result: null,
         });
       } else if (!studentUsername?.preferred_username) {
         return response.status(400).send({
           success: false,
-          status: 'keycloak_student_token_error',
-          message: 'Keycloak Student Token Expired',
-          result: studentUsername,
+          status: 'keycloak_token_error',
+          message: 'Keycloak Token Expired',
+          result: null,
         });
       } else {
-        var data = JSON.stringify({
-          subject: {
-            id: subjectId,
-          },
-        });
+        var data = JSON.stringify(requestbody);
         var config = {
           method: 'post',
           url: process.env.CRED_URL + '/credentials/search',
@@ -531,7 +523,73 @@ export class SSOService {
       return response.status(400).send({
         success: false,
         status: 'invalid_request',
-        message: 'Invalid Request. Not received token or subject ID.',
+        message: 'Invalid Request. Not received token or requestbody.',
+        result: null,
+      });
+    }
+  }
+
+  //credentialsIssue
+  async credentialsIssue(token: string, requestbody: any, response: Response) {
+    if (token && requestbody) {
+      const studentUsername = await this.verifyStudentToken(token);
+      if (studentUsername?.error) {
+        return response.status(401).send({
+          success: false,
+          status: 'keycloak_bad_request',
+          message: 'Unauthorized',
+          result: null,
+        });
+      } else if (!studentUsername?.preferred_username) {
+        return response.status(400).send({
+          success: false,
+          status: 'keycloak_token_error',
+          message: 'Keycloak Token Expired',
+          result: null,
+        });
+      } else {
+        var data = JSON.stringify(requestbody);
+        var config = {
+          method: 'post',
+          url: process.env.CRED_URL + '/credentials/issue',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          data: data,
+        };
+
+        let render_response = null;
+        await axios(config)
+          .then(function (response) {
+            //console.log(JSON.stringify(response.data));
+            render_response = response.data;
+          })
+          .catch(function (error) {
+            //console.log(error);
+            render_response = { error: error };
+          });
+
+        if (render_response?.error) {
+          return response.status(400).send({
+            success: false,
+            status: 'cred_issue_api_failed',
+            message: 'Cred Issue API Failed',
+            result: render_response,
+          });
+        } else {
+          return response.status(200).send({
+            success: true,
+            status: 'cred_issue_api_success',
+            message: 'Cred Issue API Success',
+            result: render_response,
+          });
+        }
+      }
+    } else {
+      return response.status(400).send({
+        success: false,
+        status: 'invalid_request',
+        message: 'Invalid Request. Not received token or requestbody.',
         result: null,
       });
     }
