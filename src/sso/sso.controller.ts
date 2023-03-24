@@ -171,11 +171,21 @@ export class SSOController {
   @Post('/student/credentials/search')
   async credentialsSearch(
     @Headers('Authorization') auth: string,
-    @Body('subjectId') subjectId: any,
+    @Body() requestbody: any,
     @Res() response: Response,
   ) {
     const jwt = auth.replace('Bearer ', '');
-    return this.ssoService.credentialsSearch(jwt, subjectId, response);
+    return this.ssoService.credentialsSearch(jwt, requestbody, response);
+  }
+  //credentialsIssue
+  @Post('/student/credentials/issue')
+  async credentialsIssue(
+    @Headers('Authorization') auth: string,
+    @Body() requestbody: any,
+    @Res() response: Response,
+  ) {
+    const jwt = auth.replace('Bearer ', '');
+    return this.ssoService.credentialsIssue(jwt, requestbody, response);
   }
   //credentialsSchema
   @Get('/student/credentials/schema/:id')
