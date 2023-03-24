@@ -64,7 +64,7 @@ paths:
     post:
       tags:
         - student
-      description: Student Register API. It create student account with username as aadhaar id in Keycloak and then add student record with generated DID in Sunbird RC 
+      description: Student Register API. It create student account with username as studentid id in Keycloak and then add student record with generated DID in Sunbird RC 
       requestBody:
         description: post variable aadhaarid, studentname, schoolname, studentid, phoneno
         content:
@@ -176,26 +176,15 @@ components:
         schoolName:
           type: string
           example: Delhi public school
-        schoolDistrict:
-          type: string
-          example: Delhi
-        schoolState:
-          type: string
-          example: Delhi
         grade:
           type: string
           example: class-8
         academicYear:
           type: string
           example: 2022-2023
-        issuanceDate:
-          type: string
-          example: ""
-        expirationDate:
-          type: string
-          example: ""
         credentialSubject:
           type: array
+          example: [{"studentId": "123456","studentName": "Vivek Ramchandra Kasture","fatherName": "BASANT","motherName": "SARMI","guardianName": "Sarmi","dob": "14/08/1993","class": "Level - V","gender": "Male","mobile": "9044904842","aadhaarId": "adhaartest1","districtId": "Lucknow","blockId": "Sarojini Nagar","villageId": "Sarojini Nagar",}]
           xml:
             wrapped: true
           items:
@@ -205,15 +194,42 @@ components:
     credentialSubject:
       type: object
       properties:
-        studentName:
-          type: string
-          example: ANAMIKA
-        guardianName:
-          type: string
-          example: Rakesh
         studentId:
           type: string
           example: 236239
+        studentName:
+          type: string
+          example: ANAMIKA
+        fatherName:
+          type: string
+          example: BASANT
+        guardianName:
+          type: string
+          example: Rakesh
+        dob:
+          type: string
+          example: 14/08/1993
+        class:
+          type: string
+          example: Level - V
+        gender:
+          type: string
+          example: Male
+        mobile:
+          type: string
+          example: 9044904842
+        aadhaarId:
+          type: string
+          example: adhaartest1
+        districtId:
+          type: string
+          example: Lucknow
+        blockId:
+          type: string
+          example: Sarojini Nagar
+        villageId:
+          type: string
+          example: Sarojini Nagar
       xml:
         name: credentialSubject
     RegisterStudent:
