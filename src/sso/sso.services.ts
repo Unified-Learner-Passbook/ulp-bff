@@ -1183,6 +1183,7 @@ export class SSOService {
             } else {
               //update value found id
               const osid = sb_rc_search[0]?.osid;
+              userdata.student.DID = sb_rc_search[0]?.DID;
               // sunbird registery student
               let sb_rc_response_text = await this.sbrcUpdate(
                 {
