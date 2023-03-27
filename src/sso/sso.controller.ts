@@ -211,12 +211,14 @@ export class SSOController {
     return this.ssoService.studentBulkRegister(jwt, requestbody, response);
   }
   //upload student bulk register
-  /*@Get('/student/list')
+  @Post('/student/list')
   async studentList(
     @Headers('Authorization') auth: string,
+    @Body('grade') grade: string,
+    @Body('acdemic_year') acdemic_year: string,
     @Res() response: Response,
   ) {
     const jwt = auth.replace('Bearer ', '');
-    return this.ssoService.studentList(jwt, response);
-  }*/
+    return this.ssoService.studentList(jwt,grade,acdemic_year, response);
+  }
 }
