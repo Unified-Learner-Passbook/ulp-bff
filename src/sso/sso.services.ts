@@ -1409,6 +1409,41 @@ export class SSOService {
       });
     }
   }
+
+  async getStudentDetailV2(requestbody, response: Response) {
+
+    let students = await this.studentV2(requestbody)
+    console.log("students", students)
+
+    let studentDetails = await this.studentDetailsV2(requestbody);
+    console.log('studentDetails', studentDetails);
+
+    let completeStudentDetails = studentDetails.map((element) => {
+      let temp = students.find(item => item.osid == element.student_id)
+      console.log("temp", temp)
+      element.student = temp ? temp : {}
+      return element
+    })
+    //let completeStudentDetails = []
+    console.log("completeStudentDetails", completeStudentDetails)
+    
+
+    if (completeStudentDetails) {
+      return response.status(200).send({
+        success: true,
+        status: 'Success',
+        message: 'Student details fetched successfully!',
+        result: completeStudentDetails,
+      });
+    } else {
+      return response.status(200).send({
+        success: false,
+        status: 'Success',
+        message: 'Unable to fetch student details!',
+        result: null,
+      });
+    }
+  }
   //digilockerAuthorize
   async udiseVerify(udiseid: string, response: Response) {
     //console.log(request);
@@ -2175,5 +2210,70 @@ export class SSOService {
     } catch (err) {
       console.log('err');
     }
+  }
+
+  async studentDetailsV2(requestbody) {
+    console.log('requestbody', requestbody);
+    var data = JSON.stringify(requestbody);
+
+    var config = {
+      method: 'post',
+      maxBodyLength: Infinity,
+      url: `${process.env.REGISTRY_URL}api/v1/StudentDetailV2/search`,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      data: data,
+    };
+
+    try {
+      let stdentDetailRes = await axios(config);
+      return stdentDetailRes.data;
+    } catch (err) {
+      console.log('err');
+    }
+  }
+
+  async studentV2(requestbody) {
+    const axios = require('axios');
+    let data = JSON.stringify({
+      "filters": {}
+    });
+
+    let config = {
+      method: 'post',
+      maxBodyLength: Infinity,
+      url: 'https://ulp.uniteframework.io/registry/api/v1/StudentV2/search',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      data: data
+    };
+
+    try {
+      let stdentDetailRes = await axios(config);
+      return stdentDetailRes.data;
+    } catch (err) {
+      console.log('err');
+    }
+  }
+
+  async findStudent(osid) {
+
+    let config = {
+      method: 'get',
+      maxBodyLength: Infinity,
+      url: 'https://ulp.uniteframework.io/registry/api/v1/StudentV2/1-ea0b0d65-1124-4f2b-af34-0a1eb7a3a6ba',
+      headers: {},
+    };
+
+    axios.request(config)
+      .then((response) => {
+        console.log("1899", JSON.stringify(response.data));
+      })
+      .catch((error) => {
+        console.log(error);
+      });
+
   }
 }

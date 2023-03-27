@@ -89,8 +89,12 @@ export class SSOController {
 
   @Post('/studentDetail')
   async getStudentDetail(@Body() requestbody: any, @Res() response: Response) {
-    console.log('87', requestbody);
     return this.ssoService.getStudentDetail(requestbody, response);
+  }
+  
+  @Post('/studentDetailV2')
+  async getStudentDetailV2(@Body() requestbody: any, @Res() response: Response) {
+    return this.ssoService.getStudentDetailV2(requestbody, response);
   }
 
   //digilocker authorize
