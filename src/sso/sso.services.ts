@@ -1721,6 +1721,106 @@ export class SSOService {
     }
   }
 
+  //studentBulkCredentials
+  async studentBulkCredentials(
+    token: string,
+    requestbody: any,
+    response: Response,
+  ) {
+    if (token) {
+      const studentUsername = await this.verifyStudentToken(token);
+      if (studentUsername?.error) {
+        return response.status(401).send({
+          success: false,
+          status: 'keycloak_token_bad_request',
+          message: 'Unauthorized',
+          result: null,
+        });
+      } else if (!studentUsername?.preferred_username) {
+        return response.status(400).send({
+          success: false,
+          status: 'keycloak_token_error',
+          message: 'Keycloak Token Expired',
+          result: null,
+        });
+      } else {
+        //get common detail
+        //credentialSubjectCommon
+        let grade = requestbody?.credentialSubjectCommon?.grade;
+        let academicYear = requestbody?.credentialSubjectCommon?.academicYear;
+        //issuerDetail
+        let did = requestbody?.issuerDetail?.did;
+        let schoolName = requestbody?.issuerDetail?.schoolName;
+        let schemaId = requestbody?.issuerDetail?.schemaId;
+        //generate schema
+        var schemaRes = await this.generateSchema(schemaId);
+        const credentialSubject = requestbody?.credentialSubject;
+        let iserror = false;
+        let errorlist = [];
+        if (credentialSubject) {
+          for (let i = 0; i < credentialSubject.length; i++) {
+            try {
+              const credentialSubjectItem = credentialSubject[i];
+              let id = credentialSubjectItem?.id;
+              let enrolledOn = credentialSubjectItem?.enrolledOn;
+              let studentName = credentialSubjectItem?.studentName;
+              let guardianName = credentialSubjectItem?.guardianName;
+              let issuanceDate = credentialSubjectItem?.issuanceDate;
+              let expirationDate = credentialSubjectItem?.expirationDate;
+              //issueCredentials obj
+              let obj = {
+                issuerId: did,
+                credSchema: schemaRes,
+                credentialSubject: {
+                  id: id,
+                  enrolledOn: enrolledOn,
+                  studentName: studentName,
+                  guardianName: guardianName,
+                  grade: grade,
+                  schoolName: schoolName,
+                  academicYear: academicYear,
+                },
+                issuanceDate: issuanceDate,
+                expirationDate: expirationDate,
+              };
+              //console.log('obj', obj);
+              const cred = await this.issueCredentials(obj);
+              if (cred?.error) {
+                iserror = true;
+                errorlist.push(cred?.error);
+              }
+            } catch (e) {
+              iserror = true;
+              errorlist.push(e);
+            }
+          }
+        }
+        if (iserror) {
+          return response.status(400).send({
+            success: false,
+            status: 'student_cred_bulk_api_error',
+            message: 'Student Cred Bulk API Error',
+            result: errorlist,
+          });
+        } else {
+          return response.status(200).send({
+            success: true,
+            status: 'student_cred_bulk_api_success',
+            message: 'Student Cred Bulk API Success',
+            result: null,
+          });
+        }
+      }
+    } else {
+      return response.status(400).send({
+        success: false,
+        status: 'invalid_request',
+        message: 'Invalid Request. Not received token.',
+        result: null,
+      });
+    }
+  }
+
   //helper function
   //get convert date and repalce character from string
   async convertDate(datetime) {
@@ -2249,7 +2349,6 @@ export class SSOService {
   }
 
   // cred search
-
   async credSearch(sb_rc_search) {
     console.log('sb_rc_search', sb_rc_search);
 
@@ -2304,6 +2403,67 @@ export class SSOService {
       return stdentDetailRes.data;
     } catch (err) {
       console.log('err');
+    }
+  }
+
+  //generateSchema
+  async generateSchema(schemaId) {
+    var config = {
+      method: 'get',
+      maxBodyLength: Infinity,
+      url: `${process.env.SCHEMA_URL}/schema/jsonld?id=${schemaId}`,
+      headers: {},
+    };
+
+    try {
+      const response = await axios(config);
+      console.log('response schema', response.data);
+      return response.data;
+    } catch (error) {
+      console.log('error schema', error);
+    }
+  }
+
+  //issueCredentials
+  async issueCredentials(payload) {
+    var data = JSON.stringify({
+      credential: {
+        '@context': [
+          'https://www.w3.org/2018/credentials/v1',
+          'https://www.w3.org/2018/credentials/examples/v1',
+        ],
+        id: 'did:ulp:b4a191af-d86e-453c-9d0e-dd4771067235',
+        type: ['VerifiableCredential', 'UniversityDegreeCredential'],
+        issuer: `${payload.issuerId}`,
+        issuanceDate: payload.issuanceDate,
+        expirationDate: payload.expirationDate,
+        credentialSubject: payload.credentialSubject,
+        options: {
+          created: '2020-04-02T18:48:36Z',
+          credentialStatus: {
+            type: 'RevocationList2020Status',
+          },
+        },
+      },
+      credentialSchemaId: payload.credSchema.id,
+      tags: ['tag1', 'tag2', 'tag3'],
+    });
+    var config = {
+      method: 'post',
+      maxBodyLength: Infinity,
+      url: process.env.CRED_URL + '/credentials/issue',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      data: data,
+    };
+    try {
+      const response = await axios(config);
+      //console.log('cred response');
+      return response.data;
+    } catch (e) {
+      //console.log('cred error', e.message);
+      return { error: e };
     }
   }
 }
