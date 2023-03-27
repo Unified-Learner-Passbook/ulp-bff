@@ -986,11 +986,20 @@ export class SSOService {
                 auto_password,
               );
               if (userToken?.error) {
-                return response.status(501).send({
+                //console.log(userToken?.error);
+                /*return response.status(501).send({
                   success: false,
                   status: 'keycloak_invalid_credentials',
                   message: userToken?.error.message,
                   result: null,
+                });*/
+                return response.status(200).send({
+                  success: true,
+                  status: 'digilocker_login_success',
+                  message: 'Digilocker Login Success',
+                  result: response_data,
+                  digi: response_digi?.data,
+                  user: 'NO_FOUND',
                 });
               } else {
                 if (sb_rc_search[0]?.school_type === 'private') {
