@@ -1636,6 +1636,126 @@ export class SSOService {
     }
   }
 
+  //studentList
+  async studentList(
+    token: string,
+    grade: string,
+    acdemic_year: string,
+    response: Response,
+  ) {
+    if (token && grade && acdemic_year) {
+      const studentUsername = await this.verifyStudentToken(token);
+      if (studentUsername?.error) {
+        return response.status(401).send({
+          success: false,
+          status: 'keycloak_token_bad_request',
+          message: 'Unauthorized',
+          result: null,
+        });
+      } else if (!studentUsername?.preferred_username) {
+        return response.status(401).send({
+          success: false,
+          status: 'keycloak_token_error',
+          message: 'Keycloak Token Expired',
+          result: null,
+        });
+      } else {
+        const sb_rc_search = await this.searchEntity('TeacherV1', {
+          filters: {
+            username: {
+              eq: studentUsername?.preferred_username,
+            },
+          },
+        });
+        if (sb_rc_search?.error) {
+          return response.status(501).send({
+            success: false,
+            status: 'sb_rc_search_error',
+            message: 'Sunbird RC Teacher Search Failed',
+            result: sb_rc_search?.error,
+          });
+        } else if (sb_rc_search.length === 0) {
+          return response.status(404).send({
+            success: false,
+            status: 'sb_rc_no_did_found',
+            message: 'Teacher not Found in Sunbird RC',
+            result: null,
+          });
+        } else {
+          let schoolUdise = sb_rc_search[0]?.schoolUdise;
+          const sb_rc_search_student_detail = await this.searchEntity(
+            'StudentDetailV2',
+            {
+              filters: {
+                school_udise: {
+                  eq: schoolUdise,
+                },
+                grade: {
+                  eq: grade,
+                },
+                acdemic_year: {
+                  eq: acdemic_year,
+                },
+                claim_status: {
+                  eq: 'approved',
+                },
+              },
+            },
+          );
+          if (sb_rc_search_student_detail?.error) {
+            return response.status(501).send({
+              success: false,
+              status: 'sb_rc_search_error',
+              message: 'Sunbird RC Student Search Failed',
+              result: sb_rc_search_student_detail?.error,
+            });
+          } else if (sb_rc_search_student_detail.length === 0) {
+            return response.status(404).send({
+              success: false,
+              status: 'sb_rc_no_found',
+              message: 'Student not Found in Sunbird RC',
+              result: null,
+            });
+          } else {
+            let student_list = [];
+            for (let i = 0; i < sb_rc_search_student_detail.length; i++) {
+              const sb_rc_search_student = await this.searchEntity(
+                'StudentV2',
+                {
+                  filters: {
+                    osid: {
+                      eq: sb_rc_search_student_detail[i].student_id,
+                    },
+                  },
+                },
+              );
+              if (sb_rc_search_student?.error) {
+              } else if (sb_rc_search_student.length !== 0) {
+                student_list.push({
+                  student: sb_rc_search_student[0],
+                  studentdetail: sb_rc_search_student_detail[i],
+                });
+              }
+            }
+            return response.status(200).send({
+              success: true,
+              status: 'sb_rc_found',
+              message: 'Student Found in Sunbird RC',
+              result: student_list,
+            });
+          }
+        }
+      }
+    } else {
+      return response.status(400).send({
+        success: false,
+        status: 'invalid_request',
+        message: 'Invalid Request. Not received token or request body.',
+        result: null,
+      });
+    }
+  }
+
   //helper function
   //get convert date and repalce character from string
   async convertDate(datetime) {
