@@ -214,4 +214,13 @@ export class SSOController {
     const jwt = auth.replace('Bearer ', '');
     return this.ssoService.studentBulkRegister(jwt, requestbody, response);
   }
+  //upload student bulk register
+  /*@Get('/student/list')
+  async studentList(
+    @Headers('Authorization') auth: string,
+    @Res() response: Response,
+  ) {
+    const jwt = auth.replace('Bearer ', '');
+    return this.ssoService.studentList(jwt, response);
+  }*/
 }
