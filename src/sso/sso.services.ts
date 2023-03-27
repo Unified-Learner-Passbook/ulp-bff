@@ -30,7 +30,7 @@ export class SSOService {
           success: false,
           status: 'keycloak_client_token_error',
           message: 'Bad Request for Keycloak Client Token',
-          result: clientToken?.error,
+          result: null,
         });
       } else {
         const issuerRes = await this.generateDid(user.studentId);
@@ -49,13 +49,13 @@ export class SSOService {
             user,
             clientToken,
           );
-
+          //comment
           if (response_text?.error) {
             return response.status(400).send({
               success: false,
               status: 'keycloak_register_duplicate',
               message: 'Student Already Registered in Keycloak',
-              result: response_text?.error,
+              result: null,
             });
           } else {
             // sunbird registery
@@ -198,7 +198,7 @@ export class SSOService {
           success: false,
           status: 'keycloak_student_token_error',
           message: 'Keycloak Student Token Expired',
-          result: studentUsername,
+          result: null,
         });
       } else {
         const sb_rc_search = await this.searchStudent(
@@ -323,14 +323,14 @@ export class SSOService {
           success: false,
           status: 'keycloak_student_token_bad_request',
           message: 'Unauthorized',
-          result: studentUsername?.error,
+          result: null,
         });
       } else if (!studentUsername?.preferred_username) {
         return response.status(400).send({
           success: false,
           status: 'keycloak_student_token_error',
           message: 'Keycloak Student Token Expired',
-          result: studentUsername,
+          result: null,
         });
       } else {
         var data = JSON.stringify(requestbody);
@@ -794,14 +794,14 @@ export class SSOService {
           success: false,
           status: 'keycloak_user_token_bad_request',
           message: 'Unauthorized',
-          result: studentUsername?.error,
+          result: null,
         });
       } else if (!studentUsername?.preferred_username) {
         return response.status(400).send({
           success: false,
           status: 'keycloak_user_token_error',
           message: 'Keycloak User Token Expired',
-          result: studentUsername,
+          result: null,
         });
       } else {
         //get user detail
@@ -990,7 +990,7 @@ export class SSOService {
                   success: false,
                   status: 'keycloak_invalid_credentials',
                   message: userToken?.error.message,
-                  result: userToken?.error,
+                  result: null,
                 });
               } else {
                 if (sb_rc_search[0]?.school_type === 'private') {
@@ -1085,7 +1085,7 @@ export class SSOService {
           success: false,
           status: 'keycloak_client_token_error',
           message: 'Bad Request for Keycloak Client Token',
-          result: clientToken?.error,
+          result: null,
         });
       } else {
         //register in keycloak
@@ -1109,7 +1109,7 @@ export class SSOService {
             success: false,
             status: 'keycloak_register_duplicate',
             message: 'User Already Registered in Keycloak',
-            result: response_text?.error,
+            result: null,
           });
         } else {
           //ewallet registration student
@@ -1242,7 +1242,6 @@ export class SSOService {
                       school_name: userdata?.studentdetail?.school_name,
                       school_udise: userdata?.studentdetail?.school_udise,
                       gaurdian_name: userdata?.studentdetail?.gaurdian_name,
-                      studentSchoolID: userdata?.studentdetail?.studentSchoolID,
                       mobile: userdata?.studentdetail?.mobile,
                       grade: userdata?.studentdetail?.grade,
                     },
@@ -1449,6 +1448,149 @@ export class SSOService {
       response.status(400).send({ success: false, status: 'no_found' });
     }
   }
+
+  //studentBulkRegister
+  async studentBulkRegister(
+    token: string,
+    requestbody: any,
+    response: Response,
+  ) {
+    if (token) {
+      const studentUsername = await this.verifyStudentToken(token);
+      if (studentUsername?.error) {
+        return response.status(401).send({
+          success: false,
+          status: 'keycloak_token_bad_request',
+          message: 'Unauthorized',
+          result: null,
+        });
+      } else if (!studentUsername?.preferred_username) {
+        return response.status(400).send({
+          success: false,
+          status: 'keycloak_token_error',
+          message: 'Keycloak Token Expired',
+          result: null,
+        });
+      } else {
+        //get common detail
+        let grade = requestbody?.schoolDetails?.grade;
+        let school_udise = requestbody?.schoolDetails?.schoolUdise;
+        let school_name = requestbody?.schoolDetails?.school_name;
+        let acdemic_year = requestbody?.schoolDetails?.['academic-year'];
+        let school_type = requestbody?.schoolDetails?.school_type;
+        const studentDetails = requestbody?.studentDetails;
+        let iserror = false;
+        let errorlist = [];
+        if (studentDetails) {
+          for (let i = 0; i < studentDetails.length; i++) {
+            try {
+              const student = studentDetails[i];
+              //check student account present in system or not
+              const username_name = student?.studentName.split(' ')[0];
+              let auto_username = username_name + '@' + student?.dob;
+              auto_username = auto_username.toLowerCase();
+              //find if student account present in sb rc or not
+              const sb_rc_search = await this.sbrcStudentSearch(
+                student?.studentName,
+                student?.dob,
+              );
+              //console.log(sb_rc_search);
+              if (sb_rc_search?.error) {
+                iserror = true;
+                errorlist.push(sb_rc_search?.error);
+              } else if (sb_rc_search.length === 0) {
+                //register student in sb rc
+                // sunbird registery student
+                let didRes = await this.generateDid(student?.student_id);
+                let didGenerate = '';
+                if (didRes) {
+                  didGenerate = didRes[0].verificationMethod[0].controller;
+                }
+
+                let reference_id = 'ULP_' + student?.student_id;
+                let sb_rc_response_text = await this.sbrcInvite(
+                  {
+                    student_id: student?.student_id,
+                    DID: didGenerate,
+                    reference_id: reference_id,
+                    aadhar_token: student?.aadhar_token,
+                    student_name: student?.studentName,
+                    dob: student?.dob,
+                    school_type: school_type,
+                    meripehchan_id: '',
+                    username: auto_username,
+                  },
+                  'StudentV2',
+                );
+                if (sb_rc_response_text?.error) {
+                  iserror = true;
+                  errorlist.push(sb_rc_response_text?.error);
+                } else if (
+                  sb_rc_response_text?.params?.status === 'SUCCESSFUL'
+                ) {
+                  //find osid of student and add detail in student details
+                  // sunbird registery student detail
+                  let os_student_id =
+                    sb_rc_response_text?.result?.StudentV2?.osid;
+                  let claim_status = 'approved';
+                  let sb_rc_response_text_detail = await this.sbrcInvite(
+                    {
+                      student_detail_id: '',
+                      student_id: os_student_id,
+                      mobile: student?.mobile,
+                      gaurdian_name: student?.gaurdian_name,
+                      school_udise: school_udise,
+                      school_name: school_name,
+                      grade: grade,
+                      acdemic_year: acdemic_year,
+                      start_date: '',
+                      end_date: '',
+                      claim_status: claim_status,
+                    },
+                    'StudentDetailV2',
+                  );
+                  if (sb_rc_response_text_detail?.error) {
+                    return response.status(400).send({
+                      success: false,
+                      status: 'sb_rc_register_error',
+                      message: 'Sunbird RC Student Registration Failed',
+                      result: sb_rc_response_text_detail?.error,
+                    });
+                  }
+                }
+              }
+            } catch (e) {
+              iserror = true;
+              errorlist.push(e);
+            }
+          }
+        }
+        if (iserror) {
+          return response.status(400).send({
+            success: false,
+            status: 'student_register_bulk_api_error',
+            message: 'Student Register Bulk API Error',
+            result: errorlist,
+          });
+        } else {
+          return response.status(200).send({
+            success: true,
+            status: 'student_register_bulk_api_success',
+            message: 'Student Register Bulk API Success',
+            result: null,
+          });
+        }
+      }
+    } else {
+      return response.status(400).send({
+        success: false,
+        status: 'invalid_request',
+        message: 'Invalid Request. Not received token.',
+        result: null,
+      });
+    }
+  }
+
   //helper function
   //get convert date and repalce character from string
   async convertDate(datetime) {
@@ -1661,7 +1803,7 @@ export class SSOService {
         },
       },
     });
-    console.log(data);
+    //console.log(data);
     let config = {
       method: 'post',
       url: process.env.REGISTRY_URL + 'api/v1/StudentV2/search',

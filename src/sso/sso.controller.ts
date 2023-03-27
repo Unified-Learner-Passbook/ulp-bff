@@ -200,4 +200,14 @@ export class SSOController {
   ) {
     return this.ssoService.credentialsSchemaJSON(id, response);
   }
+  //upload student bulk register
+  @Post('/student/bulk/register')
+  async studentBulkRegister(
+    @Headers('Authorization') auth: string,
+    @Body() requestbody: any,
+    @Res() response: Response,
+  ) {
+    const jwt = auth.replace('Bearer ', '');
+    return this.ssoService.studentBulkRegister(jwt, requestbody, response);
+  }
 }
