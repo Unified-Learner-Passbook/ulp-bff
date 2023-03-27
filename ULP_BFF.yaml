@@ -170,24 +170,21 @@ components:
         - photoUrls
       type: object
       properties:
-        schoolDid:
-          type: string
-          example: DID:ULP:289347329
-        schoolName:
-          type: string
-          example: Delhi public school
-        grade:
-          type: string
-          example: class-8
-        academicYear:
-          type: string
-          example: 2022-2023
+        issuerDetail:
+          type: object
+          example: {"udise": "123456","schoolName": "Delhi public school"}
+        vcData:
+          type: object
+          example: {"issuanceDate": "2023-02-06T11:56:27.259Z","expirationDate": "2023-02-06T11:56:27.259Z"}
+        credentialSubjectCommon:
+          type: object
+          example: {"grade": "class-1","academicYear": "2022-2023"}
         credentialSubject:
-          type: array
-          example: [{"studentId": "123456","studentName": "Vivek Ramchandra Kasture","fatherName": "BASANT","motherName": "SARMI","guardianName": "Sarmi","dob": "14/08/1993","class": "Level - V","gender": "Male","mobile": "9044904842","aadhaarId": "adhaartest1","districtId": "Lucknow","blockId": "Sarojini Nagar","villageId": "Sarojini Nagar",}]
-          xml:
+           type: array
+           example: [{"studentName":"Khushi Kumari","dob":"09/09/1999","reference_id": "prernaid","aadhar_token":"qwrycvqwtqw3672", "guardianName": "Sita prabhu", "enrolledOn":"2022-02-06"}]
+           xml:
             wrapped: true
-          items:
+           items:
              $ref: '#/components/schemas/Credential'
       xml:
         name: credential
