@@ -79,4 +79,35 @@ export class CredentialsController {
 
     return this.credentialsService.getSchema(id, response);
   }
+
+
+  //v2
+  @Post('/approveStudentv2')
+  approveStudentv2(
+    @Body() payload: SingleCredentialDto,
+    @Res() response: Response,
+  ) {
+    console.log('body 90', payload);
+
+    let schemaId = 'clf0rjgov0002tj15ml0fdest';
+
+    return this.credentialsService.issueSingleCredentialv2(
+      payload,
+      schemaId,
+      response,
+    );
+  }
+
+  @Post('/rejectStudentv2')
+  rejectStudentv2(
+    @Body() payload: SingleCredentialDto,
+    @Res() response: Response,
+  ) {
+    console.log('body 106', payload);
+
+    return this.credentialsService.rejectStudentV2(
+      payload,
+      response,
+    );
+  }
 }

@@ -270,6 +270,110 @@ export class CredentialsService {
         }
     }
 
+    //v2
+
+    async issueSingleCredentialv2(credentialPlayload: SingleCredentialDto, schemaId: string, response: Response) {
+        console.log('credentialPlayload: ', credentialPlayload);
+        console.log('schemaId: ', schemaId);
+
+        var payload = credentialPlayload
+
+
+        //var issuerId = "did:ulp:f08f7782-0d09-4c47-aacb-9092113bc33e"
+        var issuerId = credentialPlayload.issuer;
+        console.log("issuerId", issuerId)
+        
+        //generate schema
+        console.log("schemaId", schemaId)
+
+        var schemaRes = await this.generateSchema(schemaId);
+
+        console.log("schemaRes", schemaRes)
+
+        let studentId = payload.credentialSubject.studentId;
+        console.log("studentId", studentId)
+        const didRes = await this.generateDid(studentId);
+        console.log("didRes 191", didRes)
+
+
+        if (didRes) {
+            var did = didRes[0].verificationMethod[0].controller
+            payload.credentialSubject.id = did
+            let obj = {
+                issuerId: issuerId,
+                credSchema: schemaRes,
+                credentialSubject: payload.credentialSubject
+            }
+            console.log("obj", obj)
+            const cred = await this.issueCredentials(obj)
+            if (cred) {
+                //update did inside sbrc
+                let osid = payload.credentialSubject.osid;
+                let student_id = payload.credentialSubject.studentId;
+
+                let updateStudentDetail = await this.sbrcUpdate({"claim_status": "approved"}, 'StudentDetailV2', osid)
+                console.log("updateStudentDetail", updateStudentDetail)
+
+                let updateStudent = await this.sbrcUpdate({DID: did}, 'StudentV2', student_id)
+                console.log("updateStudent", updateStudent)
+
+                if(updateStudentDetail && updateStudent) {
+                    return response.status(200).send({
+                        success: true,
+                        status: 'Success',
+                        message: 'Credentials generated successfully!',
+                        result: cred
+                    })
+                } else { 
+                    return response.status(200).send({
+                        success: false,
+                        status: 'Success',
+                        message: 'Credentials generated successfully but Unable to update did inside Registry',
+                        result: null
+                    })
+                }
+                
+            } else {
+                return response.status(200).send({
+                    success: false,
+                    status: 'Success',
+                    message: 'Unable to generate Credentials',
+                    result: null
+                })
+            }
+            
+        } else {
+            return response.status(200).send({
+                success: false,
+                status: 'Success',
+                message: 'Unable to generate did',
+                result: null
+            })
+        }
+    }
+
+    async rejectStudentV2(credentialPlayload: SingleCredentialDto, response: Response) {
+        var payload = credentialPlayload
+        let osid = payload.credentialSubject.osid;
+        let updateRes = await this.sbrcUpdate({"claim_status": "rejected"}, 'StudentDetailV2', osid)
+        console.log("updateRes 313", updateRes)
+        if(updateRes) {
+            return response.status(200).send({
+                success: true,
+                status: 'Success',
+                message: 'Student rejected successfully!',
+                result: null
+            })
+        } else { 
+            return response.status(200).send({
+                success: false,
+                status: 'Success',
+                message: 'Unable to reject student',
+                result: null
+            })
+        }
+    }
+
 
     //helper function
     async generateSchema(schemaId) {
@@ -632,5 +736,6 @@ export class CredentialsService {
     
         return sb_rc_response_text;
       }
+      
 
 }
