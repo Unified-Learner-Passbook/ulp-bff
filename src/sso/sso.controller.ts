@@ -225,4 +225,14 @@ export class SSOController {
     const jwt = auth.replace('Bearer ', '');
     return this.ssoService.studentList(jwt,grade,acdemic_year, response);
   }
+  //upload student bulk register
+  @Post('/student/bulk/credentials')
+  async studentBulkCredentials(
+    @Headers('Authorization') auth: string,
+    @Body() requestbody: any,
+    @Res() response: Response,
+  ) {
+    const jwt = auth.replace('Bearer ', '');
+    return this.ssoService.studentBulkCredentials(jwt, requestbody, response);
+  }
 }
