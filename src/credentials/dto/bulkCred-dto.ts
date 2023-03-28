@@ -20,7 +20,9 @@ export class BulkCredentialDto {
         reference_id: string,
         aadhar_token: string,
         guardianName: string,
-        enrolledOn: string
+        enrolledOn: string,
+        grade: string,
+        academicYear: string
       }
     ]
   }

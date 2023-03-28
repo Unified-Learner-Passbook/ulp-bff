@@ -65,9 +65,6 @@ export class CredentialsController {
     @Body() payload: BulkCredentialDto,
     @Res() response: Response,
   ) {
-    console.log('body', payload);
-    console.log('query', query.type);
-    console.log('params', type);
 
     if (type === 'proofOfAssessment') {
       //var schemaId = "did:ulpschema:098765";
