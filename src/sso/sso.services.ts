@@ -1421,22 +1421,20 @@ export class SSOService {
   }
 
   async getStudentDetailV2(requestbody, response: Response) {
-
-    let students = await this.studentV2(requestbody)
-    console.log("students", students)
+    let students = await this.studentV2(requestbody);
+    console.log('students', students);
 
     let studentDetails = await this.studentDetailsV2(requestbody);
     console.log('studentDetails', studentDetails);
 
     let completeStudentDetails = studentDetails.map((element) => {
-      let temp = students.find(item => item.osid == element.student_id)
-      console.log("temp", temp)
-      element.student = temp ? temp : {}
-      return element
-    })
+      let temp = students.find((item) => item.osid == element.student_id);
+      console.log('temp', temp);
+      element.student = temp ? temp : {};
+      return element;
+    });
     //let completeStudentDetails = []
-    console.log("completeStudentDetails", completeStudentDetails)
-    
+    console.log('completeStudentDetails', completeStudentDetails);
 
     if (completeStudentDetails) {
       return response.status(200).send({
@@ -1525,7 +1523,9 @@ export class SSOService {
         let school_type = requestbody?.schoolDetails?.school_type;
         const studentDetails = requestbody?.studentDetails;
         let iserror = false;
-        let errorlist = [];
+        let loglist = [];
+        let error_count = 0;
+        let success_count = 0;
         if (studentDetails) {
           for (let i = 0; i < studentDetails.length; i++) {
             try {
@@ -1542,7 +1542,8 @@ export class SSOService {
               //console.log(sb_rc_search);
               if (sb_rc_search?.error) {
                 iserror = true;
-                errorlist.push(sb_rc_search?.error);
+                loglist.push(sb_rc_search?.error);
+                error_count++;
               } else if (sb_rc_search.length === 0) {
                 //register student in sb rc
                 // sunbird registery student
@@ -1569,7 +1570,8 @@ export class SSOService {
                 );
                 if (sb_rc_response_text?.error) {
                   iserror = true;
-                  errorlist.push(sb_rc_response_text?.error);
+                  loglist.push(sb_rc_response_text?.error);
+                  error_count++;
                 } else if (
                   sb_rc_response_text?.params?.status === 'SUCCESSFUL'
                 ) {
@@ -1595,36 +1597,36 @@ export class SSOService {
                     'StudentDetailV2',
                   );
                   if (sb_rc_response_text_detail?.error) {
-                    return response.status(400).send({
-                      success: false,
-                      status: 'sb_rc_register_error',
-                      message: 'Sunbird RC Student Registration Failed',
-                      result: sb_rc_response_text_detail?.error,
-                    });
+                    iserror = true;
+                    loglist.push(sb_rc_response_text_detail?.error);
+                    error_count++;
+                  } else if (
+                    sb_rc_response_text_detail?.params?.status === 'SUCCESSFUL'
+                  ) {
+                    success_count++;
                   }
                 }
               }
             } catch (e) {
               iserror = true;
-              errorlist.push(e);
+              loglist.push(e);
+              error_count++;
             }
           }
         }
-        if (iserror) {
-          return response.status(400).send({
-            success: false,
-            status: 'student_register_bulk_api_error',
-            message: 'Student Register Bulk API Error',
-            result: errorlist,
-          });
-        } else {
-          return response.status(200).send({
-            success: true,
-            status: 'student_register_bulk_api_success',
-            message: 'Student Register Bulk API Success',
-            result: null,
-          });
-        }
+        return response.status(200).send({
+          success: true,
+          status: 'student_register_bulk_api_success',
+          iserror: iserror,
+          message:
+            'Student Register Bulk API Success. Count: ' +
+            Number(error_count + success_count) +
+            ' Pass: ' +
+            success_count +
+            'Fail: ' +
+            error_count,
+          result: loglist,
+        });
       }
     } else {
       return response.status(400).send({
@@ -1791,7 +1793,9 @@ export class SSOService {
         var schemaRes = await this.generateSchema(schemaId);
         const credentialSubject = requestbody?.credentialSubject;
         let iserror = false;
-        let errorlist = [];
+        let loglist = [];
+        let error_count = 0;
+        let success_count = 0;
         if (credentialSubject) {
           for (let i = 0; i < credentialSubject.length; i++) {
             try {
@@ -1802,6 +1806,7 @@ export class SSOService {
               let guardianName = credentialSubjectItem?.guardianName;
               let issuanceDate = credentialSubjectItem?.issuanceDate;
               let expirationDate = credentialSubjectItem?.expirationDate;
+              let osid = credentialSubjectItem?.osid;
               //issueCredentials obj
               let obj = {
                 issuerId: did,
@@ -1822,29 +1827,52 @@ export class SSOService {
               const cred = await this.issueCredentials(obj);
               if (cred?.error) {
                 iserror = true;
-                errorlist.push(cred?.error);
+                loglist.push(cred?.error);
+                error_count++;
+              } else {
+                //update status
+                // sunbird registery student
+                let sb_rc_response_text = await this.sbrcUpdate(
+                  {
+                    claim_status: 'issued',
+                  },
+                  'StudentDetailV2',
+                  osid,
+                );
+                if (sb_rc_response_text?.error) {
+                  iserror = true;
+                  loglist.push(sb_rc_response_text?.error);
+                  error_count++;
+                } else if (
+                  sb_rc_response_text?.params?.status === 'SUCCESSFUL'
+                ) {
+                  success_count++;
+                } else {
+                  iserror = true;
+                  loglist.push(sb_rc_response_text);
+                  error_count++;
+                }
               }
             } catch (e) {
               iserror = true;
-              errorlist.push(e);
+              loglist.push(e);
+              error_count++;
             }
           }
         }
-        if (iserror) {
-          return response.status(400).send({
-            success: false,
-            status: 'student_cred_bulk_api_error',
-            message: 'Student Cred Bulk API Error',
-            result: errorlist,
-          });
-        } else {
-          return response.status(200).send({
-            success: true,
-            status: 'student_cred_bulk_api_success',
-            message: 'Student Cred Bulk API Success',
-            result: null,
-          });
-        }
+        return response.status(200).send({
+          success: true,
+          status: 'student_cred_bulk_api_success',
+          iserror: iserror,
+          message:
+            'Student Cred Bulk API Success. Count: ' +
+            Number(error_count + success_count) +
+            ' Pass: ' +
+            success_count +
+            'Fail: ' +
+            error_count,
+          result: loglist,
+        });
       }
     } else {
       return response.status(400).send({
@@ -2526,7 +2554,7 @@ export class SSOService {
   async studentV2(requestbody) {
     const axios = require('axios');
     let data = JSON.stringify({
-      "filters": {}
+      filters: {},
     });
 
     let config = {
@@ -2534,9 +2562,9 @@ export class SSOService {
       maxBodyLength: Infinity,
       url: 'https://ulp.uniteframework.io/registry/api/v1/StudentV2/search',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
       },
-      data: data
+      data: data,
     };
 
     try {
@@ -2548,7 +2576,6 @@ export class SSOService {
   }
 
   async findStudent(osid) {
-
     let config = {
       method: 'get',
       maxBodyLength: Infinity,
@@ -2556,13 +2583,13 @@ export class SSOService {
       headers: {},
     };
 
-    axios.request(config)
+    axios
+      .request(config)
       .then((response) => {
-        console.log("1899", JSON.stringify(response.data));
+        console.log('1899', JSON.stringify(response.data));
       })
       .catch((error) => {
         console.log(error);
       });
-
   }
 }
