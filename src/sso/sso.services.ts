@@ -1623,7 +1623,7 @@ export class SSOService {
             Number(error_count + success_count) +
             ' Pass: ' +
             success_count +
-            'Fail: ' +
+            ' Fail: ' +
             error_count,
           result: loglist,
         });
@@ -1677,11 +1677,11 @@ export class SSOService {
             result: sb_rc_search?.error,
           });
         } else if (sb_rc_search.length === 0) {
-          return response.status(404).send({
-            success: false,
+          return response.status(200).send({
+            success: true,
             status: 'sb_rc_no_did_found',
             message: 'Teacher not Found in Sunbird RC',
-            result: null,
+            result: [],
           });
         } else {
           let schoolUdise = sb_rc_search[0]?.schoolUdise;
@@ -1869,7 +1869,7 @@ export class SSOService {
             Number(error_count + success_count) +
             ' Pass: ' +
             success_count +
-            'Fail: ' +
+            ' Fail: ' +
             error_count,
           result: loglist,
         });
