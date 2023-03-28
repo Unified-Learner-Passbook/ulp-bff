@@ -472,8 +472,8 @@ export class CredentialsService {
             const cred = await this.issueCredentials(obj)
             if (cred) {
                 //update did inside sbrc
-                let osid = payload.credentialSubject.osid;
-                let student_id = payload.credentialSubject.studentId;
+                var osid = payload.credentialSubject.osid;
+                var student_id = payload.credentialSubject.studentId;
 
                 let updateStudentDetail = await this.sbrcUpdate({ "claim_status": "approved" }, 'StudentDetailV2', osid)
                 console.log("updateStudentDetail", updateStudentDetail)
@@ -482,6 +482,7 @@ export class CredentialsService {
                 console.log("updateStudent", updateStudent)
 
                 if (updateStudentDetail && updateStudent) {
+                    console.log("updated in 1st attempt")
                     return response.status(200).send({
                         success: true,
                         status: 'Success',
@@ -489,12 +490,34 @@ export class CredentialsService {
                         result: cred
                     })
                 } else {
-                    return response.status(200).send({
-                        success: false,
-                        status: 'Success',
-                        message: 'Credentials generated successfully but Unable to update did inside Registry',
-                        result: null
-                    })
+                    // return response.status(200).send({
+                    //     success: false,
+                    //     status: 'Success',
+                    //     message: 'Credentials generated successfully but Unable to update data inside Registry',
+                    //     result: null
+                    // })
+                    console.log("updated in 2nd attempt")
+                    let updateStudentDetail = await this.sbrcUpdate({ "claim_status": "approved" }, 'StudentDetailV2', osid)
+                    console.log("updateStudentDetail", updateStudentDetail)
+
+                    let updateStudent = await this.sbrcUpdate({ DID: did }, 'StudentV2', student_id)
+                    console.log("updateStudent", updateStudent)
+
+                    if (updateStudentDetail && updateStudent) {
+                        return response.status(200).send({
+                            success: true,
+                            status: 'Success',
+                            message: 'Credentials generated successfully!',
+                            result: cred
+                        })
+                    } else {
+                        return response.status(200).send({
+                            success: false,
+                            status: 'Success',
+                            message: 'Credentials generated successfully but Unable to update data inside Registry',
+                            result: null
+                        })
+                    }
                 }
 
             } else {
@@ -892,7 +915,7 @@ export class CredentialsService {
 
     }
 
-    
+
 
     //update
     async sbrcUpdate(updateSchema, entityName, osid) {
