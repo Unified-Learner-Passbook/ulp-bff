@@ -541,7 +541,7 @@ export class CredentialsService {
 
     async rejectStudentV2(credentialPlayload: SingleCredentialDto, response: Response) {
         var payload = credentialPlayload
-        let osid = payload.credentialSubject.osid;
+        var osid = payload.credentialSubject.osid;
         let updateRes = await this.sbrcUpdate({ "claim_status": "rejected" }, 'StudentDetailV2', osid)
         console.log("updateRes 313", updateRes)
         if (updateRes) {
