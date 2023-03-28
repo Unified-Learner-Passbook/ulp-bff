@@ -901,7 +901,7 @@ export class CredentialsService {
         console.log("osid", osid)
         let data = JSON.stringify(updateSchema);
 
-        let config_sb_rc = {
+        let config = {
             method: 'put',
             url: process.env.REGISTRY_URL + 'api/v1/' + entityName + '/' + osid,
             headers: {
@@ -910,18 +910,12 @@ export class CredentialsService {
             data: data,
         };
 
-        var sb_rc_response_text = null;
-        await axios(config_sb_rc)
-            .then(function (response) {
-                //console.log(JSON.stringify(response.data));
-                sb_rc_response_text = response.data;
-            })
-            .catch(function (error) {
-                //console.log(error);
-                sb_rc_response_text = { error: error };
-            });
-
-        return sb_rc_response_text;
+        try {
+            const response = await axios(config);
+            return response.data;
+        } catch (err) {
+            console.log("sb_rc_search err")
+        }
     }
 
     //find schoolDetail in rc
