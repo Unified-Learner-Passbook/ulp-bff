@@ -4,6 +4,7 @@ import axios from 'axios';
 import { it } from 'node:test';
 import { CredentialDto } from './dto/credential-dto';
 import { SingleCredentialDto } from './dto/singlecred-dto';
+import { BulkCredentialDto } from './dto/bulkCred-dto';
 import { Response } from 'express';
 
 
@@ -19,7 +20,7 @@ export class CredentialsService {
     //constructor(private readonly httpService: HttpService) { }
 
 
-    async issueBulkCredential(credentialPlayload: CredentialDto, schemaId: string, response: Response) {
+    async issueBulkCredential1(credentialPlayload: CredentialDto, schemaId: string, response: Response) {
 
         console.log('credentialPlayload: ', credentialPlayload);
         console.log('schemaId: ', schemaId);
@@ -55,7 +56,7 @@ export class CredentialsService {
             let dob = iterator.dob
             const studentDetails = await this.sbrcStudentSearch(name, dob)
             console.log("studentDetails", studentDetails)
-            if (studentDetails.length>0) {
+            if (studentDetails.length > 0) {
                 if (studentDetails[0]?.did) {
                     iterator.id = studentDetails[0].did
                     let obj = {
@@ -78,7 +79,7 @@ export class CredentialsService {
                     console.log("didRes 75", didRes[0])
                     if (didRes) {
                         iterator.id = didRes[0].verificationMethod[0].controller
-                        let updateRes = await this.sbrcUpdate({did: iterator.id}, 'StudentDetail', studentDetails[0].osid)
+                        let updateRes = await this.sbrcUpdate({ did: iterator.id }, 'StudentDetail', studentDetails[0].osid)
                         console.log("updateRes", updateRes)
                         let obj = {
                             issuerId: issuerId,
@@ -86,9 +87,9 @@ export class CredentialsService {
                             credentialSubject: iterator
                         }
                         console.log("obj", obj)
-    
+
                         if (iterator.id) {
-    
+
                             const cred = await this.issueCredentials(obj)
                             //console.log("cred 34", cred)
                             if (cred) {
@@ -123,13 +124,176 @@ export class CredentialsService {
                 console.log("registerStudent", sb_rc_response_text)
                 if (sb_rc_response_text?.error) {
                     console.log("err 122", sb_rc_response_text.error)
-                  } else if (
+                } else if (
                     sb_rc_response_text?.params?.status === 'SUCCESSFUL'
-                  ) {
+                ) {
                     console.log("successfull")
-                  } else {
+                } else {
                     console.log("err 128", sb_rc_response_text)
-                  }
+                }
+                let obj = {
+                    issuerId: issuerId,
+                    credSchema: schemaRes,
+                    credentialSubject: iterator
+                }
+                console.log("obj", obj)
+
+                if (iterator.id) {
+
+                    const cred = await this.issueCredentials(obj)
+                    //console.log("cred 34", cred)
+                    if (cred) {
+                        responseArray.push(cred)
+                    }
+                }
+            }
+        }
+
+        //bulk import response
+        console.log("responseArray.length", responseArray.length)
+        if (responseArray.length > 0) {
+            return response.status(200).send({
+                success: true,
+                status: 'Success',
+                message: 'Bulk Credentials generated successfully!',
+                result: responseArray
+            })
+        } else {
+            return response.status(200).send({
+                success: false,
+                status: 'Success',
+                message: 'Unable to generate did or crdentials',
+                result: null
+            })
+        }
+    }
+
+    async issueBulkCredential(credentialPlayload: BulkCredentialDto, schemaId: string, response: Response) {
+
+        console.log('credentialPlayload: ', credentialPlayload);
+        console.log('schemaId: ', schemaId);
+        var payload = credentialPlayload
+        var issuerId = ''
+        //find udise in rc
+        let searchSchoolDetail = await this.searchSchoolDetail(credentialPlayload.issuerDetail.udise)
+        console.log("searchSchoolDetail", searchSchoolDetail)
+
+        if (searchSchoolDetail) {
+            issuerId = searchSchoolDetail.did
+
+        } else {
+            let schoolDidRes = await this.generateDid(credentialPlayload.issuerDetail.udise)
+            console.log("didRes 75", schoolDidRes[0])
+            credentialPlayload.issuerDetail.schoolDid = schoolDidRes[0].verificationMethod[0].controller
+            //create schoolDetail in rc
+            let createSchoolDetail = await this.createSchoolDetail(credentialPlayload.issuerDetail)
+            if (createSchoolDetail) {
+                issuerId = credentialPlayload.issuerDetail.schoolDid
+                console.log("issuerId", issuerId)
+            }
+
+        }
+
+        //generate schema
+        var schemaRes = await this.generateSchema(schemaId);
+        console.log("schemaRes", schemaRes)
+
+        var responseArray = []
+
+        // bulk import
+        for (const iterator of payload.credentialSubject) {
+
+            //var studentId = iterator.studentId;
+            //console.log("studentId", studentId)
+            // iterator.schoolName = credentialPlayload.schoolName ? credentialPlayload.schoolName : '';
+            // iterator.grade = credentialPlayload.grade;
+            // iterator.academicYear = credentialPlayload.academicYear;
+
+            //generate did or find did
+            var aadhar_token = iterator.aadhar_token
+
+            // find student
+            let name = iterator.studentName
+            let dob = iterator.dob
+            let searchSchema = {
+                student_name: {
+                    eq: name,
+                },
+                dob: {
+                    eq: dob,
+                },
+            }
+            const studentDetails = await this.sbrcSearch(searchSchema, 'StudentV2')
+            console.log("studentDetails", studentDetails)
+            if (studentDetails.length > 0) {
+                if (studentDetails[0]?.did) {
+                    iterator.id = studentDetails[0].did
+                    let obj = {
+                        issuerId: issuerId,
+                        credSchema: schemaRes,
+                        credentialSubject: iterator
+                    }
+                    console.log("obj", obj)
+
+                    if (iterator.id) {
+
+                        const cred = await this.issueCredentials(obj)
+                        //console.log("cred 34", cred)
+                        if (cred) {
+                            responseArray.push(cred)
+                        }
+                    }
+                } else {
+                    let didRes = await this.generateDid(aadhar_token)
+                    console.log("didRes 75", didRes[0])
+                    if (didRes) {
+                        iterator.id = didRes[0].verificationMethod[0].controller
+                        let updateRes = await this.sbrcUpdate({ DID: iterator.id }, 'StudentV2', studentDetails[0].osid)
+                        console.log("updateRes", updateRes)
+                        let obj = {
+                            issuerId: issuerId,
+                            credSchema: schemaRes,
+                            credentialSubject: iterator
+                        }
+                        console.log("obj", obj)
+
+                        if (iterator.id) {
+
+                            const cred = await this.issueCredentials(obj)
+                            //console.log("cred 34", cred)
+                            if (cred) {
+                                responseArray.push(cred)
+                            }
+                        }
+
+                    }
+
+                }
+            } else {
+                console.log("else 100")
+                let didRes = await this.generateDid(aadhar_token)
+
+                if (didRes) {
+                    iterator.id = didRes[0].verificationMethod[0].controller
+                }
+
+                let inviteSchema = {
+                    "DID": iterator.id,
+                    "dob": iterator.dob,
+                    "student_name": iterator.studentName,
+                    "grade": "",
+                }
+                let sb_rc_response_text = await this.sbrcInvite(inviteSchema, 'StudentV2')
+                console.log("registerStudent", sb_rc_response_text)
+                if (sb_rc_response_text?.error) {
+                    console.log("err 122", sb_rc_response_text.error)
+                } else if (
+                    sb_rc_response_text?.params?.status === 'SUCCESSFUL'
+                ) {
+                    console.log("successfull")
+                } else {
+                    console.log("err 128", sb_rc_response_text)
+                }
                 let obj = {
                     issuerId: issuerId,
                     credSchema: schemaRes,
@@ -177,7 +341,7 @@ export class CredentialsService {
         //var issuerId = "did:ulp:f08f7782-0d09-4c47-aacb-9092113bc33e"
         var issuerId = credentialPlayload.issuer;
         console.log("issuerId", issuerId)
-        
+
         //generate schema
         console.log("schemaId", schemaId)
 
@@ -198,9 +362,9 @@ export class CredentialsService {
             //update did inside sbrc
             let osid = payload.credentialSubject.osid;
             //const updateRes = await this.updateStudentDetails(osid, did);
-            
 
-            let updateRes = await this.sbrcUpdate({did: did}, 'StudentDetail', osid)
+
+            let updateRes = await this.sbrcUpdate({ did: did }, 'StudentDetail', osid)
             console.log("updateRes 199", updateRes)
 
             if (updateRes) {
@@ -282,7 +446,7 @@ export class CredentialsService {
         //var issuerId = "did:ulp:f08f7782-0d09-4c47-aacb-9092113bc33e"
         var issuerId = credentialPlayload.issuer;
         console.log("issuerId", issuerId)
-        
+
         //generate schema
         console.log("schemaId", schemaId)
 
@@ -311,20 +475,20 @@ export class CredentialsService {
                 let osid = payload.credentialSubject.osid;
                 let student_id = payload.credentialSubject.studentId;
 
-                let updateStudentDetail = await this.sbrcUpdate({"claim_status": "approved"}, 'StudentDetailV2', osid)
+                let updateStudentDetail = await this.sbrcUpdate({ "claim_status": "approved" }, 'StudentDetailV2', osid)
                 console.log("updateStudentDetail", updateStudentDetail)
 
-                let updateStudent = await this.sbrcUpdate({DID: did}, 'StudentV2', student_id)
+                let updateStudent = await this.sbrcUpdate({ DID: did }, 'StudentV2', student_id)
                 console.log("updateStudent", updateStudent)
 
-                if(updateStudentDetail && updateStudent) {
+                if (updateStudentDetail && updateStudent) {
                     return response.status(200).send({
                         success: true,
                         status: 'Success',
                         message: 'Credentials generated successfully!',
                         result: cred
                     })
-                } else { 
+                } else {
                     return response.status(200).send({
                         success: false,
                         status: 'Success',
@@ -332,7 +496,7 @@ export class CredentialsService {
                         result: null
                     })
                 }
-                
+
             } else {
                 return response.status(200).send({
                     success: false,
@@ -341,7 +505,7 @@ export class CredentialsService {
                     result: null
                 })
             }
-            
+
         } else {
             return response.status(200).send({
                 success: false,
@@ -355,16 +519,16 @@ export class CredentialsService {
     async rejectStudentV2(credentialPlayload: SingleCredentialDto, response: Response) {
         var payload = credentialPlayload
         let osid = payload.credentialSubject.osid;
-        let updateRes = await this.sbrcUpdate({"claim_status": "rejected"}, 'StudentDetailV2', osid)
+        let updateRes = await this.sbrcUpdate({ "claim_status": "rejected" }, 'StudentDetailV2', osid)
         console.log("updateRes 313", updateRes)
-        if(updateRes) {
+        if (updateRes) {
             return response.status(200).send({
                 success: true,
                 status: 'Success',
                 message: 'Student rejected successfully!',
                 result: null
             })
-        } else { 
+        } else {
             return response.status(200).send({
                 success: false,
                 status: 'Success',
@@ -645,43 +809,64 @@ export class CredentialsService {
         try {
             const response = await axios(config_sb_rc)
             return response.data;
-        } catch(err) {
+        } catch (err) {
             console.log("sbrcInvite err")
         }
-        
+
     }
 
     async sbrcInvite(inviteSchema, entityName) {
         let data = JSON.stringify(inviteSchema);
-    
+
         let config_sb_rc = {
-          method: 'post',
-          url: process.env.REGISTRY_URL + 'api/v1/' + entityName + '/invite',
-          headers: {
-            'content-type': 'application/json',
-          },
-          data: data,
+            method: 'post',
+            url: process.env.REGISTRY_URL + 'api/v1/' + entityName + '/invite',
+            headers: {
+                'content-type': 'application/json',
+            },
+            data: data,
         };
-    
+
         var sb_rc_response_text = null;
         await axios(config_sb_rc)
-          .then(function (response) {
-            //console.log(JSON.stringify(response.data));
-            sb_rc_response_text = response.data;
-          })
-          .catch(function (error) {
-            //console.log(error);
-            sb_rc_response_text = { error: error };
-          });
-    
+            .then(function (response) {
+                //console.log(JSON.stringify(response.data));
+                sb_rc_response_text = response.data;
+            })
+            .catch(function (error) {
+                //console.log(error);
+                sb_rc_response_text = { error: error };
+            });
+
         return sb_rc_response_text;
-      }
+    }
+
+    async sbrcSearch(searchSchema, entityName) {
+        let data = JSON.stringify(searchSchema);
+
+        let config = {
+            method: 'post',
+            //url: process.env.REGISTRY_URL + 'api/v1/StudentV2/search',
+            url: process.env.REGISTRY_URL + 'api/v1/' + entityName + '/search',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            data: data,
+        };
+        try {
+            const response = await axios(config);
+            return response.data;
+        } catch (err) {
+            console.log("sb_rc_create err")
+        }
+
+    }
 
     //search student
     async sbrcStudentSearch(studentName: string, dob: string) {
         let data = JSON.stringify({
             filters: {
-                studentName: {
+                student_name: {
                     eq: studentName,
                 },
                 dob: {
@@ -707,35 +892,110 @@ export class CredentialsService {
 
     }
 
+    
+
     //update
     async sbrcUpdate(updateSchema, entityName, osid) {
         console.log("updateSchema", updateSchema)
         console.log("entityName", entityName)
         console.log("osid", osid)
         let data = JSON.stringify(updateSchema);
-    
+
         let config_sb_rc = {
-          method: 'put',
-          url: process.env.REGISTRY_URL + 'api/v1/' + entityName + '/' + osid,
-          headers: {
-            'content-type': 'application/json',
-          },
-          data: data,
+            method: 'put',
+            url: process.env.REGISTRY_URL + 'api/v1/' + entityName + '/' + osid,
+            headers: {
+                'content-type': 'application/json',
+            },
+            data: data,
         };
-    
+
         var sb_rc_response_text = null;
         await axios(config_sb_rc)
-          .then(function (response) {
-            //console.log(JSON.stringify(response.data));
-            sb_rc_response_text = response.data;
-          })
-          .catch(function (error) {
-            //console.log(error);
-            sb_rc_response_text = { error: error };
-          });
-    
+            .then(function (response) {
+                //console.log(JSON.stringify(response.data));
+                sb_rc_response_text = response.data;
+            })
+            .catch(function (error) {
+                //console.log(error);
+                sb_rc_response_text = { error: error };
+            });
+
         return sb_rc_response_text;
-      }
-      
+    }
+
+    //find schoolDetail in rc
+    async searchSchoolDetail(udise) {
+        let data = JSON.stringify({
+            "filters": {
+                "udiseCode": {
+                    "eq": udise
+                }
+            }
+        });
+
+        let config = {
+            method: 'post',
+            maxBodyLength: Infinity,
+            url: 'https://ulp.uniteframework.io/registry/api/v1/SchoolDetail/search',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            data: data
+        };
+
+        try {
+            const response = await axios(config);
+            return response.data;
+        } catch (err) {
+            console.log("sb_rc_search err")
+        }
+
+
+    }
+
+    // create schoolDetail
+    async createSchoolDetail(payload) {
+        const axios = require('axios');
+        let data = JSON.stringify({
+            "schoolName": payload.schoolName,
+            "udiseCode": payload.udise,
+            "schoolCategory": 0,
+            "schoolManagementCenter": 0,
+            "schoolManagementState": 0,
+            "schoolType": 0,
+            "classFrom": 0,
+            "classTo": 0,
+            "stateCode": 0,
+            "stateName": "",
+            "districtName": "",
+            "blockName": "",
+            "locationType": 0,
+            "headOfSchoolMobile": "",
+            "respondentMobile": "",
+            "alternateMobile": "",
+            "schoolEmail": "",
+            "did": payload.did
+        });
+
+        let config = {
+            method: 'post',
+            maxBodyLength: Infinity,
+            url: 'https://ulp.uniteframework.io/registry/api/v1/SchoolDetail/invite',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            data: data
+        };
+
+        try {
+            const response = await axios(config);
+            return response.data;
+        } catch (err) {
+            console.log("sb_rc_create err")
+        }
+
+    }
+
 
 }
