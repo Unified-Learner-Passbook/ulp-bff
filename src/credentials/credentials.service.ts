@@ -172,8 +172,10 @@ export class CredentialsService {
 
         console.log('credentialPlayload: ', credentialPlayload);
         console.log('schemaId: ', schemaId);
-        var payload = credentialPlayload;
+
         var issuerId = ''
+
+        // find or create issuerId
         //find udise in rc
         let searchSchema = {
             "filters": {
@@ -185,8 +187,9 @@ export class CredentialsService {
         let searchSchoolDetail = await this.sbrcSearch(searchSchema, 'SchoolDetail')
         console.log("searchSchoolDetail", searchSchoolDetail)
 
-        if (searchSchoolDetail.did) {
-            issuerId = searchSchoolDetail.did
+        if (searchSchoolDetail) {
+            issuerId = searchSchoolDetail[0].did
+            console.log("issuerId", issuerId)
         } else {
             let schoolDidRes = await this.generateDid(credentialPlayload.issuerDetail.udise)
 
@@ -204,150 +207,6 @@ export class CredentialsService {
                 if (createSchoolDetail) {
                     issuerId = credentialPlayload.issuerDetail.schoolDid
                     console.log("issuerId", issuerId)
-
-                    //generate schema
-                    var schemaRes = await this.generateSchema(schemaId);
-                    console.log("schemaRes", schemaRes)
-
-                    if (schemaRes) {
-
-                        var responseArray = []
-
-                        // bulk import
-                        for (const iterator of payload.credentialSubject) {
-
-                            iterator.grade = credentialPlayload.credentialSubjectCommon.grade;
-                            iterator.academicYear = credentialPlayload.credentialSubjectCommon.academicYear;
-
-                            //generate did or find did
-                            var aadhar_token = iterator.aadhar_token
-
-                            // find student
-                            let name = iterator.studentName
-                            let dob = iterator.dob
-                            let searchSchema = {
-                                student_name: {
-                                    eq: name,
-                                },
-                                dob: {
-                                    eq: dob,
-                                },
-                            }
-                            const studentDetails = await this.sbrcSearch(searchSchema, 'StudentV2')
-                            console.log("studentDetails", studentDetails)
-                            if (studentDetails.length > 0) {
-                                if (studentDetails[0]?.DID) {
-                                    iterator.id = studentDetails[0].DID
-                                    let obj = {
-                                        issuerId: issuerId,
-                                        credSchema: schemaRes,
-                                        credentialSubject: iterator
-                                    }
-                                    console.log("obj", obj)
-
-                                    const cred = await this.issueCredentials(obj)
-                                    //console.log("cred 34", cred)
-                                    if (cred) {
-                                        responseArray.push(cred)
-                                    } else {
-                                        responseArray.push({ error: "unable to issue credentials!" })
-                                    }
-
-                                } else {
-                                    let didRes = await this.generateDid(aadhar_token)
-
-                                    if (didRes) {
-                                        iterator.id = didRes[0].verificationMethod[0].controller
-                                        let updateRes = await this.sbrcUpdate({ DID: iterator.id }, 'StudentV2', studentDetails[0].osid)
-                                        if (updateRes) {
-                                            let obj = {
-                                                issuerId: issuerId,
-                                                credSchema: schemaRes,
-                                                credentialSubject: iterator
-                                            }
-                                            console.log("obj", obj)
-
-                                            if (iterator.id) {
-
-                                                const cred = await this.issueCredentials(obj)
-                                                //console.log("cred 34", cred)
-                                                if (cred) {
-                                                    responseArray.push(cred)
-                                                } else {
-                                                    responseArray.push({ error: "unable to issue credentials!" })
-                                                }
-                                            }
-                                        } else {
-                                            responseArray.push({ error: "unable to update did inside RC!" })
-                                        }
-                                    } else {
-                                        responseArray.push({ error: "unable to generate student did!" })
-                                    }
-                                }
-                            } else {
-                                let didRes = await this.generateDid(aadhar_token)
-
-                                if (didRes) {
-                                    iterator.id = didRes[0].verificationMethod[0].controller
-                                    let inviteSchema = {
-                                        "DID": iterator.id,
-                                        "dob": iterator.dob,
-                                        "student_name": iterator.studentName
-                                    }
-                                    let createStudent = await this.sbrcInvite(inviteSchema, 'StudentV2')
-                                    console.log("createStudent", createStudent)
-                                    if(createStudent) {
-                                        let obj = {
-                                            issuerId: issuerId,
-                                            credSchema: schemaRes,
-                                            credentialSubject: iterator
-                                        }
-                                        console.log("obj", obj)
-        
-                                        const cred = await this.issueCredentials(obj)
-                                        //console.log("cred 34", cred)
-                                        if (cred) {
-                                            responseArray.push(cred)
-                                        } else {
-                                            responseArray.push({ error: "unable to issue credentials!" })
-                                        }
-                                    } else {
-                                        responseArray.push({ error: "unable to create student in RC!" })
-                                    }
-                                    
-                                } else {
-                                    responseArray.push({ error: "unable to generate student did!" })
-                                }
-
-                            }
-                        }
-
-                        //bulk import response
-                        console.log("responseArray.length", responseArray.length)
-                        if (responseArray.length > 0) {
-                            return response.status(200).send({
-                                success: true,
-                                status: 'Success',
-                                message: 'Bulk upload result!',
-                                result: responseArray
-                            })
-                        } else {
-                            return response.status(200).send({
-                                success: false,
-                                status: 'Success',
-                                message: 'Unable to generate did or crdentials',
-                                result: null
-                            })
-                        }
-
-                    } else {
-                        return response.status(200).send({
-                            success: false,
-                            status: 'Success',
-                            message: 'Unable to create schema',
-                            result: null
-                        })
-                    }
 
                 } else {
                     return response.status(200).send({
@@ -367,6 +226,182 @@ export class CredentialsService {
             }
 
 
+        }
+
+
+        //generate schema
+        var schemaRes = await this.generateSchema(schemaId);
+        console.log("schemaRes", schemaRes)
+
+        if (schemaRes) {
+
+            var responseArray = []
+
+            // bulk import
+            for (const iterator of credentialPlayload.credentialSubject) {
+
+                if(credentialPlayload.credentialSubjectCommon.grade) {
+                    iterator.grade = credentialPlayload.credentialSubjectCommon.grade;
+                }
+                if(credentialPlayload.credentialSubjectCommon.academicYear) {
+                    iterator.academicYear = credentialPlayload.credentialSubjectCommon.academicYear;
+                }
+                if(credentialPlayload.credentialSubjectCommon.benefitProvider) {
+                    iterator.benefitProvider = credentialPlayload.credentialSubjectCommon.benefitProvider
+                }
+                if(credentialPlayload.credentialSubjectCommon.schemeName) {
+                    iterator.schemeName = credentialPlayload.credentialSubjectCommon.schemeName
+                }
+                if(credentialPlayload.credentialSubjectCommon.schemeId) {
+                    iterator.schemeId = credentialPlayload.credentialSubjectCommon.schemeId
+                }
+                if(credentialPlayload.credentialSubjectCommon.assessment) {
+                    iterator.assessment = credentialPlayload.credentialSubjectCommon.assessment
+                }
+                if(credentialPlayload.credentialSubjectCommon.quarterlyAssessment) {
+                    iterator.quarterlyAssessment = credentialPlayload.credentialSubjectCommon.quarterlyAssessment
+                }
+                if(credentialPlayload.credentialSubjectCommon.total) {
+                    iterator.total = credentialPlayload.credentialSubjectCommon.total
+                }
+                if(credentialPlayload.credentialSubjectCommon.schoolName) {
+                    iterator.schoolName = credentialPlayload.credentialSubjectCommon.schoolName
+                }
+
+                //generate did or find did
+                var aadhar_token = iterator.aadhar_token
+
+                // find student
+                let name = iterator.studentName
+                let dob = iterator.dob
+                let searchSchema = {
+                    student_name: {
+                        eq: name,
+                    },
+                    dob: {
+                        eq: dob,
+                    },
+                }
+                const studentDetails = await this.sbrcSearch(searchSchema, 'StudentV2')
+                console.log("studentDetails", studentDetails)
+                if (studentDetails.length > 0) {
+                    if (studentDetails[0]?.DID) {
+                        iterator.id = studentDetails[0].DID
+                        let obj = {
+                            issuerId: issuerId,
+                            credSchema: schemaRes,
+                            credentialSubject: iterator,
+                            issuanceDate: credentialPlayload.vcData.issuanceDate,
+                            expirationDate: credentialPlayload.vcData.expirationDate
+                        }
+                        console.log("obj", obj)
+
+                        const cred = await this.issueCredentials(obj)
+                        //console.log("cred 34", cred)
+                        if (cred) {
+                            responseArray.push(cred)
+                        } else {
+                            responseArray.push({ error: "unable to issue credentials!" })
+                        }
+
+                    } else {
+                        let didRes = await this.generateDid(aadhar_token)
+
+                        if (didRes) {
+                            iterator.id = didRes[0].verificationMethod[0].controller
+                            let updateRes = await this.sbrcUpdate({ DID: iterator.id }, 'StudentV2', studentDetails[0].osid)
+                            if (updateRes) {
+                                let obj = {
+                                    issuerId: issuerId,
+                                    credSchema: schemaRes,
+                                    credentialSubject: iterator,
+                                    issuanceDate: credentialPlayload.vcData.issuanceDate,
+                                    expirationDate: credentialPlayload.vcData.expirationDate
+                                }
+                                console.log("obj", obj)
+
+                                if (iterator.id) {
+
+                                    const cred = await this.issueCredentials(obj)
+                                    //console.log("cred 34", cred)
+                                    if (cred) {
+                                        responseArray.push(cred)
+                                    } else {
+                                        responseArray.push({ error: "unable to issue credentials!" })
+                                    }
+                                }
+                            } else {
+                                responseArray.push({ error: "unable to update did inside RC!" })
+                            }
+                        } else {
+                            responseArray.push({ error: "unable to generate student did!" })
+                        }
+                    }
+                } else {
+                    let didRes = await this.generateDid(aadhar_token)
+
+                    if (didRes) {
+                        iterator.id = didRes[0].verificationMethod[0].controller
+                        let inviteSchema = {
+                            "DID": iterator.id,
+                            "dob": iterator.dob,
+                            "student_name": iterator.studentName
+                        }
+                        let createStudent = await this.sbrcInvite(inviteSchema, 'StudentV2')
+                        console.log("createStudent", createStudent)
+                        if(createStudent) {
+                            let obj = {
+                                issuerId: issuerId,
+                                credSchema: schemaRes,
+                                credentialSubject: iterator,
+                                issuanceDate: credentialPlayload.vcData.issuanceDate,
+                                expirationDate: credentialPlayload.vcData.expirationDate
+                            }
+                            console.log("obj", obj)
+
+                            const cred = await this.issueCredentials(obj)
+                            //console.log("cred 34", cred)
+                            if (cred) {
+                                responseArray.push(cred)
+                            } else {
+                                responseArray.push({ error: "unable to issue credentials!" })
+                            }
+                        } else {
+                            responseArray.push({ error: "unable to create student in RC!" })
+                        }
+                        
+                    } else {
+                        responseArray.push({ error: "unable to generate student did!" })
+                    }
+
+                }
+            }
+
+            //bulk import response
+            console.log("responseArray.length", responseArray.length)
+            if (responseArray.length > 0) {
+                return response.status(200).send({
+                    success: true,
+                    status: 'Success',
+                    message: 'Bulk upload result!',
+                    result: responseArray
+                })
+            } else {
+                return response.status(200).send({
+                    success: false,
+                    status: 'Success',
+                    message: 'Unable to generate did or crdentials',
+                    result: null
+                })
+            }
+
+        } else {
+            return response.status(200).send({
+                success: false,
+                status: 'Success',
+                message: 'Unable to create schema',
+                result: null
+            })
         }
 
 
@@ -728,8 +763,8 @@ export class CredentialsService {
                     "UniversityDegreeCredential"
                 ],
                 "issuer": `${payload.issuerId}`,
-                "issuanceDate": "2023-02-06T11:56:27.259Z",
-                "expirationDate": "2023-02-08T11:56:27.259Z",
+                "issuanceDate": payload.issuanceDate,
+                "expirationDate": payload.expirationDate,
                 "credentialSubject": payload.credentialSubject,
                 "options": {
                     "created": "2020-04-02T18:48:36Z",
