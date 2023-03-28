@@ -1677,11 +1677,11 @@ export class SSOService {
             result: sb_rc_search?.error,
           });
         } else if (sb_rc_search.length === 0) {
-          return response.status(200).send({
-            success: true,
+          return response.status(404).send({
+            success: false,
             status: 'sb_rc_no_did_found',
             message: 'Teacher not Found in Sunbird RC',
-            result: [],
+            result: null,
           });
         } else {
           let schoolUdise = sb_rc_search[0]?.schoolUdise;
@@ -1712,11 +1712,11 @@ export class SSOService {
               result: sb_rc_search_student_detail?.error,
             });
           } else if (sb_rc_search_student_detail.length === 0) {
-            return response.status(404).send({
-              success: false,
+            return response.status(200).send({
+              success: true,
               status: 'sb_rc_no_found',
               message: 'Student not Found in Sunbird RC',
-              result: null,
+              result: [],
             });
           } else {
             let student_list = [];
