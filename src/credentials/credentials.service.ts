@@ -243,8 +243,8 @@ export class CredentialsService {
                 if(credentialPlayload.credentialSubjectCommon.grade) {
                     iterator.grade = credentialPlayload.credentialSubjectCommon.grade;
                 }
-                if(credentialPlayload.credentialSubjectCommon.academicYear) {
-                    iterator.academicYear = credentialPlayload.credentialSubjectCommon.academicYear;
+                if(credentialPlayload.credentialSubjectCommon.academic_year) {
+                    iterator.academic_year = credentialPlayload.credentialSubjectCommon.academic_year;
                 }
                 if(credentialPlayload.credentialSubjectCommon.benefitProvider) {
                     iterator.benefitProvider = credentialPlayload.credentialSubjectCommon.benefitProvider
@@ -272,15 +272,17 @@ export class CredentialsService {
                 var aadhar_token = iterator.aadhar_token
 
                 // find student
-                let name = iterator.studentName
+                let name = iterator.student_name
                 let dob = iterator.dob
                 let searchSchema = {
-                    student_name: {
-                        eq: name,
-                    },
-                    dob: {
-                        eq: dob,
-                    },
+                    "filters": {
+                        "student_name": {
+                            "eq": name
+                        },
+                        "dob": {
+                            "eq": dob
+                        }
+                      }
                 }
                 const studentDetails = await this.sbrcSearch(searchSchema, 'StudentV2')
                 console.log("studentDetails", studentDetails)
@@ -343,9 +345,15 @@ export class CredentialsService {
                     if (didRes) {
                         iterator.id = didRes[0].verificationMethod[0].controller
                         let inviteSchema = {
+                            "student_id": "string",
                             "DID": iterator.id,
+                            "reference_id": iterator.reference_id,
+                            "aadhar_token": iterator.aadhar_token,
+                            "student_name": iterator.student_name,
                             "dob": iterator.dob,
-                            "student_name": iterator.studentName
+                            "school_type": "public",
+                            "meripehchan_id": "",
+                            "username": ""
                         }
                         let createStudent = await this.sbrcInvite(inviteSchema, 'StudentV2')
                         console.log("createStudent", createStudent)
