@@ -943,8 +943,11 @@ export class SSOService {
               digiacc === 'ewallet'
                 ? {
                     filters: {
-                      meripehchan_id: {
-                        eq: response_data?.meripehchanid.toString(),
+                      student_name: {
+                        eq: response_data?.name.toString(),
+                      },
+                      dob: {
+                        eq: response_data?.dob.toString(),
                       },
                     },
                   }
@@ -993,14 +996,112 @@ export class SSOService {
                   message: userToken?.error.message,
                   result: null,
                 });*/
-                return response.status(200).send({
+                /*return response.status(200).send({
                   success: true,
                   status: 'digilocker_login_success',
                   message: 'Digilocker Login Success',
                   result: response_data,
                   digi: response_digi?.data,
                   user: 'NO_FOUND',
-                });
+                });*/
+                //sbrc present but no keycloak
+                //create keycloak and then login
+                const clientToken = await this.getClientToken();
+                if (clientToken?.error) {
+                  return response.status(401).send({
+                    success: false,
+                    status: 'keycloak_client_token_error',
+                    message: 'Bad Request for Keycloak Client Token',
+                    result: null,
+                  });
+                } else {
+                  //register in keycloak
+                  //register student keycloak
+                  let response_text = await this.registerUserKeycloak(
+                    auto_username,
+                    auto_password,
+                    clientToken,
+                  );
+                  if (response_text?.error) {
+                    return response.status(400).send({
+                      success: false,
+                      status: 'keycloak_register_duplicate',
+                      message: 'User Already Registered in Keycloak',
+                      result: null,
+                    });
+                  } else {
+                    const userToken = await this.getKeycloakToken(
+                      auto_username,
+                      auto_password,
+                    );
+                    if (userToken?.error) {
+                      //console.log(userToken?.error);
+                      return response.status(501).send({
+                        success: false,
+                        status: 'keycloak_invalid_credentials',
+                        message: userToken?.error.message,
+                        result: null,
+                      });
+                    } else {
+                      if (sb_rc_search[0]?.school_type === 'private') {
+                        //find if student private detaile
+                        const filter = {
+                          filters: {
+                            student_id: {
+                              eq: sb_rc_search[0].osid,
+                            },
+                          },
+                        };
+                        const sb_rc_search_detail = await this.searchEntity(
+                          'StudentDetailV2',
+                          filter,
+                        );
+                        //console.log(sb_rc_search_detail);
+                        if (sb_rc_search_detail?.error) {
+                          return response.status(501).send({
+                            success: false,
+                            status: 'sb_rc_search_error',
+                            message: 'Sunbird RC User Search Failed',
+                            result: sb_rc_search_detail?.error,
+                          });
+                        } else if (sb_rc_search_detail.length === 0) {
+                          // no student found then register
+                          return response.status(501).send({
+                            success: false,
+                            status: 'sb_rc_search_no_found',
+                            message: 'Sunbird RC User No Found',
+                            result: sb_rc_search_detail?.error,
+                          });
+                        } else {
+                          //sent user value
+                          return response.status(200).send({
+                            success: true,
+                            status: 'digilocker_login_success',
+                            message: 'Digilocker Login Success',
+                            result: response_data,
+                            digi: response_digi?.data,
+                            user: 'FOUND',
+                            userData: sb_rc_search,
+                            detail: sb_rc_search_detail[0],
+                            token: userToken?.access_token,
+                          });
+                        }
+                      } else {
+                        return response.status(200).send({
+                          success: true,
+                          status: 'digilocker_login_success',
+                          message: 'Digilocker Login Success',
+                          result: response_data,
+                          digi: response_digi?.data,
+                          user: 'FOUND',
+                          userData: sb_rc_search,
+                          detail: null,
+                          token: userToken?.access_token,
+                        });
+                      }
+                    }
+                  }
+                }
               } else {
                 if (sb_rc_search[0]?.school_type === 'private') {
                   //find if student private detaile
@@ -1518,7 +1619,7 @@ export class SSOService {
         //get common detail
         let grade = requestbody?.schoolDetails?.grade;
         let school_udise = requestbody?.schoolDetails?.schoolUdise;
-        let school_name = requestbody?.schoolDetails?.school_name;
+        let school_name = requestbody?.schoolDetails?.schoolName;
         let acdemic_year = requestbody?.schoolDetails?.['academic-year'];
         let school_type = requestbody?.schoolDetails?.school_type;
         const studentDetails = requestbody?.studentDetails;
