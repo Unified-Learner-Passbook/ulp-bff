@@ -240,31 +240,31 @@ export class CredentialsService {
             // bulk import
             for (const iterator of credentialPlayload.credentialSubject) {
 
-                if(credentialPlayload.credentialSubjectCommon.grade) {
+                if (credentialPlayload.credentialSubjectCommon.grade) {
                     iterator.grade = credentialPlayload.credentialSubjectCommon.grade;
                 }
-                if(credentialPlayload.credentialSubjectCommon.academic_year) {
+                if (credentialPlayload.credentialSubjectCommon.academic_year) {
                     iterator.academic_year = credentialPlayload.credentialSubjectCommon.academic_year;
                 }
-                if(credentialPlayload.credentialSubjectCommon.benefitProvider) {
+                if (credentialPlayload.credentialSubjectCommon.benefitProvider) {
                     iterator.benefitProvider = credentialPlayload.credentialSubjectCommon.benefitProvider
                 }
-                if(credentialPlayload.credentialSubjectCommon.schemeName) {
+                if (credentialPlayload.credentialSubjectCommon.schemeName) {
                     iterator.schemeName = credentialPlayload.credentialSubjectCommon.schemeName
                 }
-                if(credentialPlayload.credentialSubjectCommon.schemeId) {
+                if (credentialPlayload.credentialSubjectCommon.schemeId) {
                     iterator.schemeId = credentialPlayload.credentialSubjectCommon.schemeId
                 }
-                if(credentialPlayload.credentialSubjectCommon.assessment) {
+                if (credentialPlayload.credentialSubjectCommon.assessment) {
                     iterator.assessment = credentialPlayload.credentialSubjectCommon.assessment
                 }
-                if(credentialPlayload.credentialSubjectCommon.quarterlyAssessment) {
+                if (credentialPlayload.credentialSubjectCommon.quarterlyAssessment) {
                     iterator.quarterlyAssessment = credentialPlayload.credentialSubjectCommon.quarterlyAssessment
                 }
-                if(credentialPlayload.credentialSubjectCommon.total) {
+                if (credentialPlayload.credentialSubjectCommon.total) {
                     iterator.total = credentialPlayload.credentialSubjectCommon.total
                 }
-                if(credentialPlayload.credentialSubjectCommon.schoolName) {
+                if (credentialPlayload.credentialSubjectCommon.schoolName) {
                     iterator.schoolName = credentialPlayload.credentialSubjectCommon.schoolName
                 }
 
@@ -282,7 +282,7 @@ export class CredentialsService {
                         "dob": {
                             "eq": dob
                         }
-                      }
+                    }
                 }
                 const studentDetails = await this.sbrcSearch(searchSchema, 'StudentV2')
                 console.log("studentDetails", studentDetails)
@@ -357,7 +357,7 @@ export class CredentialsService {
                         }
                         let createStudent = await this.sbrcInvite(inviteSchema, 'StudentV2')
                         console.log("createStudent", createStudent)
-                        if(createStudent) {
+                        if (createStudent) {
                             let obj = {
                                 issuerId: issuerId,
                                 credSchema: schemaRes,
@@ -377,7 +377,7 @@ export class CredentialsService {
                         } else {
                             responseArray.push({ error: "unable to create student in RC!" })
                         }
-                        
+
                     } else {
                         responseArray.push({ error: "unable to generate student did!" })
                     }
@@ -526,6 +526,9 @@ export class CredentialsService {
 
         var payload = credentialPlayload
 
+        var osid = payload.credentialSubject.osid;
+        var student_osid = payload.credentialSubject.student_osid;
+
 
         //var issuerId = "did:ulp:f08f7782-0d09-4c47-aacb-9092113bc33e"
         var issuerId = credentialPlayload.issuer;
@@ -538,56 +541,38 @@ export class CredentialsService {
 
         console.log("schemaRes", schemaRes)
 
-        let studentId = payload.credentialSubject.studentId;
-        console.log("studentId", studentId)
-        const didRes = await this.generateDid(studentId);
-        console.log("didRes 191", didRes)
+        if (schemaRes) {
 
+            let aadhar_token = payload.credentialSubject.aadhar_token;
+            console.log("aadhar_token", aadhar_token)
+            const didRes = await this.generateDid(aadhar_token);
+            console.log("didRes 191", didRes)
 
-        if (didRes) {
-            var did = didRes[0].verificationMethod[0].controller
-            payload.credentialSubject.id = did
-            let obj = {
-                issuerId: issuerId,
-                credSchema: schemaRes,
-                credentialSubject: payload.credentialSubject
-            }
-            console.log("obj", obj)
-            const cred = await this.issueCredentials(obj)
-            if (cred) {
-                //update did inside sbrc
-                var osid = payload.credentialSubject.osid;
-                var student_id = payload.credentialSubject.studentId;
+            if (didRes) {
+                var did = didRes[0].verificationMethod[0].controller
+                payload.credentialSubject.id = did
+                delete payload.credentialSubject.osid
+                delete payload.credentialSubject.student_osid
+                let obj = {
+                    issuerId: issuerId,
+                    credSchema: schemaRes,
+                    credentialSubject: payload.credentialSubject,
+                    "issuanceDate": "2023-02-06T11:56:27.259Z",
+                    "expirationDate": "2023-02-06T11:56:27.259Z"
+                }
+                console.log("obj", obj)
+                const cred = await this.issueCredentials(obj)
+                if (cred) {
+                    //update did inside sbrc
 
-                let updateStudentDetail = await this.sbrcUpdate({ "claim_status": "approved" }, 'StudentDetailV2', osid)
-                console.log("updateStudentDetail", updateStudentDetail)
-
-                let updateStudent = await this.sbrcUpdate({ DID: did }, 'StudentV2', student_id)
-                console.log("updateStudent", updateStudent)
-
-                if (updateStudentDetail && updateStudent) {
-                    console.log("updated in 1st attempt")
-                    return response.status(200).send({
-                        success: true,
-                        status: 'Success',
-                        message: 'Credentials generated successfully!',
-                        result: cred
-                    })
-                } else {
-                    // return response.status(200).send({
-                    //     success: false,
-                    //     status: 'Success',
-                    //     message: 'Credentials generated successfully but Unable to update data inside Registry',
-                    //     result: null
-                    // })
-                    console.log("updated in 2nd attempt")
-                    let updateStudentDetail = await this.sbrcUpdate({ "claim_status": "approved" }, 'StudentDetailV2', osid)
+                    let updateStudentDetail = await this.sbrcUpdate({ "claim_status": "issued" }, 'StudentDetailV2', osid)
                     console.log("updateStudentDetail", updateStudentDetail)
 
-                    let updateStudent = await this.sbrcUpdate({ DID: did }, 'StudentV2', student_id)
+                    let updateStudent = await this.sbrcUpdate({ DID: did }, 'StudentV2', student_osid)
                     console.log("updateStudent", updateStudent)
 
                     if (updateStudentDetail && updateStudent) {
+                        
                         return response.status(200).send({
                             success: true,
                             status: 'Success',
@@ -599,16 +584,24 @@ export class CredentialsService {
                             success: false,
                             status: 'Success',
                             message: 'Credentials generated successfully but Unable to update data inside Registry',
-                            result: null
+                            result: cred
                         })
                     }
+
+                } else {
+                    return response.status(200).send({
+                        success: false,
+                        status: 'Success',
+                        message: 'Unable to generate Credentials',
+                        result: null
+                    })
                 }
 
             } else {
                 return response.status(200).send({
                     success: false,
                     status: 'Success',
-                    message: 'Unable to generate Credentials',
+                    message: 'Unable to generate did',
                     result: null
                 })
             }
@@ -617,10 +610,12 @@ export class CredentialsService {
             return response.status(200).send({
                 success: false,
                 status: 'Success',
-                message: 'Unable to generate did',
+                message: 'Unable to create schema',
                 result: null
             })
         }
+
+
     }
 
     async rejectStudentV2(credentialPlayload: SingleCredentialDto, response: Response) {
@@ -704,7 +699,7 @@ export class CredentialsService {
             console.log("response did", response.data)
             return response.data;
         } catch (error) {
-            console.log("error did", error)
+            console.log("did error", error.message)
         }
     }
 

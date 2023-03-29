@@ -14,18 +14,18 @@ export class SingleCredentialDto {
         credentialSubject: { id: any; grade: string; programme: any; certifyingInstitute: any; evaluatingInstitute: any; };
         credSchema: void;
         grade: string;
-        schoolName: string;
-        academicYear: string;
+        school_name: string;
+        academic_year: string;
         credId: any;
         issuerId: string;
         evaluatingInstitute: any;
         certifyingInstitute: any;
         programme: any;
         studentId: string;
-        studentName: string;
+        student_name: string;
         fatherName: string;
         motherName: string;
-        guardianName: string;
+        guardian_name: string;
         age: string;
         class: string;
         gender: string;
@@ -37,6 +37,12 @@ export class SingleCredentialDto {
         villageId: string;
         schoolId: string,
         status: string;
-        osid: string
+        osid: string;
+        student_osid: string,
+        aadhar_token: string,
+        student_id: string,
+        dob: string,
+        reference_id: string,
+        
     }
 }
