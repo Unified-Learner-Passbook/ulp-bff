@@ -10,7 +10,7 @@ export class BulkCredentialDto {
   }
   credentialSubjectCommon: {
     grade: string,
-    academicYear: string,
+    academic_year: string,
     benefitProvider: string,
     schemeName: string,
     schemeId: string,
@@ -22,15 +22,15 @@ export class BulkCredentialDto {
   credentialSubject: [
     {
       id: any,
-      studentId: string,
-      studentName: string,
+      student_id: string,
+      student_name: string,
       dob: string,
       reference_id: string,
       aadhar_token: string,
-      guardianName: string,
-      enrolledOn: string,
+      guardian_name: string,
+      enrolled_on: string,
       grade: string,
-      academicYear: string,
+      academic_year: string,
       benefitProvider: string,
       schemeName: String,
       schemeId: string,
