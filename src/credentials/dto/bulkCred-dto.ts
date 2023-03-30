@@ -42,6 +42,7 @@ export class BulkCredentialDto {
       total: string,
       schoolName: string,
       school_name: string
+      school_id: string
     }
   ]
 }
