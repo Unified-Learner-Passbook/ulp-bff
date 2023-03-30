@@ -264,8 +264,11 @@ export class CredentialsService {
                 if (credentialPlayload.credentialSubjectCommon.total) {
                     iterator.total = credentialPlayload.credentialSubjectCommon.total
                 }
-                if (credentialPlayload.credentialSubjectCommon.schoolName) {
-                    iterator.school_name = credentialPlayload.credentialSubjectCommon.schoolName
+                if (credentialPlayload.issuerDetail.schoolName) {
+                    iterator.school_name = credentialPlayload.issuerDetail.schoolName
+                }
+                if (credentialPlayload.issuerDetail.udise) {
+                    iterator.school_id = credentialPlayload.issuerDetail.udise
                 }
 
                 //generate did or find did
