@@ -265,7 +265,7 @@ export class CredentialsService {
                     iterator.total = credentialPlayload.credentialSubjectCommon.total
                 }
                 if (credentialPlayload.credentialSubjectCommon.schoolName) {
-                    iterator.schoolName = credentialPlayload.credentialSubjectCommon.schoolName
+                    iterator.school_name = credentialPlayload.credentialSubjectCommon.schoolName
                 }
 
                 //generate did or find did
@@ -1011,7 +1011,7 @@ export class CredentialsService {
             const response = await axios(config);
             return response.data;
         } catch (err) {
-            console.log("sb_rc_search err")
+            console.log("sb_rc_update err")
         }
     }
 

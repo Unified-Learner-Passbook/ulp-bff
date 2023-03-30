@@ -40,7 +40,8 @@ export class BulkCredentialDto {
       quarterlyAssessment: string,
       marks: string,
       total: string,
-      schoolName: string
+      schoolName: string,
+      school_name: string
     }
   ]
 }
