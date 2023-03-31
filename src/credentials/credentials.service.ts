@@ -348,7 +348,7 @@ export class CredentialsService {
                     if (didRes) {
                         iterator.id = didRes[0].verificationMethod[0].controller
                         let inviteSchema = {
-                            "student_id": "string",
+                            "student_id": iterator.student_id,
                             "DID": iterator.id,
                             "reference_id": iterator.reference_id,
                             "aadhar_token": iterator.aadhar_token,
@@ -356,10 +356,12 @@ export class CredentialsService {
                             "dob": iterator.dob,
                             "school_type": "public",
                             "meripehchan_id": "",
-                            "username": ""
+                            "username": (iterator.student_name.split(' ')[0]+'@'+iterator.dob.split('/').join('')).toLowerCase()
                         }
+                        console.log("inviteSchema", inviteSchema)
                         let createStudent = await this.sbrcInvite(inviteSchema, 'StudentV2')
                         console.log("createStudent", createStudent)
+
                         if (createStudent) {
                             let obj = {
                                 issuerId: issuerId,
