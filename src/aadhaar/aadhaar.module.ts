@@ -6,3 +6,4 @@ import { AadhaarService } from './aadhaar.services';
   providers: [AadhaarService],
 })
 export class AadhaarModule {}
+ 
