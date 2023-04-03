@@ -1633,7 +1633,12 @@ export class SSOService {
               const student = studentDetails[i];
               //check student account present in system or not
               const username_name = student?.studentName.split(' ')[0];
-              let auto_username = username_name + '@' + student?.dob;
+              const username_dob = await this.replaceChar(
+                student?.dob,
+                '/',
+                '',
+              );
+              let auto_username = username_name + '@' + username_dob;
               auto_username = auto_username.toLowerCase();
               //find if student account present in sb rc or not
               const sb_rc_search = await this.sbrcStudentSearch(
