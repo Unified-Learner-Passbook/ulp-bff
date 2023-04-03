@@ -28,10 +28,7 @@ export class SchoolController {
     response.status(200).send(result);
   }
   @Post('/authenticate')
-  async aadhaarVerify(
-    @Body('school_udise') school_udise: string,
-    @Res() response: Response,
-  ) {
-    return this.schoolService.schoolVerify(school_udise, response);
+  async aadhaarVerify(@Body() requestbody: any, @Res() response: Response) {
+    return this.schoolService.schoolVerify(requestbody, response);
   }
 }
