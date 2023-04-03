@@ -139,22 +139,24 @@ export class PublicSchoolService {
   //helper function
   //generate clientId
   async getClientId(udiseCode) {
-    let length = 10;
-    let chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-    var result = '';
-    for (var i = length; i > 0; --i)
-      result += chars[Math.floor(Math.random() * chars.length)];
-    result += Math.floor(Date.now() / 1000);
-    return result;
-  }
-  //generate clientSecret
-  async getClientSecret(udiseCode) {
     let length = 4;
     let chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
     var result = '';
     for (var i = length; i > 0; --i)
       result += chars[Math.floor(Math.random() * chars.length)];
-    result += Math.floor(Date.now() / 1000);
+    let timestamp = Math.floor(Date.now() / 1000).toString();
+    timestamp = timestamp.substr(timestamp.length - 5);
+    result += timestamp;
+    return result;
+  }
+  //generate clientSecret
+  async getClientSecret(udiseCode) {
+    let length = 10;
+    let chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    var result = '';
+    for (var i = length; i > 0; --i)
+      result += chars[Math.floor(Math.random() * chars.length)];
+    result += Math.floor(Date.now() / 1000).toString();
     return await this.md5(udiseCode + result);
   }
 
