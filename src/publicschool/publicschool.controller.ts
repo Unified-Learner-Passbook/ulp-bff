@@ -41,4 +41,16 @@ export class PublicSchoolController {
   ) {
     return this.publicschoolService.searchPublicSchool(udiseCode, response);
   }
+  @Post('/bulk/register')
+  async bulkRegister(
+    @Body('clientId') clientId: string,
+    @Body('clientSecret') clientSecret: string,
+    @Res() response: Response,
+  ) {
+    return this.publicschoolService.bulkRegister(
+      clientId,
+      clientSecret,
+      response,
+    );
+  }
 }
