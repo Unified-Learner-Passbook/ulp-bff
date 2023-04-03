@@ -187,7 +187,7 @@ export class CredentialsService {
         let searchSchoolDetail = await this.sbrcSearch(searchSchema, 'SchoolDetail')
         console.log("searchSchoolDetail", searchSchoolDetail)
 
-        if (searchSchoolDetail) {
+        if (searchSchoolDetail.length>0) {
             issuerId = searchSchoolDetail[0].did
             console.log("issuerId", issuerId)
         } else {
