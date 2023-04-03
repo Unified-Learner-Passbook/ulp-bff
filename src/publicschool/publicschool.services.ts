@@ -135,6 +135,61 @@ export class PublicSchoolService {
       });
     }
   }
+  //bulkRegister
+  async bulkRegister(
+    clientId: string,
+    clientSecret: string,
+    response: Response,
+  ) {
+    if (clientId && clientSecret) {
+      //search in sb rc//find if student private detaile
+      const filter = {
+        filters: {
+          clientId: {
+            eq: clientId,
+          },
+          clientSecret: {
+            eq: clientSecret,
+          },
+        },
+      };
+      const sb_rc_search_detail = await this.searchEntity(
+        'PublicSchool',
+        filter,
+      );
+      //console.log(sb_rc_search_detail);
+      if (sb_rc_search_detail?.error) {
+        return response.status(501).send({
+          success: false,
+          status: 'sb_rc_search_error',
+          message: 'Sunbird Search Failed',
+          result: sb_rc_search_detail?.error,
+        });
+      } else if (sb_rc_search_detail.length === 0) {
+        // no public school found then register
+        return response.status(501).send({
+          success: false,
+          status: 'sb_rc_invalid_credentials',
+          message: 'Invalid Client ID and Client Secret',
+          result: sb_rc_search_detail,
+        });
+      } else {
+        return response.status(200).send({
+          success: true,
+          status: 'sb_rc_search_found',
+          message: 'Public School Already Found in Subird RC',
+          result: sb_rc_search_detail[0]?.udiseCode,
+        });
+      }
+    } else {
+      return response.status(400).send({
+        success: false,
+        status: 'invalid_request',
+        message: 'Invalid Request. Not received All Parameters.',
+        result: null,
+      });
+    }
+  }
 
   //helper function
   //generate clientId
