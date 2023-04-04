@@ -1928,6 +1928,8 @@ export class SSOService {
               let guardianName = credentialSubjectItem?.guardianName;
               let issuanceDate = credentialSubjectItem?.issuanceDate;
               let expirationDate = credentialSubjectItem?.expirationDate;
+              let student_id = credentialSubjectItem?.student_id;
+              let school_id = credentialSubjectItem?.school_id;
               let osid = credentialSubjectItem?.osid;
               //issueCredentials obj
               let obj = {
@@ -1935,12 +1937,14 @@ export class SSOService {
                 credSchema: schemaRes,
                 credentialSubject: {
                   id: id,
-                  enrolledOn: enrolledOn,
-                  studentName: studentName,
-                  guardianName: guardianName,
+                  enrolled_on: enrolledOn,
+                  student_name: studentName,
+                  guardian_name: guardianName,
                   grade: grade,
-                  schoolName: schoolName,
-                  academicYear: academicYear,
+                  school_name: schoolName,
+                  academic_year: academicYear,
+                  student_id: student_id,
+                  school_id: school_id,
                 },
                 issuanceDate: issuanceDate,
                 expirationDate: expirationDate,
