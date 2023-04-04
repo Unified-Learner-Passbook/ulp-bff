@@ -1627,8 +1627,11 @@ export class SSOService {
         let loglist = [];
         let error_count = 0;
         let success_count = 0;
+        let duplicate_count = 0;
         if (studentDetails) {
           for (let i = 0; i < studentDetails.length; i++) {
+            loglist[i] = {};
+            loglist[i].studentDetails = studentDetails[i];
             try {
               const student = studentDetails[i];
               //check student account present in system or not
@@ -1648,7 +1651,8 @@ export class SSOService {
               //console.log(sb_rc_search);
               if (sb_rc_search?.error) {
                 iserror = true;
-                loglist.push(sb_rc_search?.error);
+                loglist[i].status = false;
+                loglist[i].error = sb_rc_search?.error;
                 error_count++;
               } else if (sb_rc_search.length === 0) {
                 //register student in sb rc
@@ -1676,7 +1680,8 @@ export class SSOService {
                 );
                 if (sb_rc_response_text?.error) {
                   iserror = true;
-                  loglist.push(sb_rc_response_text?.error);
+                  loglist[i].status = false;
+                  loglist[i].error = sb_rc_response_text?.error;
                   error_count++;
                 } else if (
                   sb_rc_response_text?.params?.status === 'SUCCESSFUL'
@@ -1704,18 +1709,30 @@ export class SSOService {
                   );
                   if (sb_rc_response_text_detail?.error) {
                     iserror = true;
-                    loglist.push(sb_rc_response_text_detail?.error);
+                    loglist[i].status = false;
+                    loglist[i].error = sb_rc_response_text_detail?.error;
                     error_count++;
                   } else if (
                     sb_rc_response_text_detail?.params?.status === 'SUCCESSFUL'
                   ) {
+                    loglist[i].status = true;
+                    loglist[i].error = {};
                     success_count++;
                   }
+                } else {
+                  loglist[i].status = false;
+                  loglist[i].error = 'duplicate entry';
+                  duplicate_count++;
                 }
+              } else {
+                loglist[i].status = false;
+                loglist[i].error = 'duplicate entry';
+                duplicate_count++;
               }
             } catch (e) {
               iserror = true;
-              loglist.push(e);
+              loglist[i].status = false;
+              loglist[i].error = e;
               error_count++;
             }
           }
@@ -1724,13 +1741,10 @@ export class SSOService {
           success: true,
           status: 'student_register_bulk_api_success',
           iserror: iserror,
-          message:
-            'Student Register Bulk API Success. Count: ' +
-            Number(error_count + success_count) +
-            ' Pass: ' +
-            success_count +
-            ' Fail: ' +
-            error_count,
+          message: 'Student Register Bulk API Success.',
+          error_count: error_count,
+          success_count: success_count,
+          duplicate_count: duplicate_count,
           result: loglist,
         });
       }
@@ -1904,6 +1918,8 @@ export class SSOService {
         let success_count = 0;
         if (credentialSubject) {
           for (let i = 0; i < credentialSubject.length; i++) {
+            loglist[i] = {};
+            loglist[i].credentialSubject = credentialSubject[i];
             try {
               const credentialSubjectItem = credentialSubject[i];
               let id = credentialSubjectItem?.id;
@@ -1933,7 +1949,8 @@ export class SSOService {
               const cred = await this.issueCredentials(obj);
               if (cred?.error) {
                 iserror = true;
-                loglist.push(cred?.error);
+                loglist[i].status = false;
+                loglist[i].error = cred?.error;
                 error_count++;
               } else {
                 //update status
@@ -1947,21 +1964,26 @@ export class SSOService {
                 );
                 if (sb_rc_response_text?.error) {
                   iserror = true;
-                  loglist.push(sb_rc_response_text?.error);
+                  loglist[i].status = false;
+                  loglist[i].error = sb_rc_response_text?.error;
                   error_count++;
                 } else if (
                   sb_rc_response_text?.params?.status === 'SUCCESSFUL'
                 ) {
+                  loglist[i].status = true;
+                  loglist[i].error = {};
                   success_count++;
                 } else {
                   iserror = true;
-                  loglist.push(sb_rc_response_text);
+                  loglist[i].status = false;
+                  loglist[i].error = sb_rc_response_text;
                   error_count++;
                 }
               }
             } catch (e) {
               iserror = true;
-              loglist.push(e);
+              loglist[i].status = false;
+              loglist[i].error = e;
               error_count++;
             }
           }
@@ -1970,13 +1992,9 @@ export class SSOService {
           success: true,
           status: 'student_cred_bulk_api_success',
           iserror: iserror,
-          message:
-            'Student Cred Bulk API Success. Count: ' +
-            Number(error_count + success_count) +
-            ' Pass: ' +
-            success_count +
-            ' Fail: ' +
-            error_count,
+          message: 'Student Cred Bulk API Success.',
+          error_count: error_count,
+          success_count: success_count,
           result: loglist,
         });
       }
