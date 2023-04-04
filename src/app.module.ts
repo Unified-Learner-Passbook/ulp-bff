@@ -3,7 +3,7 @@ import { SSOModule } from './sso/sso.module';
 import { CredentialsModule } from './credentials/credentials.module';
 import { AadhaarModule } from './aadhaar/aadhaar.module';
 import { SchoolModule } from './school/school.module';
-import { PublicSchoolModule } from './publicschool/publicschool.module';
+import { ClientModule } from './client/client.module';
 
 //call env variable
 import { ConfigModule } from '@nestjs/config';
@@ -15,7 +15,7 @@ import { ConfigModule } from '@nestjs/config';
     CredentialsModule,
     AadhaarModule,
     SchoolModule,
-    PublicSchoolModule,
+    ClientModule,
   ],
 })
 export class AppModule {}
