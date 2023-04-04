@@ -174,275 +174,251 @@ export class ClientService {
       } else {
         //register bulk student
 
-        //console.log('credentialPlayload: ', credentialPlayload);
-        //console.log('schemaId: ', schemaId);
+        console.log('credentialPlayload: ', credentialPlayload);
+        console.log('schemaId: ', schemaId);
 
-        var issuerId = '';
+        var issuerId = ''
 
         // find or create issuerId
         //find udise in rc
         let searchSchema = {
-          filters: {
-            udiseCode: {
-              eq: credentialPlayload.issuerDetail.udise,
-            },
-          },
-        };
-        let searchSchoolDetail = await this.sbrcSearch(
-          searchSchema,
-          'SchoolDetail',
-        );
-        //console.log('searchSchoolDetail', searchSchoolDetail);
-
-        if (searchSchoolDetail) {
-          issuerId = searchSchoolDetail[0].did;
-          //console.log('issuerId', issuerId);
-        } else {
-          let schoolDidRes = await this.generateDid(
-            credentialPlayload.issuerDetail.udise,
-          );
-
-          if (schoolDidRes) {
-            credentialPlayload.issuerDetail.schoolDid =
-              schoolDidRes[0].verificationMethod[0].controller;
-            //create schoolDetail in rc
-
-            let inviteSchema = {
-              schoolName: credentialPlayload.issuerDetail.schoolName,
-              udiseCode: credentialPlayload.issuerDetail.udise,
-              did: credentialPlayload.issuerDetail.schoolDid,
-            };
-            let createSchoolDetail = await this.sbrcInvite(
-              inviteSchema,
-              'SchoolDetail',
-            );
-            //console.log('createSchoolDetail', createSchoolDetail);
-            if (createSchoolDetail) {
-              issuerId = credentialPlayload.issuerDetail.schoolDid;
-              //console.log('issuerId', issuerId);
-            } else {
-              return response.status(200).send({
-                success: false,
-                status: 'Success',
-                message: 'Unable to create schoolDetail',
-                result: null,
-              });
+            "filters": {
+                "udiseCode": {
+                    "eq": credentialPlayload.issuerDetail.udise
+                }
             }
-          } else {
-            return response.status(200).send({
-              success: false,
-              status: 'Success',
-              message: 'Unable to generate schoolDid',
-              result: null,
-            });
-          }
         }
+        let searchSchoolDetail = await this.sbrcSearch(searchSchema, 'SchoolDetail')
+        console.log("searchSchoolDetail", searchSchoolDetail)
+
+        if (searchSchoolDetail.length>0) {
+            issuerId = searchSchoolDetail[0].did
+            console.log("issuerId", issuerId)
+        } else {
+            let schoolDidRes = await this.generateDid(credentialPlayload.issuerDetail.udise)
+
+            if (schoolDidRes) {
+                credentialPlayload.issuerDetail.schoolDid = schoolDidRes[0].verificationMethod[0].controller
+                //create schoolDetail in rc
+
+                let inviteSchema = {
+                    "schoolName": credentialPlayload.issuerDetail.schoolName,
+                    "udiseCode": credentialPlayload.issuerDetail.udise,
+                    "did": credentialPlayload.issuerDetail.schoolDid
+                }
+                let createSchoolDetail = await this.sbrcInvite(inviteSchema, 'SchoolDetail')
+                console.log("createSchoolDetail", createSchoolDetail)
+                if (createSchoolDetail) {
+                    issuerId = credentialPlayload.issuerDetail.schoolDid
+                    console.log("issuerId", issuerId)
+
+                } else {
+                    return response.status(200).send({
+                        success: false,
+                        status: 'Success',
+                        message: 'Unable to create schoolDetail',
+                        result: null
+                    })
+                }
+            } else {
+                return response.status(200).send({
+                    success: false,
+                    status: 'Success',
+                    message: 'Unable to generate schoolDid',
+                    result: null
+                })
+            }
+
+
+        }
+
 
         //generate schema
         var schemaRes = await this.generateSchema(schemaId);
-        //console.log('schemaRes', schemaRes);
+        console.log("schemaRes", schemaRes)
 
         if (schemaRes) {
-          var responseArray = [];
 
-          // bulk import
-          for (const iterator of credentialPlayload.credentialSubject) {
-            if (credentialPlayload.credentialSubjectCommon.grade) {
-              iterator.grade = credentialPlayload.credentialSubjectCommon.grade;
-            }
-            if (credentialPlayload.credentialSubjectCommon.academic_year) {
-              iterator.academic_year =
-                credentialPlayload.credentialSubjectCommon.academic_year;
-            }
-            if (credentialPlayload.credentialSubjectCommon.benefitProvider) {
-              iterator.benefitProvider =
-                credentialPlayload.credentialSubjectCommon.benefitProvider;
-            }
-            if (credentialPlayload.credentialSubjectCommon.schemeName) {
-              iterator.schemeName =
-                credentialPlayload.credentialSubjectCommon.schemeName;
-            }
-            if (credentialPlayload.credentialSubjectCommon.schemeId) {
-              iterator.schemeId =
-                credentialPlayload.credentialSubjectCommon.schemeId;
-            }
-            if (credentialPlayload.credentialSubjectCommon.assessment) {
-              iterator.assessment =
-                credentialPlayload.credentialSubjectCommon.assessment;
-            }
-            if (
-              credentialPlayload.credentialSubjectCommon.quarterlyAssessment
-            ) {
-              iterator.quarterlyAssessment =
-                credentialPlayload.credentialSubjectCommon.quarterlyAssessment;
-            }
-            if (credentialPlayload.credentialSubjectCommon.total) {
-              iterator.total = credentialPlayload.credentialSubjectCommon.total;
-            }
-            if (credentialPlayload.credentialSubjectCommon.schoolName) {
-              iterator.school_name =
-                credentialPlayload.credentialSubjectCommon.schoolName;
-            }
+            var responseArray = []
 
-            //generate did or find did
-            var aadhar_token = iterator.aadhar_token;
+            // bulk import
+            for (const iterator of credentialPlayload.credentialSubject) {
 
-            // find student
-            let name = iterator.student_name;
-            let dob = iterator.dob;
-            let searchSchema = {
-              filters: {
-                student_name: {
-                  eq: name,
-                },
-                dob: {
-                  eq: dob,
-                },
-              },
-            };
-            const studentDetails = await this.sbrcSearch(
-              searchSchema,
-              'StudentV2',
-            );
-            //console.log('studentDetails', studentDetails);
-            if (studentDetails.length > 0) {
-              if (studentDetails[0]?.DID) {
-                iterator.id = studentDetails[0].DID;
-                let obj = {
-                  issuerId: issuerId,
-                  credSchema: schemaRes,
-                  credentialSubject: iterator,
-                  issuanceDate: credentialPlayload.vcData.issuanceDate,
-                  expirationDate: credentialPlayload.vcData.expirationDate,
-                };
-                //console.log('obj', obj);
-
-                const cred = await this.issueCredentials(obj);
-                //console.log("cred 34", cred)
-                if (cred) {
-                  responseArray.push(cred);
-                } else {
-                  responseArray.push({ error: 'unable to issue credentials!' });
+                if (credentialPlayload.credentialSubjectCommon.grade) {
+                    iterator.grade = credentialPlayload.credentialSubjectCommon.grade;
                 }
-              } else {
-                let didRes = await this.generateDid(aadhar_token);
+                if (credentialPlayload.credentialSubjectCommon.academic_year) {
+                    iterator.academic_year = credentialPlayload.credentialSubjectCommon.academic_year;
+                }
+                if (credentialPlayload.credentialSubjectCommon.benefitProvider) {
+                    iterator.benefitProvider = credentialPlayload.credentialSubjectCommon.benefitProvider
+                }
+                if (credentialPlayload.credentialSubjectCommon.schemeName) {
+                    iterator.schemeName = credentialPlayload.credentialSubjectCommon.schemeName
+                }
+                if (credentialPlayload.credentialSubjectCommon.schemeId) {
+                    iterator.schemeId = credentialPlayload.credentialSubjectCommon.schemeId
+                }
+                if (credentialPlayload.credentialSubjectCommon.assessment) {
+                    iterator.assessment = credentialPlayload.credentialSubjectCommon.assessment
+                }
+                if (credentialPlayload.credentialSubjectCommon.quarterlyAssessment) {
+                    iterator.quarterlyAssessment = credentialPlayload.credentialSubjectCommon.quarterlyAssessment
+                }
+                if (credentialPlayload.credentialSubjectCommon.total) {
+                    iterator.total = credentialPlayload.credentialSubjectCommon.total
+                }
+                if (credentialPlayload.issuerDetail.schoolName) {
+                    iterator.school_name = credentialPlayload.issuerDetail.schoolName
+                }
+                if (credentialPlayload.issuerDetail.udise) {
+                    iterator.school_id = credentialPlayload.issuerDetail.udise
+                }
 
-                if (didRes) {
-                  iterator.id = didRes[0].verificationMethod[0].controller;
-                  let updateRes = await this.sbrcUpdate(
-                    { DID: iterator.id },
-                    'StudentV2',
-                    studentDetails[0].osid,
-                  );
-                  if (updateRes) {
-                    let obj = {
-                      issuerId: issuerId,
-                      credSchema: schemaRes,
-                      credentialSubject: iterator,
-                      issuanceDate: credentialPlayload.vcData.issuanceDate,
-                      expirationDate: credentialPlayload.vcData.expirationDate,
-                    };
-                    //console.log('obj', obj);
+                //generate did or find did
+                var aadhar_token = iterator.aadhar_token
 
-                    if (iterator.id) {
-                      const cred = await this.issueCredentials(obj);
-                      //console.log("cred 34", cred)
-                      if (cred) {
-                        responseArray.push(cred);
-                      } else {
-                        responseArray.push({
-                          error: 'unable to issue credentials!',
-                        });
-                      }
+                // find student
+                let name = iterator.student_name
+                let dob = iterator.dob
+                let searchSchema = {
+                    "filters": {
+                        "student_name": {
+                            "eq": name
+                        },
+                        "dob": {
+                            "eq": dob
+                        }
                     }
-                  } else {
-                    responseArray.push({
-                      error: 'unable to update did inside RC!',
-                    });
-                  }
-                } else {
-                  responseArray.push({
-                    error: 'unable to generate student did!',
-                  });
                 }
-              }
-            } else {
-              let didRes = await this.generateDid(aadhar_token);
+                const studentDetails = await this.sbrcSearch(searchSchema, 'StudentV2')
+                console.log("studentDetails", studentDetails)
+                if (studentDetails.length > 0) {
+                    if (studentDetails[0]?.DID) {
+                        iterator.id = studentDetails[0].DID
+                        let obj = {
+                            issuerId: issuerId,
+                            credSchema: schemaRes,
+                            credentialSubject: iterator,
+                            issuanceDate: credentialPlayload.vcData.issuanceDate,
+                            expirationDate: credentialPlayload.vcData.expirationDate
+                        }
+                        console.log("obj", obj)
 
-              if (didRes) {
-                iterator.id = didRes[0].verificationMethod[0].controller;
-                let inviteSchema = {
-                  student_id: 'string',
-                  DID: iterator.id,
-                  reference_id: iterator.reference_id,
-                  aadhar_token: iterator.aadhar_token,
-                  student_name: iterator.student_name,
-                  dob: iterator.dob,
-                  school_type: 'public',
-                  meripehchan_id: '',
-                  username: '',
-                };
-                let createStudent = await this.sbrcInvite(
-                  inviteSchema,
-                  'StudentV2',
-                );
-                //console.log('createStudent', createStudent);
-                if (createStudent) {
-                  let obj = {
-                    issuerId: issuerId,
-                    credSchema: schemaRes,
-                    credentialSubject: iterator,
-                    issuanceDate: credentialPlayload.vcData.issuanceDate,
-                    expirationDate: credentialPlayload.vcData.expirationDate,
-                  };
-                  //console.log('obj', obj);
+                        const cred = await this.issueCredentials(obj)
+                        //console.log("cred 34", cred)
+                        if (cred) {
+                            responseArray.push(cred)
+                        } else {
+                            responseArray.push({ error: "unable to issue credentials!" })
+                        }
 
-                  const cred = await this.issueCredentials(obj);
-                  //console.log("cred 34", cred)
-                  if (cred) {
-                    responseArray.push(cred);
-                  } else {
-                    responseArray.push({
-                      error: 'unable to issue credentials!',
-                    });
-                  }
+                    } else {
+                        let didRes = await this.generateDid(aadhar_token)
+
+                        if (didRes) {
+                            iterator.id = didRes[0].verificationMethod[0].controller
+                            let updateRes = await this.sbrcUpdate({ DID: iterator.id }, 'StudentV2', studentDetails[0].osid)
+                            if (updateRes) {
+                                let obj = {
+                                    issuerId: issuerId,
+                                    credSchema: schemaRes,
+                                    credentialSubject: iterator,
+                                    issuanceDate: credentialPlayload.vcData.issuanceDate,
+                                    expirationDate: credentialPlayload.vcData.expirationDate
+                                }
+                                console.log("obj", obj)
+
+                                if (iterator.id) {
+
+                                    const cred = await this.issueCredentials(obj)
+                                    //console.log("cred 34", cred)
+                                    if (cred) {
+                                        responseArray.push(cred)
+                                    } else {
+                                        responseArray.push({ error: "unable to issue credentials!" })
+                                    }
+                                }
+                            } else {
+                                responseArray.push({ error: "unable to update did inside RC!" })
+                            }
+                        } else {
+                            responseArray.push({ error: "unable to generate student did!" })
+                        }
+                    }
                 } else {
-                  responseArray.push({
-                    error: 'unable to create student in RC!',
-                  });
+                    let didRes = await this.generateDid(aadhar_token)
+
+                    if (didRes) {
+                        iterator.id = didRes[0].verificationMethod[0].controller
+                        let inviteSchema = {
+                            "student_id": iterator.student_id,
+                            "DID": iterator.id,
+                            "reference_id": iterator.reference_id,
+                            "aadhar_token": iterator.aadhar_token,
+                            "student_name": iterator.student_name,
+                            "dob": iterator.dob,
+                            "school_type": "public",
+                            "meripehchan_id": "",
+                            "username": (iterator.student_name.split(' ')[0]+'@'+iterator.dob.split('/').join('')).toLowerCase()
+                        }
+                        console.log("inviteSchema", inviteSchema)
+                        let createStudent = await this.sbrcInvite(inviteSchema, 'StudentV2')
+                        console.log("createStudent", createStudent)
+
+                        if (createStudent) {
+                            let obj = {
+                                issuerId: issuerId,
+                                credSchema: schemaRes,
+                                credentialSubject: iterator,
+                                issuanceDate: credentialPlayload.vcData.issuanceDate,
+                                expirationDate: credentialPlayload.vcData.expirationDate
+                            }
+                            console.log("obj", obj)
+
+                            const cred = await this.issueCredentials(obj)
+                            //console.log("cred 34", cred)
+                            if (cred) {
+                                responseArray.push(cred)
+                            } else {
+                                responseArray.push({ error: "unable to issue credentials!" })
+                            }
+                        } else {
+                            responseArray.push({ error: "unable to create student in RC!" })
+                        }
+
+                    } else {
+                        responseArray.push({ error: "unable to generate student did!" })
+                    }
+
                 }
-              } else {
-                responseArray.push({
-                  error: 'unable to generate student did!',
-                });
-              }
             }
-          }
 
-          //bulk import response
-          //console.log('responseArray.length', responseArray.length);
-          if (responseArray.length > 0) {
-            return response.status(200).send({
-              success: true,
-              status: 'Success',
-              message: 'Bulk upload result!',
-              result: responseArray,
-            });
-          } else {
-            return response.status(200).send({
-              success: false,
-              status: 'Success',
-              message: 'Unable to generate did or crdentials',
-              result: null,
-            });
-          }
+            //bulk import response
+            console.log("responseArray.length", responseArray.length)
+            if (responseArray.length > 0) {
+                return response.status(200).send({
+                    success: true,
+                    status: 'Success',
+                    message: 'Bulk upload result!',
+                    result: responseArray
+                })
+            } else {
+                return response.status(200).send({
+                    success: false,
+                    status: 'Success',
+                    message: 'Unable to generate did or crdentials',
+                    result: null
+                })
+            }
+
         } else {
-          return response.status(200).send({
-            success: false,
-            status: 'Success',
-            message: 'Unable to create schema',
-            result: null,
-          });
+            return response.status(200).send({
+                success: false,
+                status: 'Success',
+                message: 'Unable to create schema',
+                result: null
+            })
         }
       }
     } else {
