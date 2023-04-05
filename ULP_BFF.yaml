@@ -19,6 +19,8 @@ tags:
     description: Bulk AAPI to generate credential of student
   - name: student
     description: Student Ewallet Profile Related Operations
+  - name: client
+    description: Client who uses our bulk registration API with Client ID and Client Secret
 paths:
   /credential/upload/{type}:
     parameters:
@@ -162,6 +164,96 @@ paths:
             application/xml:
               schema:
                 $ref: '#/components/schemas/CredentialsSuccess'
+  /client/register:
+    post:
+      tags:
+        - client
+      requestBody:
+        description: post variable clientName
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterClient'
+          application/xml:
+            schema:
+              $ref: '#/components/schemas/RegisterClient'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RegisterClient'
+        required: true
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisterClientSuccess'          
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/RegisterClientSuccess'
+  /client/search:
+    post:
+      tags:
+        - client
+      requestBody:
+        description: post variable clientName
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SearchClient'
+          application/xml:
+            schema:
+              $ref: '#/components/schemas/SearchClient'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SearchClient'
+        required: true
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchClientSuccess'          
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/SearchClientSuccess'
+  /client/bulk/upload/{type}:
+    post:
+      tags:
+        - client
+      description: get student DID from student aadhaar id 
+      parameters:
+        - name: type
+          in: path
+          description: type proofOfAssessment, proofOfEnrollment, proofOfBenifits
+          required: true
+          schema:
+            type: string
+            format: test
+      requestBody:
+        description: post variable clientId, clientSecret, issuerDetail, vcData, credentialSubjectCommon, credentialSubject
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClientBulkUpload'
+          application/xml:
+            schema:
+              $ref: '#/components/schemas/ClientBulkUpload'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ClientBulkUpload'
+        required: true
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClientBulkUploadSuccess'          
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/ClientBulkUploadSuccess'
 components:
   schemas: 
     Credential:
@@ -388,3 +480,140 @@ components:
           example: credential object
       xml:
         name: CredentialsSuccess
+    RegisterClient:
+      required:
+        - clientName
+      type: object
+      properties:
+        clientName:
+          type: string
+          format: text
+          example: Prerana Portal
+      xml:
+        name: RegisterClient
+    RegisterClientSuccess:
+      required:
+        - success
+        - status
+        - message
+        - result
+      type: object
+      properties:
+        success:
+          type: boolean
+          format: boolean
+          example: true
+        status:
+          type: string
+          format: text
+          example: sb_rc_registered
+        message:
+          type: string
+          format: text
+          example: Client Found in Subird RC
+        result:
+          type: string
+          format: text
+          example: Logs
+      xml:
+        name: RegisterClientSuccess
+    SearchClient:
+      required:
+        - clientName
+      type: object
+      properties:
+        clientName:
+          type: string
+          format: text
+          example: Prerana Portal
+      xml:
+        name: SearchClient
+    SearchClientSuccess:
+      required:
+        - success
+        - status
+        - message
+        - result
+      type: object
+      properties:
+        success:
+          type: boolean
+          format: boolean
+          example: true
+        status:
+          type: string
+          format: text
+          example: sb_rc_search_found
+        message:
+          type: string
+          format: text
+          example: Client Found in Subird RC
+        result:
+          type: string
+          format: text
+          example: Client Details
+      xml:
+        name: SearchClientSuccess
+    ClientBulkUpload:
+      required:
+        - clientId
+        - clientSecret
+        - issuerDetail
+        - vcData
+        - credentialSubjectCommon
+        - credentialSubject
+      type: object
+      properties:
+        clientId:
+          type: string
+          format: text
+          example: GY1K1412121
+        clientSecret:
+          type: string
+          format: text
+          example: 0c3cbdba425f5db1fa47bfa78563
+        issuerDetail:
+          type: object
+          example: {"udise": "123456","schoolName": "Delhi public school"}
+        vcData:
+          type: object
+          example: {"issuanceDate": "2023-02-06T11:56:27.259Z","expirationDate": "2023-02-06T11:56:27.259Z"}
+        credentialSubjectCommon:
+          type: object
+          example: {"grade": "class-1","academicYear": "2022-2023"}
+        credentialSubject:
+           type: array
+           example: [{"studentName":"Khushi Kumari","dob":"09/09/1999","reference_id": "prernaid","aadhar_token":"qwrycvqwtqw3672", "guardianName": "Sita prabhu", "enrolledOn":"2022-02-06"}]
+           xml:
+            wrapped: true
+           items:
+             $ref: '#/components/schemas/Credential'
+      xml:
+        name: ClientBulkUpload
+    ClientBulkUploadSuccess:
+      required:
+        - success
+        - status
+        - message
+        - result
+      type: object
+      properties:
+        success:
+          type: boolean
+          format: boolean
+          example: true
+        status:
+          type: string
+          format: text
+          example: upload_success
+        message:
+          type: string
+          format: text
+          example: Upload Success
+        result:
+          type: string
+          format: text
+          example: Logs
+      xml:
+        name: ClientBulkUploadSuccess
+        
