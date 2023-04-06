@@ -17,12 +17,12 @@ export class SchoolService {
   //schoolVerify
   async schoolVerify(requestbody: any, response: Response) {
     if (requestbody) {
-      const aes_key = await this.getAESKey();
-      console.log('aes_key', aes_key);
+      const appKey = await this.getAppKey();
+      console.log('appKey', appKey);
       const PLAIN_JSON = {
         clientId: 'test',
         clientSecret: 'test@123',
-        appKey: aes_key,
+        appKey: appKey,
       };
       console.log(PLAIN_JSON);
       const PLAIN_TEXT_JSON = JSON.stringify(PLAIN_JSON);
@@ -75,7 +75,6 @@ export class SchoolService {
       } else {
         let authtoken = response_text?.data?.authToken;
         let sek = response_text?.data?.sek;
-        let appKey = aes_key.toString();
         console.log('sek', sek);
         console.log('appKey', appKey);
         //console.log('authtoken', authtoken);
@@ -144,7 +143,7 @@ export class SchoolService {
   }
 
   //helper function
-  async getAESKey() {
+  async getAppKey() {
     const key = await this.crypto.randomBytes(32); // Generate a 256-bit key (32 bytes)
     const encodedKey = await key.toString('base64');
     return encodedKey;
