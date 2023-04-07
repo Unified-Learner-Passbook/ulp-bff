@@ -4,6 +4,7 @@ import { CredentialsModule } from './credentials/credentials.module';
 import { AadhaarModule } from './aadhaar/aadhaar.module';
 import { SchoolModule } from './school/school.module';
 import { ClientModule } from './client/client.module';
+import { PortalModule } from './portal/portal.module';
 
 //call env variable
 import { ConfigModule } from '@nestjs/config';
@@ -16,6 +17,7 @@ import { ConfigModule } from '@nestjs/config';
     AadhaarModule,
     SchoolModule,
     ClientModule,
+    PortalModule,
   ],
 })
 export class AppModule {}
