@@ -1652,77 +1652,86 @@ export class SSOService {
               if (sb_rc_search?.error) {
                 iserror = true;
                 loglist[i].status = false;
-                loglist[i].error = sb_rc_search?.error;
+                loglist[i].error = 'SBRC Student Search Failed';
+                loglist[i].errorlog = sb_rc_search?.error;
                 error_count++;
               } else if (sb_rc_search.length === 0) {
                 //register student in sb rc
                 // sunbird registery student
-                let didRes = await this.generateDid(student?.student_id);
-                let didGenerate = '';
-                if (didRes) {
-                  didGenerate = didRes[0].verificationMethod[0].controller;
-                }
-
-                let reference_id = 'ULP_' + student?.student_id;
-                let sb_rc_response_text = await this.sbrcInvite(
-                  {
-                    student_id: student?.student_id,
-                    DID: didGenerate,
-                    reference_id: reference_id,
-                    aadhar_token: student?.aadhar_token,
-                    student_name: student?.studentName,
-                    dob: student?.dob,
-                    school_type: school_type,
-                    meripehchan_id: '',
-                    username: auto_username,
-                  },
-                  'StudentV2',
-                );
-                if (sb_rc_response_text?.error) {
+                const issuerRes = await this.generateDid(student?.student_id);
+                if (issuerRes?.error) {
                   iserror = true;
                   loglist[i].status = false;
-                  loglist[i].error = sb_rc_response_text?.error;
+                  loglist[i].error = 'DID Generate Failed';
+                  loglist[i].errorlog = issuerRes?.error;
                   error_count++;
-                } else if (
-                  sb_rc_response_text?.params?.status === 'SUCCESSFUL'
-                ) {
-                  //find osid of student and add detail in student details
-                  // sunbird registery student detail
-                  let os_student_id =
-                    sb_rc_response_text?.result?.StudentV2?.osid;
-                  let claim_status = 'approved';
-                  let sb_rc_response_text_detail = await this.sbrcInvite(
+                } else {
+                  var didGenerate =
+                    issuerRes[0].verificationMethod[0].controller;
+                  let reference_id = 'ULP_' + student?.student_id;
+                  let sb_rc_response_text = await this.sbrcInvite(
                     {
-                      student_detail_id: '',
-                      student_id: os_student_id,
-                      mobile: student?.mobile,
-                      gaurdian_name: student?.gaurdian_name,
-                      school_udise: school_udise,
-                      school_name: school_name,
-                      grade: grade,
-                      acdemic_year: acdemic_year,
-                      start_date: '',
-                      end_date: '',
-                      claim_status: claim_status,
+                      student_id: student?.student_id,
+                      DID: didGenerate,
+                      reference_id: reference_id,
+                      aadhar_token: student?.aadhar_token,
+                      student_name: student?.studentName,
+                      dob: student?.dob,
+                      school_type: school_type,
+                      meripehchan_id: '',
+                      username: auto_username,
                     },
-                    'StudentDetailV2',
+                    'StudentV2',
                   );
-                  if (sb_rc_response_text_detail?.error) {
+                  if (sb_rc_response_text?.error) {
                     iserror = true;
                     loglist[i].status = false;
-                    loglist[i].error = sb_rc_response_text_detail?.error;
+                    loglist[i].error = 'SBRC Student Register Failed';
+                    loglist[i].errorlog = sb_rc_response_text?.error;
                     error_count++;
                   } else if (
-                    sb_rc_response_text_detail?.params?.status === 'SUCCESSFUL'
+                    sb_rc_response_text?.params?.status === 'SUCCESSFUL'
                   ) {
-                    loglist[i].status = true;
-                    loglist[i].error = {};
-                    success_count++;
+                    //find osid of student and add detail in student details
+                    // sunbird registery student detail
+                    let os_student_id =
+                      sb_rc_response_text?.result?.StudentV2?.osid;
+                    let claim_status = 'approved';
+                    let sb_rc_response_text_detail = await this.sbrcInvite(
+                      {
+                        student_detail_id: '',
+                        student_id: os_student_id,
+                        mobile: student?.mobile,
+                        gaurdian_name: student?.gaurdian_name,
+                        school_udise: school_udise,
+                        school_name: school_name,
+                        grade: grade,
+                        acdemic_year: acdemic_year,
+                        start_date: '',
+                        end_date: '',
+                        claim_status: claim_status,
+                      },
+                      'StudentDetailV2',
+                    );
+                    if (sb_rc_response_text_detail?.error) {
+                      iserror = true;
+                      loglist[i].status = false;
+                      loglist[i].error = 'SBRC Student Detail Register Failed';
+                      loglist[i].errorlog = sb_rc_response_text_detail?.error;
+                      error_count++;
+                    } else if (
+                      sb_rc_response_text_detail?.params?.status ===
+                      'SUCCESSFUL'
+                    ) {
+                      loglist[i].status = true;
+                      loglist[i].error = {};
+                      success_count++;
+                    }
+                  } else {
+                    loglist[i].status = false;
+                    loglist[i].error = 'duplicate entry';
+                    duplicate_count++;
                   }
-                } else {
-                  loglist[i].status = false;
-                  loglist[i].error = 'duplicate entry';
-                  duplicate_count++;
                 }
               } else {
                 loglist[i].status = false;
@@ -1730,9 +1739,11 @@ export class SSOService {
                 duplicate_count++;
               }
             } catch (e) {
+              console.log(e);
               iserror = true;
               loglist[i].status = false;
-              loglist[i].error = e;
+              loglist[i].error = 'Exception Occured';
+              loglist[i].errorlog = JSON.stringify(e);
               error_count++;
             }
           }
@@ -1954,7 +1965,8 @@ export class SSOService {
               if (cred?.error) {
                 iserror = true;
                 loglist[i].status = false;
-                loglist[i].error = cred?.error;
+                loglist[i].error = 'Error in Issue Credentials API';
+                loglist[i].errorlog = cred?.error;
                 error_count++;
               } else {
                 //update status
@@ -1969,7 +1981,8 @@ export class SSOService {
                 if (sb_rc_response_text?.error) {
                   iserror = true;
                   loglist[i].status = false;
-                  loglist[i].error = sb_rc_response_text?.error;
+                  loglist[i].error = 'SBRC Student Detail Update Failed';
+                  loglist[i].errorlog = sb_rc_response_text?.error;
                   error_count++;
                 } else if (
                   sb_rc_response_text?.params?.status === 'SUCCESSFUL'
@@ -1980,14 +1993,16 @@ export class SSOService {
                 } else {
                   iserror = true;
                   loglist[i].status = false;
-                  loglist[i].error = sb_rc_response_text;
+                  loglist[i].error = 'SBRC Student Detail Update Failed';
+                  loglist[i].errorlog = sb_rc_response_text;
                   error_count++;
                 }
               }
             } catch (e) {
               iserror = true;
               loglist[i].status = false;
-              loglist[i].error = e;
+              loglist[i].error = 'Exception Occured';
+              loglist[i].errorlog = JSON.stringify(e);
               error_count++;
             }
           }

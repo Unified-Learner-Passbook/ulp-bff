@@ -34,4 +34,40 @@ export class AadhaarController {
   ) {
     return this.aadhaarService.aadhaarVerify(aadhaar_id, response);
   }
+  @Post('/demographic')
+  async aadhaarDemographic(
+    @Body('aadhaar_id') aadhaar_id: string,
+    @Body('aadhaar_name') aadhaar_name: string,
+    @Res() response: Response,
+  ) {
+    return this.aadhaarService.aadhaarDemographic(
+      aadhaar_id,
+      aadhaar_name,
+      response,
+    );
+  }
+  @Post('/auth/sentotp')
+  async aadhaarAuthSentOTP(
+    @Body('aadhaar_id') aadhaar_id: string,
+    @Res() response: Response,
+  ) {
+    return this.aadhaarService.aadhaarAuthSentOTP(
+      aadhaar_id,
+      response,
+    );
+  }
+  @Post('/auth/verifyotp')
+  async aadhaarAuthVerifyOTP(
+    @Body('aadhaar_id') aadhaar_id: string,
+    @Body('aadhaar_otp') aadhaar_otp: string,
+    @Body('aadhaar_txn') aadhaar_txn: string,
+    @Res() response: Response,
+  ) {
+    return this.aadhaarService.aadhaarAuthVerifyOTP(
+      aadhaar_id,
+      aadhaar_otp,
+      aadhaar_txn,
+      response,
+    );
+  }
 }
