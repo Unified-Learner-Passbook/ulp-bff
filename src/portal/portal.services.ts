@@ -186,7 +186,7 @@ export class PortalService {
             }
             countlog[field] = fieldcount;
           }
-          return response.status(400).send({
+          return response.status(200).send({
             success: true,
             status: 'count_success',
             message: 'Count Success',
