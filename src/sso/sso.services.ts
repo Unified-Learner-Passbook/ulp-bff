@@ -8,6 +8,7 @@ import { Response, Request } from 'express';
 import * as wkhtmltopdf from 'wkhtmltopdf';
 import { UserDto } from './dto/user-dto';
 import { schoolList } from './constlist/schoollist';
+import { aadhaarDemographic, getUUID } from '../utils/aadhaar/aadhaar_api';
 
 @Injectable()
 export class SSOService {
@@ -929,25 +930,22 @@ export class SSOService {
             const dob = await this.convertDate(token_data[0]?.birthdate);
             const username_name = token_data[0]?.given_name.split(' ')[0];
             const username_dob = await this.replaceChar(dob, '/', '');
-            let auto_username = username_name + '@' + username_dob;
-            auto_username = auto_username.toLowerCase();
+            /*let auto_username = username_name + '@' + username_dob;
+            auto_username = auto_username.toLowerCase();*/
             let response_data = {
               meripehchanid: token_data[0]?.sub,
               name: token_data[0]?.given_name,
               mobile: token_data[0]?.phone_number,
               dob: dob,
-              username: auto_username,
+              username: '',
             };
             const sb_rc_search = await this.searchDigiEntity(
               digiacc === 'ewallet' ? 'StudentV2' : 'TeacherV1',
               digiacc === 'ewallet'
                 ? {
                     filters: {
-                      student_name: {
-                        eq: response_data?.name.toString(),
-                      },
-                      dob: {
-                        eq: response_data?.dob.toString(),
+                      meripehchan_id: {
+                        eq: response_data?.meripehchanid.toString(),
                       },
                     },
                   }
@@ -974,12 +972,28 @@ export class SSOService {
                 result: response_data,
                 digi: response_digi?.data,
                 user: 'NO_FOUND',
+                needaadhaar: 'YES',
+              });
+            } else if (
+              !sb_rc_search[0]?.aadhar_token ||
+              sb_rc_search[0]?.aadhar_token === ''
+            ) {
+              return response.status(200).send({
+                success: true,
+                status: 'digilocker_login_success',
+                message: 'Digilocker Login Success',
+                result: response_data,
+                digi: response_digi?.data,
+                user: 'FOUND',
+                needaadhaar: 'YES',
               });
             } else {
               let auto_username =
                 digiacc === 'ewallet'
-                  ? response_data?.username
-                  : response_data?.meripehchanid + '_teacher';
+                  ? //response_data?.username
+                    sb_rc_search[0]?.username
+                  : //response_data?.meripehchanid + '_teacher'
+                    sb_rc_search[0]?.username;
               auto_username = auto_username.toLowerCase();
               const auto_password = await this.md5(
                 auto_username + 'MjQFlAJOQSlWIQJHOEDhod',
@@ -989,21 +1003,6 @@ export class SSOService {
                 auto_password,
               );
               if (userToken?.error) {
-                //console.log(userToken?.error);
-                /*return response.status(501).send({
-                  success: false,
-                  status: 'keycloak_invalid_credentials',
-                  message: userToken?.error.message,
-                  result: null,
-                });*/
-                /*return response.status(200).send({
-                  success: true,
-                  status: 'digilocker_login_success',
-                  message: 'Digilocker Login Success',
-                  result: response_data,
-                  digi: response_digi?.data,
-                  user: 'NO_FOUND',
-                });*/
                 //sbrc present but no keycloak
                 //create keycloak and then login
                 const clientToken = await this.getClientToken();
@@ -1181,6 +1180,298 @@ export class SSOService {
     }
   }
 
+  //digilockerAadhaar
+  async digilockerAadhaar(
+    response: Response,
+    digiacc: string,
+    aadhaar_id: string,
+    aadhaar_name: string,
+    digilocker_id: string,
+  ) {
+    if (digiacc && aadhaar_id && aadhaar_name && digilocker_id) {
+      const aadhar_data = {
+        success: true,
+        status: 'aadhaar_success',
+        message: 'Aadhaar Success',
+        result: {
+          ret: 'y',
+          code: '4e3e88ebfd6a4dab893c27cfc414b11a',
+          txn: '0023133040f01ba3b8cc4532b4360cb81de99fb8',
+          ts: '2023-04-08T15:17:12.786+05:30',
+          err: '000',
+          errdesc: '',
+          rrn: 'IDIO9E1U8PT5MAUHNNNU1680947231',
+          ref: 'FROMSAMPLE',
+          responseXML:
+            'PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz48QXV0aFJlcyBjb2RlPSI0ZTNlODhlYmZkNmE0ZGFiODkzYzI3Y2ZjNDE0YjExYSIgaW5mbz0iMDR7MDExMTE3NDVQTG5HV0NwTHR2NDc0cDBIaUltWjRqR3MwSHd0bHU2eU5oZXRqd2J2Qk5oU21MME9jaXFUL3VTWGMybG5KeFNxLEEsZDFmZjU2MGUzNmQ1YzBiMWM3ZTg2NjNiMWY1ZmYzMWZhZjA2YjUyMTdjMGQ3MzkwZGU1ZTFiY2M2YjAxMTZmZSwwMTgwMDAwMDA4MDAwMDEwLDIuMCwyMDIzMDQwODE1MTYyNiwwLDAsMCwwLDIuNSxmMGFhZGQyNmQ2MjhmZjE5NmQ5MjE3ZmVkMTMxNGMzZTY2MDZkOGYwM2YyZTRhZmUyMmNkNjk1MDRlZDU3YThlLDAyY2Q2M2FkOTI3NzdmMGU1MmYwMjYyM2ZmYjYzMThhOTEyMTY3M2MzNTFjMWMyNGM3MTk3YjdjNDJkY2YzMzEsNWFkNTVmOThhZjU4MDhiMDVlNjZhM2FhZDZkMzdjNDU4ZjQxN2I3NTZhZTI5YTcyZjQ1Y2MwY2ZjODUyMmM4OCwyMyxFLDEwMCxOQSxOQSxOQSxOQSxOQSxOQSxOQSwsTkEsTkEsTkEsTkEsTkEsTkF9IiByZXQ9InkiIHRzPSIyMDIzLTA0LTA4VDE1OjE3OjEyLjc4NiswNTozMCIgdHhuPSIwMDIzMTMzMDQwZjAxYmEzYjhjYzQ1MzJiNDM2MGNiODFkZTk5ZmI4IiB1dWlkPSI2MzgxNjM5NDYyNTU5MzU1MDYiPjxTaWduYXR1cmUgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvMDkveG1sZHNpZyMiPjxTaWduZWRJbmZvPjxDYW5vbmljYWxpemF0aW9uTWV0aG9kIEFsZ29yaXRobT0iaHR0cDovL3d3dy53My5vcmcvVFIvMjAwMS9SRUMteG1sLWMxNG4tMjAwMTAzMTUiIC8+PFNpZ25hdHVyZU1ldGhvZCBBbGdvcml0aG09Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvMDkveG1sZHNpZyNyc2Etc2hhMSIgLz48UmVmZXJlbmNlIFVSST0iIj48VHJhbnNmb3Jtcz48VHJhbnNmb3JtIEFsZ29yaXRobT0iaHR0cDovL3d3dy53My5vcmcvMjAwMC8wOS94bWxkc2lnI2VudmVsb3BlZC1zaWduYXR1cmUiIC8+PC9UcmFuc2Zvcm1zPjxEaWdlc3RNZXRob2QgQWxnb3JpdGhtPSJodHRwOi8vd3d3LnczLm9yZy8yMDAxLzA0L3htbGVuYyNzaGEyNTYiIC8+PERpZ2VzdFZhbHVlPjh2dFp2T1VFNy9Ma2F4TjRSNGhSeUtPbTUzcENsV1MxeDhjVm41NUptUms9PC9EaWdlc3RWYWx1ZT48L1JlZmVyZW5jZT48L1NpZ25lZEluZm8+PFNpZ25hdHVyZVZhbHVlPmdZTUFIZDVWaktvakpGVHVzd3AzT0p3ZlhtMnRwTG9hM1FleExETEs4U3ZJdFhVdjArcDVJNFltWUo0Sk5yUW5DWTBKckZTMENiankKVUFyZjZBRC9nSDg0QVBNRFgyMTgwaTJUaEJqNEFoZ0RlMXcwZnRwWnhnNVlXcklxcmhVSXRMbEZDazZucG5YUjdPSGxLcVRaOEZ2RApVSWN4R0U4M0FzL2VQeDljUW51d3BVTW9JUndsYmZWNk9HVWYzVE5Tc0IxZGY4RFpHR2l6blc3YWoyQlltSE5KdVo0RjRLQjEvZWx0CjNEOHZqZTBWM21jbG8rSXBWSWVqbFZucEpXalJqeDIwUUJiV1lDeXZkRnFMdHA2YktzUDV1SG5pS0tsakpjK3AyZlQ3K291LzJiUlQKekRjRFRRYlc5b28xdVBHMzhHOHcreE1zS3JZMytUOTl6MDhSK0E9PTwvU2lnbmF0dXJlVmFsdWU+PC9TaWduYXR1cmU+PC9BdXRoUmVzPg==',
+        },
+        decodedxml:
+          '<?xml version="1.0" encoding="UTF-8"?><AuthRes code="4e3e88ebfd6a4dab893c27cfc414b11a" info="04{01111745PLnGWCpLtv474p0HiImZ4jGs0Hwtlu6yNhetjwbvBNhSmL0OciqT/uSXc2lnJxSq,A,d1ff560e36d5c0b1c7e8663b1f5ff31faf06b5217c0d7390de5e1bcc6b0116fe,0180000008000010,2.0,20230408151626,0,0,0,0,2.5,f0aadd26d628ff196d9217fed1314c3e6606d8f03f2e4afe22cd69504ed57a8e,02cd63ad92777f0e52f02623ffb6318a9121673c351c1c24c7197b7c42dcf331,5ad55f98af5808b05e66a3aad6d37c458f417b756ae29a72f45cc0cfc8522c88,23,E,100,NA,NA,NA,NA,NA,NA,NA,,NA,NA,NA,NA,NA,NA}" ret="y" ts="2023-04-08T15:17:12.786+05:30" txn="0023133040f01ba3b8cc4532b4360cb81de99fb8" uuid="638163946255935506"><Signature xmlns="http://www.w3.org/2000/09/xmldsig#"><SignedInfo><CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315" /><SignatureMethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha1" /><Reference URI=""><Transforms><Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature" /></Transforms><DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256" /><DigestValue>8vtZvOUE7/LkaxN4R4hRyKOm53pClWS1x8cVn55JmRk=</DigestValue></Reference></SignedInfo><SignatureValue>gYMAHd5VjKojJFTuswp3OJwfXm2tpLoa3QexLDLK8SvItXUv0+p5I4YmYJ4JNrQnCY0JrFS0Cbjy\nUArf6AD/gH84APMDX2180i2ThBj4AhgDe1w0ftpZxg5YWrIqrhUItLlFCk6npnXR7OHlKqTZ8FvD\nUIcxGE83As/ePx9cQnuwpUMoIRwlbfV6OGUf3TNSsB1df8DZGGiznW7aj2BYmHNJuZ4F4KB1/elt\n3D8vje0V3mclo+IpVIejlVnpJWjRjx20QBbWYCyvdFqLtp6bKsP5uHniKKljJc+p2fT7+ou/2bRT\nzDcDTQbW9oo1uPG38G8w+xMsKrY3+T99z08R+A==</SignatureValue></Signature></AuthRes>',
+      };
+      //await aadhaarDemographic(aadhaar_id, aadhaar_name);
+      if (!aadhar_data?.success === true) {
+        return response.status(400).send({
+          success: false,
+          status: 'aadhaar_api_error',
+          message: 'Aadhar API Not Working',
+          result: aadhar_data?.result,
+        });
+      } else {
+        if (aadhar_data?.result?.ret === 'y') {
+          const decodedxml = aadhar_data?.decodedxml;
+          const uuid = await getUUID(decodedxml);
+          if (uuid === null) {
+            return response.status(400).send({
+              success: false,
+              status: 'aadhaar_api_error',
+              message: 'Aadhar API UUID Not Found',
+              result: uuid,
+            });
+          } else {
+            //check uuid present in sbrc or not
+            const sb_rc_search = await this.searchDigiEntity(
+              digiacc === 'ewallet' ? 'StudentV2' : 'TeacherV1',
+              digiacc === 'ewallet'
+                ? {
+                    filters: {
+                      aadhar_token: {
+                        eq: uuid.toString(),
+                      },
+                    },
+                  }
+                : {
+                    filters: {
+                      aadharId: {
+                        eq: uuid.toString(),
+                      },
+                    },
+                  },
+            );
+            if (sb_rc_search?.error) {
+              return response.status(501).send({
+                success: false,
+                status: 'sb_rc_search_error',
+                message: 'Sunbird RC Search Failed',
+                result: sb_rc_search?.error.message,
+              });
+            } else if (sb_rc_search.length === 0) {
+              return response.status(200).send({
+                success: true,
+                status: 'aadhaar_verify_success',
+                message: 'Aadhaar Verify Success',
+                result: { uuid: uuid },
+                user: 'NO_FOUND',
+              });
+            } else {
+              //update meripehchan id in sb rc
+              const osid = sb_rc_search[0]?.osid;
+              // sunbird registery student
+              let sb_rc_response_text = await this.sbrcUpdate(
+                digiacc === 'ewallet'
+                  ? {
+                      meripehchan_id: digilocker_id,
+                    }
+                  : {
+                      meripehchanLoginId: digilocker_id,
+                    },
+                digiacc === 'ewallet' ? 'StudentV2' : 'TeacherV1',
+                osid,
+              );
+              if (sb_rc_response_text?.error) {
+                return response.status(400).send({
+                  success: false,
+                  status: 'sb_rc_update_error',
+                  message: 'Sunbird RC Digilocker Id Update Failed',
+                  result: sb_rc_response_text?.error,
+                });
+              } else if (sb_rc_response_text?.params?.status === 'SUCCESSFUL') {
+                let auto_username = sb_rc_search[0]?.username;
+                auto_username = auto_username.toLowerCase();
+                const auto_password = await this.md5(
+                  auto_username + 'MjQFlAJOQSlWIQJHOEDhod',
+                );
+                const userToken = await this.getKeycloakToken(
+                  auto_username,
+                  auto_password,
+                );
+                if (userToken?.error) {
+                  //sbrc present but no keycloak
+                  //create keycloak and then login
+                  const clientToken = await this.getClientToken();
+                  if (clientToken?.error) {
+                    return response.status(401).send({
+                      success: false,
+                      status: 'keycloak_client_token_error',
+                      message: 'Bad Request for Keycloak Client Token',
+                      result: null,
+                    });
+                  } else {
+                    //register in keycloak
+                    //register student keycloak
+                    let response_text = await this.registerUserKeycloak(
+                      auto_username,
+                      auto_password,
+                      clientToken,
+                    );
+                    if (response_text?.error) {
+                      return response.status(400).send({
+                        success: false,
+                        status: 'keycloak_register_duplicate',
+                        message: 'User Already Registered in Keycloak',
+                        result: null,
+                      });
+                    } else {
+                      const userToken = await this.getKeycloakToken(
+                        auto_username,
+                        auto_password,
+                      );
+                      if (userToken?.error) {
+                        //console.log(userToken?.error);
+                        return response.status(501).send({
+                          success: false,
+                          status: 'keycloak_invalid_credentials',
+                          message: userToken?.error.message,
+                          result: null,
+                        });
+                      } else {
+                        if (sb_rc_search[0]?.school_type === 'private') {
+                          //find if student private detaile
+                          const filter = {
+                            filters: {
+                              student_id: {
+                                eq: sb_rc_search[0].osid,
+                              },
+                            },
+                          };
+                          const sb_rc_search_detail = await this.searchEntity(
+                            'StudentDetailV2',
+                            filter,
+                          );
+                          //console.log(sb_rc_search_detail);
+                          if (sb_rc_search_detail?.error) {
+                            return response.status(501).send({
+                              success: false,
+                              status: 'sb_rc_search_error',
+                              message: 'Sunbird RC User Search Failed',
+                              result: sb_rc_search_detail?.error,
+                            });
+                          } else if (sb_rc_search_detail.length === 0) {
+                            // no student found then register
+                            return response.status(501).send({
+                              success: false,
+                              status: 'sb_rc_search_no_found',
+                              message: 'Sunbird RC User No Found',
+                              result: sb_rc_search_detail?.error,
+                            });
+                          } else {
+                            //sent user value
+                            return response.status(200).send({
+                              success: true,
+                              status: 'digilocker_login_success',
+                              message: 'Digilocker Login Success',
+                              user: 'FOUND',
+                              userData: sb_rc_search,
+                              detail: sb_rc_search_detail[0],
+                              token: userToken?.access_token,
+                            });
+                          }
+                        } else {
+                          return response.status(200).send({
+                            success: true,
+                            status: 'digilocker_login_success',
+                            message: 'Digilocker Login Success',
+                            user: 'FOUND',
+                            userData: sb_rc_search,
+                            detail: null,
+                            token: userToken?.access_token,
+                          });
+                        }
+                      }
+                    }
+                  }
+                } else {
+                  if (sb_rc_search[0]?.school_type === 'private') {
+                    //find if student private detaile
+                    const filter = {
+                      filters: {
+                        student_id: {
+                          eq: sb_rc_search[0].osid,
+                        },
+                      },
+                    };
+                    const sb_rc_search_detail = await this.searchEntity(
+                      'StudentDetailV2',
+                      filter,
+                    );
+                    //console.log(sb_rc_search_detail);
+                    if (sb_rc_search_detail?.error) {
+                      return response.status(501).send({
+                        success: false,
+                        status: 'sb_rc_search_error',
+                        message: 'Sunbird RC User Search Failed',
+                        result: sb_rc_search_detail?.error,
+                      });
+                    } else if (sb_rc_search_detail.length === 0) {
+                      // no student found then register
+                      return response.status(501).send({
+                        success: false,
+                        status: 'sb_rc_search_no_found',
+                        message: 'Sunbird RC User No Found',
+                        result: sb_rc_search_detail?.error,
+                      });
+                    } else {
+                      //sent user value
+                      return response.status(200).send({
+                        success: true,
+                        status: 'digilocker_login_success',
+                        message: 'Digilocker Login Success',
+                        user: 'FOUND',
+                        userData: sb_rc_search,
+                        detail: sb_rc_search_detail[0],
+                        token: userToken?.access_token,
+                      });
+                    }
+                  } else {
+                    return response.status(200).send({
+                      success: true,
+                      status: 'digilocker_login_success',
+                      message: 'Digilocker Login Success',
+                      user: 'FOUND',
+                      userData: sb_rc_search,
+                      detail: null,
+                      token: userToken?.access_token,
+                    });
+                  }
+                }
+              } else {
+                return response.status(400).send({
+                  success: false,
+                  status: 'sb_rc_update_error',
+                  message: 'Sunbird RC Digilocker Id Update Failed',
+                  result: sb_rc_response_text,
+                });
+              }
+            }
+          }
+        } else {
+          return response.status(200).send({
+            success: false,
+            status: 'aadhaar_api_success',
+            message: 'Invalid Aadhaar',
+            result: null,
+          });
+        }
+      }
+    } else {
+      return response.status(400).send({
+        success: false,
+        status: 'invalid_request',
+        message: 'Invalid Request. Not received All Parameters.',
+        result: null,
+      });
+    }
+  }
+
   //digilockerRegister
   async digilockerRegister(
     response: Response,
@@ -1201,7 +1492,7 @@ export class SSOService {
         //register in keycloak
         let auto_username =
           digiacc === 'ewallet'
-            ? userdata?.student?.username
+            ? userdata?.student?.aadhar_token
             : digimpid + '_teacher';
         auto_username = auto_username.toLowerCase();
         const auto_password = await this.md5(
@@ -1226,8 +1517,7 @@ export class SSOService {
           if (digiacc === 'ewallet') {
             //find if student account present in sb rc or not
             const sb_rc_search = await this.sbrcStudentSearch(
-              userdata?.student?.student_name,
-              userdata?.student?.dob,
+              userdata?.student?.aadhar_token,
             );
             //console.log(sb_rc_search);
             if (sb_rc_search?.error) {
@@ -1645,8 +1935,7 @@ export class SSOService {
               auto_username = auto_username.toLowerCase();
               //find if student account present in sb rc or not
               const sb_rc_search = await this.sbrcStudentSearch(
-                student?.studentName,
-                student?.dob,
+                student?.aadhaar_token,
               );
               //console.log(sb_rc_search);
               if (sb_rc_search?.error) {
@@ -2228,14 +2517,11 @@ export class SSOService {
   }
 
   //search student
-  async sbrcStudentSearch(studentName: string, dob: string) {
+  async sbrcStudentSearch(aadhar_token: string) {
     let data = JSON.stringify({
       filters: {
-        student_name: {
-          eq: studentName,
-        },
-        dob: {
-          eq: dob,
+        aadhar_token: {
+          eq: aadhar_token,
         },
       },
     });

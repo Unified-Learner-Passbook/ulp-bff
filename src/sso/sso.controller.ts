@@ -91,9 +91,12 @@ export class SSOController {
   async getStudentDetail(@Body() requestbody: any, @Res() response: Response) {
     return this.ssoService.getStudentDetail(requestbody, response);
   }
-  
+
   @Post('/studentDetailV2')
-  async getStudentDetailV2(@Body() requestbody: any, @Res() response: Response) {
+  async getStudentDetailV2(
+    @Body() requestbody: any,
+    @Res() response: Response,
+  ) {
     return this.ssoService.getStudentDetailV2(requestbody, response);
   }
 
@@ -113,6 +116,23 @@ export class SSOController {
     @Body('auth_code') auth_code: string,
   ) {
     return this.ssoService.digilockerToken(response, digiacc, auth_code);
+  }
+  //digilocker aadhaar
+  @Post('/digilocker/aadhaar')
+  async digilockerAadhaar(
+    @Res() response: Response,
+    @Body('digiacc') digiacc: string,
+    @Body('aadhaar_id') aadhaar_id: string,
+    @Body('aadhaar_name') aadhaar_name: string,
+    @Body('digilocker_id') digilocker_id: string,
+  ) {
+    return this.ssoService.digilockerAadhaar(
+      response,
+      digiacc,
+      aadhaar_id,
+      aadhaar_name,
+      digilocker_id,
+    );
   }
   //digilocker keycloak sunbird rc register and get token
   @Post('/digilocker/register')
@@ -223,7 +243,7 @@ export class SSOController {
     @Res() response: Response,
   ) {
     const jwt = auth.replace('Bearer ', '');
-    return this.ssoService.studentList(jwt,grade,acdemic_year, response);
+    return this.ssoService.studentList(jwt, grade, acdemic_year, response);
   }
   //upload student bulk register
   @Post('/student/bulk/credentials')
