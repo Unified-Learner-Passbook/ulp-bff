@@ -1213,6 +1213,7 @@ export class SSOService {
           'Iel04QkAWhAm1nU8zMSQ90nI9cYPK1A0DlAt7Q==</SignatureValue></Signature></AuthRes>',
       };
       //await aadhaarDemographic(aadhaar_id, aadhaar_name);
+
       //console.log(aadhar_data);
       if (!aadhar_data?.success === true) {
         return response.status(400).send({
