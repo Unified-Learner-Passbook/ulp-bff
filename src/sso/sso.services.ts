@@ -1189,26 +1189,7 @@ export class SSOService {
     digilocker_id: string,
   ) {
     if (digiacc && aadhaar_id && aadhaar_name && digilocker_id) {
-      const aadhar_data = {
-        success: true,
-        status: 'aadhaar_success',
-        message: 'Aadhaar Success',
-        result: {
-          ret: 'y',
-          code: '4e3e88ebfd6a4dab893c27cfc414b11a',
-          txn: '0023133040f01ba3b8cc4532b4360cb81de99fb8',
-          ts: '2023-04-08T15:17:12.786+05:30',
-          err: '000',
-          errdesc: '',
-          rrn: 'IDIO9E1U8PT5MAUHNNNU1680947231',
-          ref: 'FROMSAMPLE',
-          responseXML:
-            'PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz48QXV0aFJlcyBjb2RlPSI0ZTNlODhlYmZkNmE0ZGFiODkzYzI3Y2ZjNDE0YjExYSIgaW5mbz0iMDR7MDExMTE3NDVQTG5HV0NwTHR2NDc0cDBIaUltWjRqR3MwSHd0bHU2eU5oZXRqd2J2Qk5oU21MME9jaXFUL3VTWGMybG5KeFNxLEEsZDFmZjU2MGUzNmQ1YzBiMWM3ZTg2NjNiMWY1ZmYzMWZhZjA2YjUyMTdjMGQ3MzkwZGU1ZTFiY2M2YjAxMTZmZSwwMTgwMDAwMDA4MDAwMDEwLDIuMCwyMDIzMDQwODE1MTYyNiwwLDAsMCwwLDIuNSxmMGFhZGQyNmQ2MjhmZjE5NmQ5MjE3ZmVkMTMxNGMzZTY2MDZkOGYwM2YyZTRhZmUyMmNkNjk1MDRlZDU3YThlLDAyY2Q2M2FkOTI3NzdmMGU1MmYwMjYyM2ZmYjYzMThhOTEyMTY3M2MzNTFjMWMyNGM3MTk3YjdjNDJkY2YzMzEsNWFkNTVmOThhZjU4MDhiMDVlNjZhM2FhZDZkMzdjNDU4ZjQxN2I3NTZhZTI5YTcyZjQ1Y2MwY2ZjODUyMmM4OCwyMyxFLDEwMCxOQSxOQSxOQSxOQSxOQSxOQSxOQSwsTkEsTkEsTkEsTkEsTkEsTkF9IiByZXQ9InkiIHRzPSIyMDIzLTA0LTA4VDE1OjE3OjEyLjc4NiswNTozMCIgdHhuPSIwMDIzMTMzMDQwZjAxYmEzYjhjYzQ1MzJiNDM2MGNiODFkZTk5ZmI4IiB1dWlkPSI2MzgxNjM5NDYyNTU5MzU1MDYiPjxTaWduYXR1cmUgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvMDkveG1sZHNpZyMiPjxTaWduZWRJbmZvPjxDYW5vbmljYWxpemF0aW9uTWV0aG9kIEFsZ29yaXRobT0iaHR0cDovL3d3dy53My5vcmcvVFIvMjAwMS9SRUMteG1sLWMxNG4tMjAwMTAzMTUiIC8+PFNpZ25hdHVyZU1ldGhvZCBBbGdvcml0aG09Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvMDkveG1sZHNpZyNyc2Etc2hhMSIgLz48UmVmZXJlbmNlIFVSST0iIj48VHJhbnNmb3Jtcz48VHJhbnNmb3JtIEFsZ29yaXRobT0iaHR0cDovL3d3dy53My5vcmcvMjAwMC8wOS94bWxkc2lnI2VudmVsb3BlZC1zaWduYXR1cmUiIC8+PC9UcmFuc2Zvcm1zPjxEaWdlc3RNZXRob2QgQWxnb3JpdGhtPSJodHRwOi8vd3d3LnczLm9yZy8yMDAxLzA0L3htbGVuYyNzaGEyNTYiIC8+PERpZ2VzdFZhbHVlPjh2dFp2T1VFNy9Ma2F4TjRSNGhSeUtPbTUzcENsV1MxeDhjVm41NUptUms9PC9EaWdlc3RWYWx1ZT48L1JlZmVyZW5jZT48L1NpZ25lZEluZm8+PFNpZ25hdHVyZVZhbHVlPmdZTUFIZDVWaktvakpGVHVzd3AzT0p3ZlhtMnRwTG9hM1FleExETEs4U3ZJdFhVdjArcDVJNFltWUo0Sk5yUW5DWTBKckZTMENiankKVUFyZjZBRC9nSDg0QVBNRFgyMTgwaTJUaEJqNEFoZ0RlMXcwZnRwWnhnNVlXcklxcmhVSXRMbEZDazZucG5YUjdPSGxLcVRaOEZ2RApVSWN4R0U4M0FzL2VQeDljUW51d3BVTW9JUndsYmZWNk9HVWYzVE5Tc0IxZGY4RFpHR2l6blc3YWoyQlltSE5KdVo0RjRLQjEvZWx0CjNEOHZqZTBWM21jbG8rSXBWSWVqbFZucEpXalJqeDIwUUJiV1lDeXZkRnFMdHA2YktzUDV1SG5pS0tsakpjK3AyZlQ3K291LzJiUlQKekRjRFRRYlc5b28xdVBHMzhHOHcreE1zS3JZMytUOTl6MDhSK0E9PTwvU2lnbmF0dXJlVmFsdWU+PC9TaWduYXR1cmU+PC9BdXRoUmVzPg==',
-        },
-        decodedxml:
-          '<?xml version="1.0" encoding="UTF-8"?><AuthRes code="4e3e88ebfd6a4dab893c27cfc414b11a" info="04{01111745PLnGWCpLtv474p0HiImZ4jGs0Hwtlu6yNhetjwbvBNhSmL0OciqT/uSXc2lnJxSq,A,d1ff560e36d5c0b1c7e8663b1f5ff31faf06b5217c0d7390de5e1bcc6b0116fe,0180000008000010,2.0,20230408151626,0,0,0,0,2.5,f0aadd26d628ff196d9217fed1314c3e6606d8f03f2e4afe22cd69504ed57a8e,02cd63ad92777f0e52f02623ffb6318a9121673c351c1c24c7197b7c42dcf331,5ad55f98af5808b05e66a3aad6d37c458f417b756ae29a72f45cc0cfc8522c88,23,E,100,NA,NA,NA,NA,NA,NA,NA,,NA,NA,NA,NA,NA,NA}" ret="y" ts="2023-04-08T15:17:12.786+05:30" txn="0023133040f01ba3b8cc4532b4360cb81de99fb8" uuid="638163946255935506"><Signature xmlns="http://www.w3.org/2000/09/xmldsig#"><SignedInfo><CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315" /><SignatureMethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha1" /><Reference URI=""><Transforms><Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature" /></Transforms><DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256" /><DigestValue>8vtZvOUE7/LkaxN4R4hRyKOm53pClWS1x8cVn55JmRk=</DigestValue></Reference></SignedInfo><SignatureValue>gYMAHd5VjKojJFTuswp3OJwfXm2tpLoa3QexLDLK8SvItXUv0+p5I4YmYJ4JNrQnCY0JrFS0Cbjy\nUArf6AD/gH84APMDX2180i2ThBj4AhgDe1w0ftpZxg5YWrIqrhUItLlFCk6npnXR7OHlKqTZ8FvD\nUIcxGE83As/ePx9cQnuwpUMoIRwlbfV6OGUf3TNSsB1df8DZGGiznW7aj2BYmHNJuZ4F4KB1/elt\n3D8vje0V3mclo+IpVIejlVnpJWjRjx20QBbWYCyvdFqLtp6bKsP5uHniKKljJc+p2fT7+ou/2bRT\nzDcDTQbW9oo1uPG38G8w+xMsKrY3+T99z08R+A==</SignatureValue></Signature></AuthRes>',
-      };
-      //await aadhaarDemographic(aadhaar_id, aadhaar_name);
+      const aadhar_data = await aadhaarDemographic(aadhaar_id, aadhaar_name);
       if (!aadhar_data?.success === true) {
         return response.status(400).send({
           success: false,
