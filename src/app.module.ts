@@ -14,7 +14,7 @@ import { ConfigModule } from '@nestjs/config';
     ConfigModule.forRoot(),
     SSOModule,
     CredentialsModule,
-    AadhaarModule,
+    //AadhaarModule,
     SchoolModule,
     ClientModule,
     PortalModule,
