@@ -37,7 +37,6 @@ export class CredentialsController {
   ) {
     console.log('body', payload);
     console.log('query', query.type);
-    console.log('params', type);
 
     if (type === 'proofOfAssessment') {
       //var schemaId = "did:ulpschema:098765";
