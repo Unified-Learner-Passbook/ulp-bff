@@ -1069,7 +1069,7 @@ export class SSOService {
                             success: false,
                             status: 'sb_rc_search_no_found',
                             message: 'Sunbird RC User No Found',
-                            result: sb_rc_search_detail?.error,
+                            result: sb_rc_search_detail,
                           });
                         } else {
                           //sent user value
@@ -1129,7 +1129,7 @@ export class SSOService {
                       success: false,
                       status: 'sb_rc_search_no_found',
                       message: 'Sunbird RC User No Found',
-                      result: sb_rc_search_detail?.error,
+                      result: sb_rc_search_detail,
                     });
                   } else {
                     //sent user value

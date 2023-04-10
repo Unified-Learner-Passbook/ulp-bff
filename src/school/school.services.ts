@@ -87,15 +87,15 @@ export class SchoolService {
           console.log('objStr', objStr);
           let et = await this.encrypt(objStr, decryptedSek);
           console.log('et', et);
-          let etBase64 = await Buffer.from(et).toString('base64');
-          console.log('etBase64', etBase64);
+          /*let etBase64 = await Buffer.from(et).toString('base64');
+          console.log('etBase64', etBase64);*/
 
           const encryptedRequestBody = {
-            data: etBase64,
+            data: et,
           };
           let config_token = {
             method: 'post',
-            url: 'https://api.udiseplus.gov.in/school/v1.0/school-info/by-udise-code/public',
+            url: 'https://api.udiseplus.gov.in/school/v1.1/school-info/by-udise-code/public',
             headers: {
               'Content-Type': 'application/json',
               Authorization: 'Bearer ' + authtoken,
