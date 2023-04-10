@@ -18,29 +18,29 @@ export class SchoolService {
   async schoolVerify(requestbody: any, response: Response) {
     if (requestbody) {
       const appKey = await this.getAppKey();
-      console.log('appKey', appKey);
+      ////console.log('appKey', appKey);
       const PLAIN_JSON = {
         clientId: 'test',
         clientSecret: 'test@123',
         appKey: appKey,
       };
-      console.log(PLAIN_JSON);
+      ////console.log(PLAIN_JSON);
       const PLAIN_TEXT_JSON = JSON.stringify(PLAIN_JSON);
-      console.log(PLAIN_TEXT_JSON);
+      //console.log(PLAIN_TEXT_JSON);
       const base64_plaintextjson = await Buffer.from(PLAIN_TEXT_JSON).toString(
         'base64',
       );
-      console.log('base64_plaintextjson', base64_plaintextjson);
+      //console.log('base64_plaintextjson', base64_plaintextjson);
       const cert_path = __dirname + '/assets/cert/udiseplusapi.cer';
       const public_key = await this.getPublicKeyFromCert(cert_path);
-      console.log('public_key', public_key);
+      //console.log('public_key', public_key);
       const encryptedBuffer = await this.encryptCer(
         base64_plaintextjson,
         public_key,
       );
-      console.log('encryptedBuffer', encryptedBuffer);
+      //console.log('encryptedBuffer', encryptedBuffer);
       const hex_encryptedBuffer = await this.bytesToHex(encryptedBuffer);
-      console.log('hex_encryptedBuffer', hex_encryptedBuffer);
+      //console.log('hex_encryptedBuffer', hex_encryptedBuffer);
 
       //call gov api
       let data = {
@@ -55,15 +55,15 @@ export class SchoolService {
         },
         data: data,
       };
-      console.log('config', config);
+      //console.log('config', config);
       let response_text = null;
       await axios(config)
         .then(function (response) {
-          console.log(JSON.stringify(response.data));
+          //console.log(JSON.stringify(response.data));
           response_text = response.data;
         })
         .catch(function (error) {
-          //console.log(error);
+          ////console.log(error);
           response_text = { error: error };
         });
 
@@ -75,20 +75,20 @@ export class SchoolService {
       } else {
         let authtoken = response_text?.data?.authToken;
         let sek = response_text?.data?.sek;
-        console.log('sek', sek);
-        console.log('appKey', appKey);
-        //console.log('authtoken', authtoken);
+        //console.log('sek', sek);
+        //console.log('appKey', appKey);
+        ////console.log('authtoken', authtoken);
         if (authtoken && sek) {
           let dsek = await Buffer.from(sek, 'base64').toString('utf8');
-          console.log('dsek', dsek);
+          //console.log('dsek', dsek);
           let decryptedSek = await this.decrypt(dsek, appKey);
-          console.log('decryptedSek', decryptedSek);
+          //console.log('decryptedSek', decryptedSek);
           let objStr = JSON.stringify(requestbody);
-          console.log('objStr', objStr);
+          //console.log('objStr', objStr);
           let et = await this.encrypt(objStr, decryptedSek);
-          console.log('et', et);
+          //console.log('et', et);
           /*let etBase64 = await Buffer.from(et).toString('base64');
-          console.log('etBase64', etBase64);*/
+          //console.log('etBase64', etBase64);*/
 
           const encryptedRequestBody = {
             data: et,
@@ -102,15 +102,15 @@ export class SchoolService {
             },
             data: encryptedRequestBody,
           };
-          console.log('config_token', config_token);
+          //console.log('config_token', config_token);
           let response_text = null;
           await axios(config_token)
             .then(function (response) {
-              console.log(JSON.stringify(response.data));
+              //console.log(JSON.stringify(response.data));
               response_text = response.data;
             })
             .catch(function (error) {
-              //console.log(error);
+              ////console.log(error);
               response_text = { error: error };
             });
 
@@ -150,9 +150,9 @@ export class SchoolService {
   }
   async getPublicKeyFromCert(certPath) {
     const certData = await this.fs.readFileSync(certPath);
-    //console.log(certData);
+    ////console.log(certData);
     //const cert = this.x509.parseCert(certData);
-    //console.log(cert);
+    ////console.log(cert);
     //const publicKey = cert.publicKey;
     //const publicKey = cert.publicModulus;
     //const publicKey = { algorithm: 'sha256WithRSAEncryption' };
@@ -163,13 +163,13 @@ export class SchoolService {
       .export({ type: 'spki', format: 'pem' });
     //for rsa public key
     //.export({ type: 'pkcs1', format: 'pem' });
-    //console.log(publicKey);
+    ////console.log(publicKey);
 
     return publicKey;
   }
   async encryptCer(text, publicKeyPem) {
     const buffer = await Buffer.from(text, 'utf8');
-    //console.log(buffer);
+    ////console.log(buffer);
     const encrypted = await this.crypto.publicEncrypt(
       {
         key: publicKeyPem,
@@ -177,7 +177,7 @@ export class SchoolService {
       },
       buffer,
     );
-    //console.log(encrypted);
+    ////console.log(encrypted);
     return encrypted;
   }
   async decrypt(text, secretKey) {
