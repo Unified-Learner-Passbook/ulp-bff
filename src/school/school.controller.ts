@@ -23,7 +23,7 @@ export class SchoolController {
   @Get('/test')
   async getUser(@Res() response: Response) {
     const adharencrypt = await encryptaadhaar('rushi');
-    const deadharencrypt = await decryptaadhaar('adharencrypt');
+    const deadharencrypt = await decryptaadhaar(adharencrypt);
     const result = {
       success: true,
       message:
