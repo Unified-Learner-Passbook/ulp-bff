@@ -2,8 +2,7 @@
 import axios from 'axios';
 var parser = require('xml2json');
 var crypto = require('crypto');
-var algorithm = 'aes256'; // or any other algorithm supported by OpenSSL
-var key = process.env.KEY;
+const Cryptr = require('cryptr');
 
 const addhar_aua_url = 'https://uatauakua.auashreetron.com/clientgwapi';
 
@@ -126,24 +125,66 @@ export const getUUID = async (xmldata) => {
 //encryptaadhaar
 export const encryptaadhaar = async (aadhaar_enc_text) => {
   try {
+    const cryptr = new Cryptr('myTotallySecretKey');
+
+    const encryptedString = cryptr.encrypt(aadhaar_enc_text);
+    return encryptedString;
+    /*const algorithm = 'aes-256-cbc';
+
+    // generate 16 bytes of random data
+    const initVector = Buffer.from(
+      `<Buffer bf 28 6f 09 1f 28 eb 2b a0 3b 3c d5 0d 0f 8b 2c>`,
+    ); //crypto.randomBytes(16);
+    // protected data
+    const message = aadhaar_enc_text;
+
+    // secret key generate 32 bytes of random data
+    let Securitykey = Buffer.from(
+      `<Buffer 18 62 6e f4 89 63 55 16 97 ba 5a 10 a4 a6 4b 4d a5 14 f0 82 90 ed 17 32 a4 af 12 fc d4 8d 0a 32>`,
+    ); //crypto.randomBytes(32);
+    console.log(initVector);
+    console.log(Securitykey);
+    // the cipher function
+    const cipher = crypto.createCipheriv(algorithm, Securitykey, initVector);
+
+    // encrypt the message
+    // input encoding
+    // output encoding
+    let encryptedData = cipher.update(message, 'utf-8', 'hex');
+    encryptedData += cipher.final('hex');
+
+    return encryptedData;*/
+
+    /*var algorithm = 'aes256'; // or any other algorithm supported by OpenSSL
+    var key = process.env.KEY;
     var cipher = crypto.createCipheriv(algorithm, key);
     var encrypted =
       cipher.update(aadhaar_enc_text, 'utf8', 'hex') + cipher.final('hex');
-    return encrypted;
+    return encrypted;*/
   } catch (e) {
-    return '';
+    console.log(e);
+    return 'e';
   }
 };
 
 //decryptaadhaar
 export const decryptaadhaar = async (aadhaar_dec_text) => {
   try {
+    const cryptr = new Cryptr('myTotallySecretKey');
+    console.log(cryptr);
+    const decryptedString = cryptr.decrypt(aadhaar_dec_text);
+    return decryptedString;
+    /*var algorithm = 'aes256'; // or any other algorithm supported by OpenSSL
+    var key = process.env.KEY;
+    const Securitykey = crypto.randomBytes(32);
+    console.log(Securitykey);
     // or any other algorithm supported by OpenSSL
-    var decipher = crypto.createDecipheriv(algorithm, key);
+    var decipher = crypto.createDecipher(algorithm, Securitykey);
     var decrypted =
       decipher.update(aadhaar_dec_text, 'hex', 'utf8') + decipher.final('utf8');
-    return decrypted;
+    return decrypted;*/
   } catch (e) {
+    console.log(e);
     return '';
   }
 };
