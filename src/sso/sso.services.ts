@@ -2065,7 +2065,7 @@ export class SSOService {
     aadhaar_status: string,
     response: Response,
   ) {
-    if (token && grade && acdemic_year && aadhaar_status) {
+    if (token && grade && acdemic_year) {
       const studentUsername = await this.verifyStudentToken(token);
       if (studentUsername?.error) {
         return response.status(401).send({
