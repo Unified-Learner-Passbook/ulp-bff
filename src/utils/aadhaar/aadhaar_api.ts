@@ -50,7 +50,7 @@ export const aadhaarDemographic = async (
     };
     //console.log('config', config);
     let response_text = null;
-    response_text = {
+    /*response_text = {
       success: true,
       status: 'aadhaar_success',
       message: 'Aadhaar Success',
@@ -72,8 +72,8 @@ export const aadhaarDemographic = async (
         '2CUFTvM0u1imePN55RCttManvo2HIoMubdDr+vAu6LLtp5P/OoeLfh6oTXL7ZFzsBlm/gqu/7nT4\n' +
         'c1M/2MFQ8gv3ZsDWdR68K6MnHrpjYZfeybQo2OB/L90H8gp3DqGey6uxGBRvz31shvysj72gxLOg\n' +
         'Iel04QkAWhAm1nU8zMSQ90nI9cYPK1A0DlAt7Q==</SignatureValue></Signature></AuthRes>',
-    };
-    /*await axios(config)
+    };*/
+    await axios(config)
       .then(function (response) {
         //console.log(JSON.stringify(response.data));
         response_text = response.data;
@@ -81,7 +81,7 @@ export const aadhaarDemographic = async (
       .catch(function (error) {
         //console.log(error);
         response_text = { error: error };
-      });*/
+      });
     if (response_text?.error) {
       return {
         success: false,
