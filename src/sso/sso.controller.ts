@@ -240,10 +240,38 @@ export class SSOController {
     @Headers('Authorization') auth: string,
     @Body('grade') grade: string,
     @Body('acdemic_year') acdemic_year: string,
+    @Body('aadhaar_status') aadhaar_status: string,
     @Res() response: Response,
   ) {
     const jwt = auth.replace('Bearer ', '');
-    return this.ssoService.studentList(jwt, grade, acdemic_year, response);
+    return this.ssoService.studentList(
+      jwt,
+      grade,
+      acdemic_year,
+      aadhaar_status,
+      response,
+    );
+  }
+  //studentUpdate
+  @Post('/student/update')
+  async studentUpdate(
+    @Headers('Authorization') auth: string,
+    @Body('studentNewData') studentNewData: any,
+    @Body('osid') osid: string,
+    @Res() response: Response,
+  ) {
+    const jwt = auth.replace('Bearer ', '');
+    return this.ssoService.studentUpdate(jwt, studentNewData, osid, response);
+  }
+  //studentAadhaarVerify
+  @Post('/student/aadhaar/verify')
+  async studentAadhaarVerify(
+    @Headers('Authorization') auth: string,
+    @Body('studentData') studentData: any,
+    @Res() response: Response,
+  ) {
+    const jwt = auth.replace('Bearer ', '');
+    return this.ssoService.studentAadhaarVerify(jwt, studentData, response);
   }
   //upload student bulk register
   @Post('/student/bulk/credentials')
