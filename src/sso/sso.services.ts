@@ -980,8 +980,10 @@ export class SSOService {
                 needaadhaar: 'YES',
               });
             } else if (
-              !sb_rc_search[0]?.aadhar_token ||
-              sb_rc_search[0]?.aadhar_token === ''
+              (!sb_rc_search[0]?.aadhar_token && digiacc === 'ewallet') ||
+              (sb_rc_search[0]?.aadhar_token === '' && digiacc === 'ewallet') ||
+              (!sb_rc_search[0]?.aadharId && digiacc === 'portal') ||
+              (sb_rc_search[0]?.aadharId === '' && digiacc === 'portal')
             ) {
               return response.status(200).send({
                 success: true,
