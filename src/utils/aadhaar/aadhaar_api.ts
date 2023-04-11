@@ -76,6 +76,7 @@ export const aadhaarDemographic = async (
         'c1M/2MFQ8gv3ZsDWdR68K6MnHrpjYZfeybQo2OB/L90H8gp3DqGey6uxGBRvz31shvysj72gxLOg\n' +
         'Iel04QkAWhAm1nU8zMSQ90nI9cYPK1A0DlAt7Q==</SignatureValue></Signature></AuthRes>',
     };
+    return response_text
     /*await axios(config)
       .then(function (response) {
         //console.log(JSON.stringify(response.data));
