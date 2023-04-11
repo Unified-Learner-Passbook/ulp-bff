@@ -90,6 +90,7 @@ export const aadhaarDemographic = async (
         result: response_text?.error,
       };
     } else {
+      console.log('response_text', response_text);
       const responseXML = response_text?.responseXML;
       const decodedxml = Buffer.from(responseXML, 'base64').toString('utf8');
       return {
