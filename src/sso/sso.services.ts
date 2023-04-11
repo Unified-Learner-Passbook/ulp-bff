@@ -1927,9 +1927,12 @@ export class SSOService {
               );
               let auto_username = username_name + '@' + username_dob;
               auto_username = auto_username.toLowerCase();
+              const aadhaar_enc_text = await encryptaadhaar(
+                student?.aadhar_token,
+              );
               //find if student account present in sb rc or not
-              const sb_rc_search = await this.sbrcStudentSearch(
-                student?.aadhaar_token,
+              const sb_rc_search = await this.sbrcStudentSearch1(
+                aadhaar_enc_text,
               );
               //console.log(sb_rc_search);
               if (sb_rc_search?.error) {
@@ -1952,9 +1955,6 @@ export class SSOService {
                   var didGenerate =
                     issuerRes[0].verificationMethod[0].controller;
                   let reference_id = 'ULP_' + student?.student_id;
-                  const aadhaar_enc_text = await encryptaadhaar(
-                    student?.aadhar_token,
-                  );
                   let sb_rc_response_text = await this.sbrcInvite(
                     {
                       student_id: student?.student_id,
@@ -2143,16 +2143,24 @@ export class SSOService {
             for (let i = 0; i < sb_rc_search_student_detail.length; i++) {
               const sb_rc_search_student = await this.searchEntity(
                 'StudentV2',
-                {
-                  filters: {
-                    osid: {
-                      eq: sb_rc_search_student_detail[i].student_id,
+                aadhaar_status === 'all'
+                  ? {
+                      filters: {
+                        osid: {
+                          eq: sb_rc_search_student_detail[i].student_id,
+                        },
+                      },
+                    }
+                  : {
+                      filters: {
+                        osid: {
+                          eq: sb_rc_search_student_detail[i].student_id,
+                        },
+                        aadhaar_status: {
+                          eq: aadhaar_status,
+                        },
+                      },
                     },
-                    aadhaar_status: {
-                      eq: aadhaar_status,
-                    },
-                  },
-                },
               );
               if (sb_rc_search_student?.error) {
               } else if (sb_rc_search_student.length !== 0) {
@@ -2669,6 +2677,37 @@ export class SSOService {
     let config = {
       method: 'post',
       url: process.env.REGISTRY_URL + 'api/v1/StudentDetail/search',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      data: data,
+    };
+    let sb_rc_search = null;
+    await axios(config)
+      .then(function (response) {
+        //console.log(JSON.stringify(response.data));
+        sb_rc_search = response.data;
+      })
+      .catch(function (error) {
+        //console.log(error);
+        sb_rc_search = { error: error };
+      });
+    return sb_rc_search;
+  }
+
+  //search student
+  async sbrcStudentSearch1(aadhaar_enc_text: string) {
+    let data = JSON.stringify({
+      filters: {
+        aadhaar_enc: {
+          eq: aadhaar_enc_text,
+        },
+      },
+    });
+    //console.log(data);
+    let config = {
+      method: 'post',
+      url: process.env.REGISTRY_URL + 'api/v1/StudentV2/search',
       headers: {
         'Content-Type': 'application/json',
       },
