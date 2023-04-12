@@ -56,7 +56,7 @@ export class SSOService {
             clientToken,
           );
           //comment
-          if (response_text?.error) {
+          if (response_text?.error && false) {
             return response.status(400).send({
               success: false,
               status: 'keycloak_register_duplicate',
@@ -1028,7 +1028,7 @@ export class SSOService {
                     auto_password,
                     clientToken,
                   );
-                  if (response_text?.error) {
+                  if (response_text?.error && false) {
                     return response.status(400).send({
                       success: false,
                       status: 'keycloak_register_duplicate',
@@ -1303,7 +1303,7 @@ export class SSOService {
                       auto_password,
                       clientToken,
                     );
-                    if (response_text?.error) {
+                    if (response_text?.error && false) {
                       return response.status(400).send({
                         success: false,
                         status: 'keycloak_register_duplicate',
@@ -1495,7 +1495,7 @@ export class SSOService {
           clientToken,
         );
 
-        if (response_text?.error) {
+        if (response_text?.error && false) {
           return response.status(400).send({
             success: false,
             status: 'keycloak_register_duplicate',
