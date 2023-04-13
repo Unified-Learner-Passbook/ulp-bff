@@ -24,15 +24,12 @@ export class ClientController {
   getUser(@Res() response: Response) {
     const result = {
       success: true,
-      message: 'Client API Working 3 April',
+      message: 'Client API Working 3 April ' + process.env.TESTVAR,
     };
     response.status(200).send(result);
   }
   @Post('/register')
-  async registerClient(
-    @Body() requestbody: any,
-    @Res() response: Response,
-  ) {
+  async registerClient(@Body() requestbody: any, @Res() response: Response) {
     return this.clientService.registerClient(requestbody, response);
   }
   @Post('/search')
