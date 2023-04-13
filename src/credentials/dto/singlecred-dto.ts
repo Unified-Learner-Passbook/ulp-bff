@@ -9,6 +9,10 @@ export class SingleCredentialDto {
     issuanceDate: string;
     expirationDate: string;
     issuer: string;
+    vcData: {
+        issuanceDate: string,
+        expirationDate: string
+      }
     credentialSubject: {
         id: any;
         credentialSubject: { id: any; grade: string; programme: any; certifyingInstitute: any; evaluatingInstitute: any; };
