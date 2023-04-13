@@ -1,6 +1,5 @@
 import { Body, Controller, Get, Param, Post, Query, Res } from '@nestjs/common';
 import { CredentialsService } from './credentials.service';
-import { CredentialDto } from './dto/credential-dto';
 import { SingleCredentialDto } from './dto/singlecred-dto';
 import { BulkCredentialDto } from './dto/bulkCred-dto';
 import { Response } from 'express';

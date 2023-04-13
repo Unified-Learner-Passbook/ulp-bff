@@ -2,7 +2,6 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import axios from 'axios';
 import { it } from 'node:test';
-import { CredentialDto } from './dto/credential-dto';
 import { SingleCredentialDto } from './dto/singlecred-dto';
 import { BulkCredentialDto } from './dto/bulkCred-dto';
 import { Response } from 'express';
@@ -348,8 +347,8 @@ export class CredentialsService {
                     issuerId: issuerId,
                     credSchema: schemaRes,
                     credentialSubject: payload.credentialSubject,
-                    "issuanceDate": "2023-02-06T11:56:27.259Z",
-                    "expirationDate": "2023-02-06T11:56:27.259Z"
+                    issuanceDate: payload.vcData.issuanceDate,
+                    expirationDate: payload.vcData.expirationDate
                 }
                 console.log("obj", obj)
                 //const cred = await this.issueCredentials(obj)
