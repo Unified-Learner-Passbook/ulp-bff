@@ -8,10 +8,18 @@ import { PortalModule } from './portal/portal.module';
 
 //call env variable
 import { ConfigModule } from '@nestjs/config';
+import { CredService } from './services/cred/cred.service';
+import { SbrcService } from './services/sbrc/sbrc.service';
+import { HttpModule, HttpModuleOptions } from '@nestjs/axios';
 
 @Module({
   imports: [
     ConfigModule.forRoot(),
+    //HttpModule,
+    {
+      ...HttpModule.register({}),
+      global: true
+    },
     SSOModule,
     CredentialsModule,
     //AadhaarModule,
@@ -19,5 +27,6 @@ import { ConfigModule } from '@nestjs/config';
     ClientModule,
     PortalModule,
   ],
+  providers: [CredService, SbrcService]
 })
 export class AppModule {}
