@@ -13,7 +13,7 @@ import { SbrcService } from './services/sbrc/sbrc.service';
 import { HttpModule, HttpModuleOptions } from '@nestjs/axios';
 import { getEnvPath } from './utils/helper/helper';
 
-const envFilePath: string = getEnvPath(`${__dirname}/utils/envs`);
+const envFilePath: string = getEnvPath(`${__dirname}/envs`);
 //console.log('envFilePath', envFilePath);
 @Module({
   imports: [
