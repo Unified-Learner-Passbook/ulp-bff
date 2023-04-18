@@ -31,7 +31,7 @@ export class SchoolService {
         'base64',
       );
       //console.log('base64_plaintextjson', base64_plaintextjson);
-      const cert_path = __dirname + '/assets/cert/udiseplusapi.cer';
+      const cert_path = __dirname + '/src/assets/cert/udiseplusapi.cer';
       const public_key = await this.getPublicKeyFromCert(cert_path);
       //console.log('public_key', public_key);
       const encryptedBuffer = await this.encryptCer(
