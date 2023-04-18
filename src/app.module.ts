@@ -11,14 +11,17 @@ import { ConfigModule } from '@nestjs/config';
 import { CredService } from './services/cred/cred.service';
 import { SbrcService } from './services/sbrc/sbrc.service';
 import { HttpModule, HttpModuleOptions } from '@nestjs/axios';
+import { getEnvPath } from './utils/helper/helper';
 
+const envFilePath: string = getEnvPath(`${__dirname}/envs`);
+//console.log('envFilePath', envFilePath);
 @Module({
   imports: [
-    ConfigModule.forRoot(),
+    ConfigModule.forRoot({ envFilePath, isGlobal: true }),
     //HttpModule,
     {
       ...HttpModule.register({}),
-      global: true
+      global: true,
     },
     SSOModule,
     CredentialsModule,
@@ -27,6 +30,6 @@ import { HttpModule, HttpModuleOptions } from '@nestjs/axios';
     ClientModule,
     PortalModule,
   ],
-  providers: [CredService, SbrcService]
+  providers: [CredService, SbrcService],
 })
 export class AppModule {}
