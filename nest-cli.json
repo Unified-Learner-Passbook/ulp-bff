@@ -9,6 +9,11 @@
         "include": "./assets",
         "outDir": "dist/school/",
         "watchAssets": true
+      },
+      {
+        "include": "./utils/envs",
+        "outDir": "dist/",
+        "watchAssets": true
       }
     ],
     "watchAssets": true
