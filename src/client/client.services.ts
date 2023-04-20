@@ -1,9 +1,13 @@
 import { Injectable, StreamableFile } from '@nestjs/common';
 
+import { HttpService } from '@nestjs/axios';
+import { AxiosRequestConfig } from 'axios';
+
 //custom imports
-import axios from 'axios';
 import { Response, Request } from 'express';
 import { BulkCredentialDto } from './dto/bulkCred-dto';
+import { SbrcService } from '../services/sbrc/sbrc.service';
+import { CredService } from 'src/services/cred/cred.service';
 
 const cred_url = process.env.CRED_URL || 'http://64.227.185.154:3002';
 const did_url = process.env.DID_URL || 'http://64.227.185.154:3000';
@@ -11,6 +15,11 @@ const schema_url = process.env.SCHEMA_URL || 'http://64.227.185.154:3001';
 
 @Injectable()
 export class ClientService {
+  constructor(
+    private readonly httpService: HttpService,
+    private sbrcService: SbrcService,
+    private credService: CredService,
+  ) {}
   //axios call
   md5 = require('md5');
   crypto = require('crypto');
@@ -30,7 +39,10 @@ export class ClientService {
           },
         },
       };
-      const sb_rc_search_detail = await this.searchEntityNew('Client', filter);
+      const sb_rc_search_detail = await this.sbrcService.sbrcSearchEL(
+        'Client',
+        filter,
+      );
       //console.log(sb_rc_search_detail);
       if (sb_rc_search_detail?.error) {
         return response.status(501).send({
@@ -46,7 +58,7 @@ export class ClientService {
           requestbody?.clientName,
         );
         // sunbird registery client
-        let sb_rc_response_text = await this.sbrcInviteNew(
+        let sb_rc_response_text = await this.sbrcService.sbrcInviteEL(
           requestbody,
           'Client',
         );
@@ -100,7 +112,10 @@ export class ClientService {
           },
         },
       };
-      const sb_rc_search_detail = await this.searchEntityNew('Client', filter);
+      const sb_rc_search_detail = await this.sbrcService.sbrcSearchEL(
+        'Client',
+        filter,
+      );
       //console.log(sb_rc_search_detail);
       if (sb_rc_search_detail?.error) {
         return response.status(501).send({
@@ -154,7 +169,10 @@ export class ClientService {
           },
         },
       };
-      const sb_rc_search_detail = await this.searchEntityNew('Client', filter);
+      const sb_rc_search_detail = await this.sbrcService.sbrcSearchEL(
+        'Client',
+        filter,
+      );
       //console.log(sb_rc_search_detail);
       if (sb_rc_search_detail?.error) {
         return response.status(501).send({
@@ -188,7 +206,7 @@ export class ClientService {
             },
           },
         };
-        let searchSchoolDetail = await this.sbrcSearch(
+        let searchSchoolDetail = await this.sbrcService.sbrcSearch(
           searchSchema,
           'SchoolDetail',
         );
@@ -198,7 +216,7 @@ export class ClientService {
           issuerId = searchSchoolDetail[0].did;
           console.log('issuerId', issuerId);
         } else {
-          let schoolDidRes = await this.generateDid(
+          let schoolDidRes = await this.credService.generateDid(
             credentialPlayload.issuerDetail.udise,
           );
 
@@ -212,7 +230,7 @@ export class ClientService {
               udiseCode: credentialPlayload.issuerDetail.udise,
               did: credentialPlayload.issuerDetail.schoolDid,
             };
-            let createSchoolDetail = await this.sbrcInvite(
+            let createSchoolDetail = await this.sbrcService.sbrcInvite(
               inviteSchema,
               'SchoolDetail',
             );
@@ -239,7 +257,7 @@ export class ClientService {
         }
 
         //generate schema
-        var schemaRes = await this.generateSchema(schemaId);
+        var schemaRes = await this.credService.generateSchema(schemaId);
         console.log('schemaRes', schemaRes);
 
         if (schemaRes) {
@@ -319,7 +337,7 @@ export class ClientService {
                   },
                 },
               };
-              const studentDetails = await this.sbrcSearch(
+              const studentDetails = await this.sbrcService.sbrcSearch(
                 searchSchema,
                 'StudentV2',
               );
@@ -336,7 +354,7 @@ export class ClientService {
                   };
                   console.log('obj', obj);
 
-                  const cred = await this.issueCredentials(obj);
+                  const cred = await this.credService.issueCredentials(obj);
                   //console.log("cred 34", cred)
                   if (cred) {
                     responseArray.push(cred);
@@ -354,11 +372,11 @@ export class ClientService {
                     error_count++;
                   }
                 } else {
-                  let didRes = await this.generateDid(aadhar_token);
+                  let didRes = await this.credService.generateDid(aadhar_token);
 
                   if (didRes) {
                     iterator.id = didRes[0].verificationMethod[0].controller;
-                    let updateRes = await this.sbrcUpdate(
+                    let updateRes = await this.sbrcService.sbrcUpdate(
                       { DID: iterator.id },
                       'StudentV2',
                       studentDetails[0].osid,
@@ -375,7 +393,9 @@ export class ClientService {
                       console.log('obj', obj);
 
                       if (iterator.id) {
-                        const cred = await this.issueCredentials(obj);
+                        const cred = await this.credService.issueCredentials(
+                          obj,
+                        );
                         //console.log("cred 34", cred)
                         if (cred) {
                           responseArray.push(cred);
@@ -417,7 +437,7 @@ export class ClientService {
                   }
                 }
               } else {
-                let didRes = await this.generateDid(aadhar_token);
+                let didRes = await this.credService.generateDid(aadhar_token);
 
                 if (didRes) {
                   iterator.id = didRes[0].verificationMethod[0].controller;
@@ -436,7 +456,7 @@ export class ClientService {
                     aadhaar_enc: '',
                   };
                   console.log('inviteSchema', inviteSchema);
-                  let createStudent = await this.sbrcInvite(
+                  let createStudent = await this.sbrcService.sbrcInvite(
                     inviteSchema,
                     'StudentV2',
                   );
@@ -452,7 +472,7 @@ export class ClientService {
                     };
                     console.log('obj', obj);
 
-                    const cred = await this.issueCredentials(obj);
+                    const cred = await this.credService.issueCredentials(obj);
                     //console.log("cred 34", cred)
                     if (cred) {
                       responseArray.push(cred);
@@ -569,221 +589,5 @@ export class ClientService {
       result += chars[Math.floor(Math.random() * chars.length)];
     result += Math.floor(Date.now() / 1000).toString();
     return await this.md5(clientName + result);
-  }
-
-  // invite entity in registery
-  async sbrcInviteNew(inviteSchema, entityName) {
-    let data = JSON.stringify(inviteSchema);
-
-    let config_sb_rc = {
-      method: 'post',
-      url: process.env.REGISTRY_URL + 'api/v1/' + entityName + '/invite',
-      headers: {
-        'content-type': 'application/json',
-      },
-      data: data,
-    };
-
-    var sb_rc_response_text = null;
-    await axios(config_sb_rc)
-      .then(function (response) {
-        //console.log(JSON.stringify(response.data));
-        sb_rc_response_text = response.data;
-      })
-      .catch(function (error) {
-        //console.log(error);
-        sb_rc_response_text = { error: error };
-      });
-
-    return sb_rc_response_text;
-  }
-  //searchEntity
-  async searchEntityNew(entity: string, filter: any) {
-    let data = JSON.stringify(filter);
-
-    let url = process.env.REGISTRY_URL + 'api/v1/' + entity + '/search';
-    //console.log(data + ' ' + url);
-    let config = {
-      method: 'post',
-      url: url,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      data: data,
-    };
-    let sb_rc_search = null;
-    await axios(config)
-      .then(function (response) {
-        //console.log(JSON.stringify(response.data));
-        sb_rc_search = response.data;
-      })
-      .catch(function (error) {
-        //console.log(error);
-        sb_rc_search = { error: error };
-      });
-    return sb_rc_search;
-  }
-  //new function for bulk register
-
-  async sbrcInvite(inviteSchema, entityName) {
-    let data = JSON.stringify(inviteSchema);
-
-    let config = {
-      method: 'post',
-      url: process.env.REGISTRY_URL + 'api/v1/' + entityName + '/invite',
-      headers: {
-        'content-type': 'application/json',
-      },
-      data: data,
-    };
-
-    try {
-      const response = await axios(config);
-      return response.data;
-    } catch (err) {
-      //console.log("sb_rc_create err")
-    }
-  }
-
-  async sbrcSearch(searchSchema, entityName) {
-    let data = JSON.stringify(searchSchema);
-
-    let config = {
-      method: 'post',
-      //url: process.env.REGISTRY_URL + 'api/v1/StudentV2/search',
-      url: process.env.REGISTRY_URL + 'api/v1/' + entityName + '/search',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      data: data,
-    };
-    try {
-      const response = await axios(config);
-      return response.data;
-    } catch (err) {
-      //console.log("sb_rc_search err")
-    }
-  }
-  async generateSchema(schemaId) {
-    var config = {
-      method: 'get',
-      maxBodyLength: Infinity,
-      url: `${schema_url}/schema/jsonld?id=${schemaId}`,
-      headers: {},
-    };
-
-    try {
-      const response = await axios(config);
-      //console.log("response schema", response.data)
-      return response.data;
-    } catch (error) {
-      //console.log("error schema", error)
-    }
-  }
-
-  async generateDid(studentId) {
-    var data = JSON.stringify({
-      content: [
-        {
-          alsoKnownAs: [`did.${studentId}`],
-          services: [
-            {
-              id: 'IdentityHub',
-              type: 'IdentityHub',
-              serviceEndpoint: {
-                '@context': 'schema.identity.foundation/hub',
-                '@type': 'UserServiceEndpoint',
-                instance: ['did:test:hub.id'],
-              },
-            },
-          ],
-        },
-      ],
-    });
-
-    var config = {
-      method: 'post',
-      maxBodyLength: Infinity,
-      url: `${did_url}/did/generate`,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      data: data,
-    };
-
-    try {
-      const response = await axios(config);
-      //console.log("response did", response.data)
-      return response.data;
-    } catch (error) {
-      //console.log("did error", error.message)
-    }
-  }
-
-  async issueCredentials(payload) {
-    var data = JSON.stringify({
-      credential: {
-        '@context': [
-          'https://www.w3.org/2018/credentials/v1',
-          'https://www.w3.org/2018/credentials/examples/v1',
-        ],
-        id: 'did:ulp:b4a191af-d86e-453c-9d0e-dd4771067235',
-        type: ['VerifiableCredential', 'UniversityDegreeCredential'],
-        issuer: `${payload.issuerId}`,
-        issuanceDate: payload.issuanceDate,
-        expirationDate: payload.expirationDate,
-        credentialSubject: payload.credentialSubject,
-        options: {
-          created: '2020-04-02T18:48:36Z',
-          credentialStatus: {
-            type: 'RevocationList2020Status',
-          },
-        },
-      },
-      credentialSchemaId: payload.credSchema.id,
-      tags: ['tag1', 'tag2', 'tag3'],
-    });
-
-    var config = {
-      method: 'post',
-      maxBodyLength: Infinity,
-      url: 'http://64.227.185.154:3002/credentials/issue',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      data: data,
-    };
-
-    try {
-      const response = await axios(config);
-      //console.log("cred response")
-      return response.data;
-    } catch (e) {
-      //console.log("cred error", e.message)
-    }
-  }
-
-  //update
-  async sbrcUpdate(updateSchema, entityName, osid) {
-    //console.log("updateSchema", updateSchema)
-    //console.log("entityName", entityName)
-    //console.log("osid", osid)
-    let data = JSON.stringify(updateSchema);
-
-    let config = {
-      method: 'put',
-      url: process.env.REGISTRY_URL + 'api/v1/' + entityName + '/' + osid,
-      headers: {
-        'content-type': 'application/json',
-      },
-      data: data,
-    };
-
-    try {
-      const response = await axios(config);
-      return response.data;
-    } catch (err) {
-      //console.log("sb_rc_update err")
-    }
   }
 }

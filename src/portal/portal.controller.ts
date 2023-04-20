@@ -11,7 +11,6 @@ import {
 } from '@nestjs/common';
 
 //custom imports
-import axios from 'axios';
 import { Response, Request } from 'express';
 import { PortalService } from './portal.services';
 

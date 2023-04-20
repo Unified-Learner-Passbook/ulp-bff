@@ -1,16 +1,22 @@
 import { Injectable, StreamableFile } from '@nestjs/common';
 
+import { HttpService } from '@nestjs/axios';
+import { AxiosRequestConfig } from 'axios';
+
 //custom imports
-import axios from 'axios';
 import { Response, Request } from 'express';
 //sbrc api
-import { sbrcSearch } from '../utils/sbrc/sbrc_api';
 import { KeycloakService } from '../services/keycloak/keycloak.service';
+import { SbrcService } from '../services/sbrc/sbrc.service';
 import { count } from 'rxjs';
 
 @Injectable()
 export class PortalService {
-  constructor(private keycloakService: KeycloakService) {}
+  constructor(
+    private readonly httpService: HttpService,
+    private keycloakService: KeycloakService,
+    private sbrcService: SbrcService,
+  ) {}
   //searchCount
   async searchCount(token: string, countFields: any, response: Response) {
     if (token && countFields.length > 0) {
@@ -30,7 +36,7 @@ export class PortalService {
           result: null,
         });
       } else {
-        const sb_rc_search = await sbrcSearch('TeacherV1', {
+        const sb_rc_search = await this.sbrcService.sbrcSearchEL('TeacherV1', {
           filters: {
             username: {
               eq: username?.preferred_username,
@@ -60,7 +66,7 @@ export class PortalService {
             let fieldcount = 0;
             //students_registered
             if (field === 'students_registered') {
-              const sb_rc_search_student_detail = await sbrcSearch(
+              const sb_rc_search_student_detail = await this.sbrcService.sbrcSearchEL(
                 'StudentDetailV2',
                 {
                   filters: {
@@ -77,7 +83,7 @@ export class PortalService {
             }
             //claims_pending
             if (field === 'claims_pending') {
-              const sb_rc_search_student_detail = await sbrcSearch(
+              const sb_rc_search_student_detail = await this.sbrcService.sbrcSearchEL(
                 'StudentDetailV2',
                 {
                   filters: {
@@ -97,7 +103,7 @@ export class PortalService {
             }
             //claims_approved
             if (field === 'claims_approved') {
-              const sb_rc_search_student_detail = await sbrcSearch(
+              const sb_rc_search_student_detail = await this.sbrcService.sbrcSearchEL(
                 'StudentDetailV2',
                 {
                   filters: {
@@ -117,7 +123,7 @@ export class PortalService {
             }
             //claims_rejected
             if (field === 'claims_rejected') {
-              const sb_rc_search_student_detail = await sbrcSearch(
+              const sb_rc_search_student_detail = await this.sbrcService.sbrcSearchEL(
                 'StudentDetailV2',
                 {
                   filters: {
@@ -140,7 +146,7 @@ export class PortalService {
               //find school did from school udise id
               let did = '';
               //find if student account present in sb rc or not
-              const sb_rc_search = await sbrcSearch('SchoolDetail', {
+              const sb_rc_search = await this.sbrcService.sbrcSearchEL('SchoolDetail', {
                 filters: {
                   udiseCode: {
                     eq: schoolUdise,
@@ -160,25 +166,25 @@ export class PortalService {
                   id: did,
                 },
               });
-              var config = {
-                method: 'post',
-                url: process.env.CRED_URL + '/credentials/search',
+
+              const url = process.env.CRED_URL + '/credentials/search';
+              const config: AxiosRequestConfig = {
                 headers: {
                   'Content-Type': 'application/json',
                 },
-                data: data,
               };
 
               let render_response = null;
-              await axios(config)
-                .then(function (response) {
-                  //console.log(JSON.stringify(response.data));
-                  render_response = response.data;
-                })
-                .catch(function (error) {
-                  //console.log(error);
-                  render_response = { error: error };
-                });
+              try {
+                const observable = this.httpService.post(url, data, config);
+                const promise = observable.toPromise();
+                const response = await promise;
+                //console.log(JSON.stringify(response.data));
+                render_response = response.data;
+              } catch (e) {
+                //console.log(e);
+                render_response = { error: e };
+              }
 
               if (render_response?.error) {
               } else {

@@ -10,7 +10,7 @@ import { ConfigModule } from '@nestjs/config';
 import { CredService } from './services/cred/cred.service';
 import { SbrcService } from './services/sbrc/sbrc.service';
 import { HttpModule, HttpModuleOptions } from '@nestjs/axios';
-import { getEnvPath } from './utils/helper/helper';
+import { getEnvPath } from './services/helper/helper';
 import { AadharService } from './services/aadhar/aadhar.service';
 import { KeycloakService } from './services/keycloak/keycloak.service';
 
