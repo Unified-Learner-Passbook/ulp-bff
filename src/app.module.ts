@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { SSOModule } from './sso/sso.module';
 import { CredentialsModule } from './credentials/credentials.module';
-import { AadhaarModule } from './aadhaar/aadhaar.module';
 import { SchoolModule } from './school/school.module';
 import { ClientModule } from './client/client.module';
 import { PortalModule } from './portal/portal.module';
@@ -27,7 +26,6 @@ const envFilePath: string = getEnvPath(`${__dirname}/envs`);
     },
     SSOModule,
     CredentialsModule,
-    //AadhaarModule,
     SchoolModule,
     ClientModule,
     PortalModule,

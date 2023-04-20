@@ -5,15 +5,16 @@ import axios from 'axios';
 import { Response, Request } from 'express';
 //sbrc api
 import { sbrcSearch } from '../utils/sbrc/sbrc_api';
-import { verifyUserToken } from '../utils/keycloak/keycloak_api';
+import { KeycloakService } from '../services/keycloak/keycloak.service';
 import { count } from 'rxjs';
 
 @Injectable()
 export class PortalService {
+  constructor(private keycloakService: KeycloakService) {}
   //searchCount
   async searchCount(token: string, countFields: any, response: Response) {
     if (token && countFields.length > 0) {
-      const username = await verifyUserToken(token);
+      const username = await this.keycloakService.verifyUserToken(token);
       if (username?.error) {
         return response.status(401).send({
           success: false,

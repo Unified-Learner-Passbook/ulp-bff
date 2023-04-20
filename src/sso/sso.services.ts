@@ -8,15 +8,13 @@ import { Response, Request } from 'express';
 import * as wkhtmltopdf from 'wkhtmltopdf';
 import { UserDto } from './dto/user-dto';
 import { schoolList } from './constlist/schoollist';
-import {
-  aadhaarDemographic,
-  getUUID,
-  encryptaadhaar,
-  decryptaadhaar,
-} from '../utils/aadhaar/aadhaar_api';
+import { AadharService } from '../services/aadhar/aadhar.service';
 
 @Injectable()
 export class SSOService {
+  constructor(
+    private aadharService: AadharService,
+  ) {}
   //axios call
   md5 = require('md5');
   qs = require('qs');
@@ -1196,7 +1194,7 @@ export class SSOService {
     digilocker_id: string,
   ) {
     if (digiacc && aadhaar_id && aadhaar_name && digilocker_id) {
-      const aadhar_data = await aadhaarDemographic(aadhaar_id, aadhaar_name);
+      const aadhar_data = await this.aadharService.aadhaarDemographic(aadhaar_id, aadhaar_name);
 
       //console.log(aadhar_data);
       if (!aadhar_data?.success === true) {
@@ -1209,7 +1207,7 @@ export class SSOService {
       } else {
         if (aadhar_data?.result?.ret === 'y') {
           const decodedxml = aadhar_data?.decodedxml;
-          const uuid = await getUUID(decodedxml);
+          const uuid = await this.aadharService.getUUID(decodedxml);
           if (uuid === null) {
             return response.status(400).send({
               success: false,
@@ -1996,7 +1994,7 @@ export class SSOService {
               );
               let auto_username = username_name + '@' + username_dob;
               auto_username = auto_username.toLowerCase();
-              const aadhaar_enc_text = await encryptaadhaar(
+              const aadhaar_enc_text = await this.aadharService.encryptaadhaar(
                 student?.aadhar_token,
               );
               //find if student account present in sb rc or not
@@ -2347,8 +2345,8 @@ export class SSOService {
           result: null,
         });
       } else {
-        const aadhaar_id = await decryptaadhaar(studentData?.aadhaar_enc);
-        const aadhar_data = await aadhaarDemographic(
+        const aadhaar_id = await this.aadharService.decryptaadhaar(studentData?.aadhaar_enc);
+        const aadhar_data = await this.aadharService.aadhaarDemographic(
           aadhaar_id,
           studentData?.student_name,
         );
@@ -2363,7 +2361,7 @@ export class SSOService {
         } else {
           if (aadhar_data?.result?.ret === 'y') {
             const decodedxml = aadhar_data?.decodedxml;
-            const uuid = await getUUID(decodedxml);
+            const uuid = await this.aadharService.getUUID(decodedxml);
             if (uuid === null) {
               return response.status(400).send({
                 success: false,
