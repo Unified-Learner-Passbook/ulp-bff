@@ -11,7 +11,7 @@ import { SbrcService } from 'src/services/sbrc/sbrc.service';
 @Injectable()
 export class CredentialsService {
 
-    constructor(private credService: CredService, private sbrcService : SbrcService) { }
+    constructor(private credService: CredService, private sbrcService: SbrcService) { }
 
     async issueBulkCredential(credentialPlayload: BulkCredentialDto, schemaId: string, response: Response) {
 
@@ -34,7 +34,7 @@ export class CredentialsService {
         console.log("searchSchoolDetail", searchSchoolDetail)
 
 
-        if (searchSchoolDetail.length>0) {
+        if (searchSchoolDetail.length > 0) {
             issuerId = searchSchoolDetail[0].did
             console.log("issuerId", issuerId)
         } else {
@@ -202,52 +202,56 @@ export class CredentialsService {
                     }
                 } else {
                     //let didRes = await this.generateDid(aadhar_token)
-                    let didRes = await this.credService.generateDid(aadhar_token)
+                    console.log("aadhar_token  205", aadhar_token)
+                    if (aadhar_token) {
+                        let didRes = await this.credService.generateDid(aadhar_token)
 
-                    if (didRes) {
-                        iterator.id = didRes[0].verificationMethod[0].controller
-                        let inviteSchema = {
-                            "student_id": iterator.student_id,
-                            "DID": iterator.id,
-                            "reference_id": iterator.reference_id,
-                            "aadhar_token": iterator.aadhar_token,
-                            "student_name": iterator.student_name,
-                            "dob": iterator.dob,
-                            "school_type": "public",
-                            "meripehchan_id": "",
-                            "username": (iterator.student_name.split(' ')[0]+'@'+iterator.dob.split('/').join('')).toLowerCase()
-                        }
-                        console.log("inviteSchema", inviteSchema)
-                        //let createStudent = await this.sbrcInvite(inviteSchema, 'StudentV2')
-                        let createStudent = await this.sbrcService.sbrcInvite(inviteSchema, 'StudentV2')
-                        console.log("createStudent", createStudent)
-
-                        if (createStudent) {
-                            let obj = {
-                                issuerId: issuerId,
-                                credSchema: schemaRes,
-                                credentialSubject: iterator,
-                                issuanceDate: credentialPlayload.vcData.issuanceDate,
-                                expirationDate: credentialPlayload.vcData.expirationDate
+                        if (didRes) {
+                            iterator.id = didRes[0].verificationMethod[0].controller
+                            let inviteSchema = {
+                                "student_id": iterator.student_id,
+                                "DID": iterator.id,
+                                "reference_id": iterator.reference_id,
+                                "aadhar_token": iterator.aadhar_token,
+                                "student_name": iterator.student_name,
+                                "dob": iterator.dob,
+                                "school_type": "public",
+                                "meripehchan_id": "",
+                                "username": (iterator.student_name.split(' ')[0] + '@' + iterator.dob.split('/').join('')).toLowerCase()
                             }
-                            console.log("obj", obj)
+                            console.log("inviteSchema", inviteSchema)
+                            //let createStudent = await this.sbrcInvite(inviteSchema, 'StudentV2')
+                            let createStudent = await this.sbrcService.sbrcInvite(inviteSchema, 'StudentV2')
+                            console.log("createStudent", createStudent)
 
-                            //const cred = await this.issueCredentials(obj)
-                            const cred = await this.credService.issueCredentials(obj)
-                            //console.log("cred 34", cred)
-                            if (cred) {
-                                responseArray.push(cred)
+                            if (createStudent) {
+                                let obj = {
+                                    issuerId: issuerId,
+                                    credSchema: schemaRes,
+                                    credentialSubject: iterator,
+                                    issuanceDate: credentialPlayload.vcData.issuanceDate,
+                                    expirationDate: credentialPlayload.vcData.expirationDate
+                                }
+                                console.log("obj", obj)
+
+                                //const cred = await this.issueCredentials(obj)
+                                const cred = await this.credService.issueCredentials(obj)
+                                //console.log("cred 34", cred)
+                                if (cred) {
+                                    responseArray.push(cred)
+                                } else {
+                                    responseArray.push({ error: "unable to issue credentials!" })
+                                }
                             } else {
-                                responseArray.push({ error: "unable to issue credentials!" })
+                                responseArray.push({ error: "unable to create student in RC!" })
                             }
+
                         } else {
-                            responseArray.push({ error: "unable to create student in RC!" })
+                            responseArray.push({ error: "unable to generate student did!" })
                         }
-
                     } else {
-                        responseArray.push({ error: "unable to generate student did!" })
+                        responseArray.push({ error: "aadhar_token not found!" })
                     }
-
                 }
             }
 
@@ -352,20 +356,23 @@ export class CredentialsService {
                 }
                 console.log("obj", obj)
                 //const cred = await this.issueCredentials(obj)
-                const cred = await this.credService.issueCredentials(obj)
-                if (cred) {
-                    //update did inside sbrc
+                //const cred = await this.credService.issueCredentials(obj)
+                //if (cred) {
+                //update did inside sbrc
 
-                    //let updateStudentDetail = await this.sbrcUpdate({ "claim_status": "issued" }, 'StudentDetailV2', osid)
-                    let updateStudentDetail = await this.sbrcService.sbrcUpdate({ "claim_status": "issued" }, 'StudentDetailV2', osid)
-                    console.log("updateStudentDetail", updateStudentDetail)
+                //let updateStudentDetail = await this.sbrcUpdate({ "claim_status": "issued" }, 'StudentDetailV2', osid)
+                let updateStudentDetail = await this.sbrcService.sbrcUpdate({ "claim_status": "issued" }, 'StudentDetailV2', osid)
+                console.log("updateStudentDetail", updateStudentDetail)
 
-                    //let updateStudent = await this.sbrcUpdate({ DID: did }, 'StudentV2', student_osid)
-                    let updateStudent = await this.sbrcService.sbrcUpdate({ DID: did }, 'StudentV2', student_osid)
-                    console.log("updateStudent", updateStudent)
+                //let updateStudent = await this.sbrcUpdate({ DID: did }, 'StudentV2', student_osid)
+                let updateStudent = await this.sbrcService.sbrcUpdate({ DID: did }, 'StudentV2', student_osid)
+                console.log("updateStudent", updateStudent)
 
-                    if (updateStudentDetail && updateStudent) {
-                        
+                if (updateStudentDetail && updateStudent) {
+
+                    const cred = await this.credService.issueCredentials(obj)
+
+                    if (cred) {
                         return response.status(200).send({
                             success: true,
                             status: 'Success',
@@ -376,19 +383,29 @@ export class CredentialsService {
                         return response.status(200).send({
                             success: false,
                             status: 'Success',
-                            message: 'Credentials generated successfully but Unable to update data inside Registry',
-                            result: cred
+                            message: 'Unable to generate Credentials',
+                            result: null
                         })
                     }
+
 
                 } else {
                     return response.status(200).send({
                         success: false,
                         status: 'Success',
-                        message: 'Unable to generate Credentials',
+                        message: 'Unable to update data inside Registry',
                         result: null
                     })
                 }
+
+                // } else {
+                //     return response.status(200).send({
+                //         success: false,
+                //         status: 'Success',
+                //         message: 'Unable to generate Credentials',
+                //         result: null
+                //     })
+                // }
 
             } else {
                 return response.status(200).send({
