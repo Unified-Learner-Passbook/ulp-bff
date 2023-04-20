@@ -56,7 +56,7 @@ export class SSOService {
             clientToken,
           );
           //comment
-          if (response_text?.error) {
+          if (response_text?.error && false) {
             return response.status(400).send({
               success: false,
               status: 'keycloak_register_duplicate',
@@ -1028,7 +1028,7 @@ export class SSOService {
                     auto_password,
                     clientToken,
                   );
-                  if (response_text?.error) {
+                  if (response_text?.error && false) {
                     return response.status(400).send({
                       success: false,
                       status: 'keycloak_register_duplicate',
@@ -1303,7 +1303,7 @@ export class SSOService {
                       auto_password,
                       clientToken,
                     );
-                    if (response_text?.error) {
+                    if (response_text?.error && false) {
                       return response.status(400).send({
                         success: false,
                         status: 'keycloak_register_duplicate',
@@ -1495,7 +1495,7 @@ export class SSOService {
           clientToken,
         );
 
-        if (response_text?.error) {
+        if (response_text?.error && false) {
           return response.status(400).send({
             success: false,
             status: 'keycloak_register_duplicate',
@@ -1773,6 +1773,75 @@ export class SSOService {
             });
           }
         }
+      }
+    } else {
+      return response.status(400).send({
+        success: false,
+        status: 'invalid_request',
+        message: 'Invalid Request. Not received All Parameters.',
+        result: null,
+      });
+    }
+  }
+
+  //digilockerLogout
+  async digilockerLogout(
+    response: Response,
+    digiacc: string,
+    access_token: string,
+  ) {
+    if (digiacc && access_token) {
+      let digi_client_id = '';
+      let digi_client_secret = '';
+      let digi_url_call_back_uri = '';
+      if (digiacc === 'ewallet') {
+        digi_client_id = process.env.EWA_CLIENT_ID;
+        digi_client_secret = process.env.EWA_CLIENT_SECRET;
+        digi_url_call_back_uri = process.env.EWA_CALL_BACK_URL;
+      } else if (digiacc === 'portal') {
+        digi_client_id = process.env.URP_CLIENT_ID;
+        digi_client_secret = process.env.URP_CLIENT_SECRET;
+        digi_url_call_back_uri = process.env.URP_CALL_BACK_URL;
+      }
+      var data = this.qs.stringify({
+        token: access_token,
+        token_type_hint: 'access_token',
+        client_id: digi_client_id,
+        client_secret: digi_client_secret,
+      });
+      var config = {
+        method: 'post',
+        url: 'https://digilocker.meripehchaan.gov.in/public/oauth2/1/revoke',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        data: data,
+      };
+
+      let response_digi = null;
+      await axios(config)
+        .then(function (response) {
+          //console.log(JSON.stringify(response.data));
+          response_digi = { data: response.data };
+        })
+        .catch(function (error) {
+          //console.log(error);
+          response_digi = { error: error };
+        });
+      if (response_digi?.data?.revoked === true) {
+        return response.status(200).send({
+          success: true,
+          status: 'digilocker_logout_success',
+          message: 'Digilocker Logout Success',
+          result: null,
+        });
+      } else {
+        return response.status(200).send({
+          success: false,
+          status: 'digilocker_logout_error',
+          message: 'Digilocker Logout Error',
+          result: null,
+        });
       }
     } else {
       return response.status(400).send({

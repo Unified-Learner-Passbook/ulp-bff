@@ -149,6 +149,15 @@ export class SSOController {
       digimpid,
     );
   }
+  //digilocker logout
+  @Post('/digilocker/logout')
+  async digilockerLogout(
+    @Res() response: Response,
+    @Body('digiacc') digiacc: string,
+    @Body('access_token') access_token: string,
+  ) {
+    return this.ssoService.digilockerLogout(response, digiacc, access_token);
+  }
   //token data response
   @Get('/user/:digiacc')
   async userData(
