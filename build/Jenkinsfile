@@ -21,7 +21,7 @@ node() {
         '''
         if (env.BRANCH_NAME == 'staging') {
             sh '''
-            docker build -t $docker_server/$docker_repo:staging .
+            docker build -t $docker_server/$docker_repo:latest .
             '''
         }
     }
