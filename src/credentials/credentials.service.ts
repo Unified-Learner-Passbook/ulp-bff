@@ -250,7 +250,7 @@ export class CredentialsService {
                             responseArray.push({ error: "unable to generate student did!" })
                         }
                     } else {
-                        responseArray.push({ error: "aadhar_token not found!" })
+                        responseArray.push({student_name: iterator.student_name, dob: iterator.dob, error: "aadhar_token not found!" })
                     }
                 }
             }
