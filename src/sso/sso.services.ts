@@ -9,6 +9,7 @@ import { Response, Request } from 'express';
 import * as wkhtmltopdf from 'wkhtmltopdf';
 import { UserDto } from './dto/user-dto';
 import { schoolList } from './constlist/schoollist';
+<<<<<<< HEAD
 import { AadharService } from '../services/aadhar/aadhar.service';
 import { SbrcService } from 'src/services/sbrc/sbrc.service';
 import { CredService } from 'src/services/cred/cred.service';
@@ -23,6 +24,21 @@ export class SSOService {
     private credService: CredService,
     private keycloakService: KeycloakService,
   ) {}
+=======
+import {
+  aadhaarDemographic,
+  getUUID,
+  encryptaadhaar,
+  decryptaadhaar,
+} from '../utils/aadhaar/aadhaar_api';
+import { CredService } from 'src/services/cred/cred.service';
+import { SbrcService } from 'src/services/sbrc/sbrc.service';
+
+@Injectable()
+export class SSOService {
+
+  constructor(private credService: CredService, private sbrcService: SbrcService) { }
+>>>>>>> upstream/main
   //axios call
   md5 = require('md5');
   moment = require('moment');
@@ -1011,19 +1027,19 @@ export class SSOService {
               digiacc === 'ewallet' ? 'StudentV2' : 'TeacherV1',
               digiacc === 'ewallet'
                 ? {
-                    filters: {
-                      meripehchan_id: {
-                        eq: response_data?.meripehchanid.toString(),
-                      },
-                    },
-                  }
-                : {
-                    filters: {
-                      meripehchanLoginId: {
-                        eq: response_data?.meripehchanid.toString(),
-                      },
+                  filters: {
+                    meripehchan_id: {
+                      eq: response_data?.meripehchanid.toString(),
                     },
                   },
+                }
+                : {
+                  filters: {
+                    meripehchanLoginId: {
+                      eq: response_data?.meripehchanid.toString(),
+                    },
+                  },
+                },
             );
             if (sb_rc_search?.error) {
               return response.status(501).send({
@@ -1061,9 +1077,9 @@ export class SSOService {
               let auto_username =
                 digiacc === 'ewallet'
                   ? //response_data?.username
-                    sb_rc_search[0]?.username
+                  sb_rc_search[0]?.username
                   : //response_data?.meripehchanid + '_teacher'
-                    sb_rc_search[0]?.username;
+                  sb_rc_search[0]?.username;
               auto_username = auto_username.toLowerCase();
               const auto_password = await this.md5(
                 auto_username + 'MjQFlAJOQSlWIQJHOEDhod',
@@ -1293,19 +1309,19 @@ export class SSOService {
               digiacc === 'ewallet' ? 'StudentV2' : 'TeacherV1',
               digiacc === 'ewallet'
                 ? {
-                    filters: {
-                      aadhar_token: {
-                        eq: uuid.toString(),
-                      },
-                    },
-                  }
-                : {
-                    filters: {
-                      aadharId: {
-                        eq: uuid.toString(),
-                      },
+                  filters: {
+                    aadhar_token: {
+                      eq: uuid.toString(),
                     },
                   },
+                }
+                : {
+                  filters: {
+                    aadharId: {
+                      eq: uuid.toString(),
+                    },
+                  },
+                },
             );
             if (sb_rc_search?.error) {
               return response.status(501).send({
@@ -1329,11 +1345,11 @@ export class SSOService {
               let sb_rc_response_text = await this.sbrcService.sbrcUpdateEL(
                 digiacc === 'ewallet'
                   ? {
-                      meripehchan_id: digilocker_id,
-                    }
+                    meripehchan_id: digilocker_id,
+                  }
                   : {
-                      meripehchanLoginId: digilocker_id,
-                    },
+                    meripehchanLoginId: digilocker_id,
+                  },
                 digiacc === 'ewallet' ? 'StudentV2' : 'TeacherV1',
                 osid,
               );
@@ -1963,25 +1979,47 @@ export class SSOService {
   }
 
   async getStudentDetailV2(requestbody, response: Response) {
-    let students = await this.sbrcService.sbrcSearch(requestbody, 'StudentV2');
-    console.log('students', students);
 
-    let studentDetails = await this.sbrcService.sbrcSearch(
-      requestbody,
-      'StudentDetailV2',
-    );
-    console.log('studentDetails', studentDetails);
+    // var studentDetails = await this.studentDetailsV2(requestbody);
+    var studentDetails = await this.sbrcService.sbrcSearch(requestbody, 'StudentDetailV2')
+    console.log('studentDetails', studentDetails.length);
+    console.log('studentDetails1', studentDetails[1]);
+
+    let promises = []
+    for (const iterator of studentDetails) {
+      let searchSchema = {
+        "filters": {
+          "osid": {
+              "eq": iterator.student_id
+          }
+        }
+      }
+      //promises.push(this.studentV2(searchSchema))
+      promises.push(this.sbrcService.sbrcSearch(searchSchema, 'StudentV2'))
+    }
+    console.log("promises", promises.length)
+
+    var students = await Promise.all(promises)
+
+    let studentList = [];
+
+    for (const item of students) {
+      console.log("item", item)
+      for (const iterator of item) {
+        studentList.push(iterator)
+      }
+    }
 
     let completeStudentDetails = studentDetails.map((element) => {
-      let temp = students.find((item) => item.osid == element.student_id);
-      console.log('temp', temp);
+      let temp = studentList.find((item) => item.osid === element.student_id);
+      // console.log('temp', temp);
       element.student = temp ? temp : {};
       return element;
     });
-    //let completeStudentDetails = []
-    console.log('completeStudentDetails', completeStudentDetails);
 
-    if (completeStudentDetails) {
+    console.log('completeStudentDetails', completeStudentDetails.length);
+
+    if (completeStudentDetails.length === studentDetails.length) {
       return response.status(200).send({
         success: true,
         status: 'Success',
@@ -2313,22 +2351,22 @@ export class SSOService {
                 'StudentV2',
                 aadhaar_status === 'all'
                   ? {
-                      filters: {
-                        osid: {
-                          eq: sb_rc_search_student_detail[i].student_id,
-                        },
-                      },
-                    }
-                  : {
-                      filters: {
-                        osid: {
-                          eq: sb_rc_search_student_detail[i].student_id,
-                        },
-                        aadhaar_status: {
-                          eq: aadhaar_status,
-                        },
+                    filters: {
+                      osid: {
+                        eq: sb_rc_search_student_detail[i].student_id,
                       },
                     },
+                  }
+                  : {
+                    filters: {
+                      osid: {
+                        eq: sb_rc_search_student_detail[i].student_id,
+                      },
+                      aadhaar_status: {
+                        eq: aadhaar_status,
+                      },
+                    },
+                  },
               );
               if (sb_rc_search_student?.error) {
               } else if (sb_rc_search_student.length !== 0) {
@@ -2694,4 +2732,712 @@ export class SSOService {
     const decoded = jwt_decode(token);
     return [decoded];
   }
+<<<<<<< HEAD
+=======
+
+  //get client token
+  async getClientToken() {
+    let data = this.qs.stringify({
+      grant_type: this.keycloakCred.grant_type,
+      client_id: this.keycloakCred.client_id,
+      client_secret: this.keycloakCred.client_secret,
+    });
+    let config = {
+      method: 'post',
+      url:
+        process.env.KEYCLOAK_URL +
+        'realms/' +
+        process.env.REALM_ID +
+        '/protocol/openid-connect/token',
+      headers: {
+        'content-type': 'application/x-www-form-urlencoded',
+      },
+      data: data,
+    };
+
+    let response_text = null;
+    await axios(config)
+      .then(function (response) {
+        //console.log(JSON.stringify(response.data));
+        response_text = response.data;
+      })
+      .catch(function (error) {
+        //console.log(error);
+        response_text = { error: error };
+      });
+    return response_text;
+  }
+
+  //get keycloak token after login
+  async getKeycloakToken(username: string, password: string) {
+    let data = this.qs.stringify({
+      client_id: this.keycloakCred.client_id,
+      username: username.toString(),
+      password: password,
+      grant_type: 'password',
+      client_secret: this.keycloakCred.client_secret,
+    });
+
+    let config = {
+      method: 'post',
+      url:
+        process.env.KEYCLOAK_URL +
+        'realms/' +
+        process.env.REALM_ID +
+        '/protocol/openid-connect/token',
+      headers: {
+        'content-type': 'application/x-www-form-urlencoded',
+      },
+      data: data,
+    };
+
+    var response_text = null;
+    await axios(config)
+      .then(function (response) {
+        //console.log("data 516", JSON.stringify(response.data));
+        response_text = response.data;
+      })
+      .catch(function (error) {
+        console.log('error 520', error);
+        response_text = { error: error };
+      });
+
+    return response_text;
+  }
+
+  //generate did
+  async generateDid(studentId: string) {
+    let data = JSON.stringify({
+      content: [
+        {
+          alsoKnownAs: [`did.${studentId}`],
+          services: [
+            {
+              id: 'IdentityHub',
+              type: 'IdentityHub',
+              serviceEndpoint: {
+                '@context': 'schema.identity.foundation/hub',
+                '@type': 'UserServiceEndpoint',
+                instance: ['did:test:hub.id'],
+              },
+            },
+          ],
+        },
+      ],
+    });
+
+    let config = {
+      method: 'post',
+      maxBodyLength: Infinity,
+      url: `${process.env.DID_URL}/did/generate`,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      data: data,
+    };
+    let response_text = null;
+    try {
+      const response = await axios(config);
+      //console.log("response did", response.data)
+      response_text = response.data;
+    } catch (error) {
+      //console.log('error did', error);
+      response_text = { error: error };
+    }
+    return response_text;
+  }
+
+  //search entity meripehchan
+  async searchDigiEntity(entity: string, filter: any) {
+    let data = JSON.stringify(filter);
+
+    let url = process.env.REGISTRY_URL + 'api/v1/' + entity + '/search';
+    //console.log(data + ' ' + url);
+    let config = {
+      method: 'post',
+      url: url,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      data: data,
+    };
+    let sb_rc_search = null;
+    await axios(config)
+      .then(function (response) {
+        //console.log(JSON.stringify(response.data));
+        sb_rc_search = response.data;
+      })
+      .catch(function (error) {
+        //console.log(error);
+        sb_rc_search = { error: error };
+      });
+    return sb_rc_search;
+  }
+
+  //search student
+  async searchStudent(studentId: string) {
+    let data = JSON.stringify({
+      filters: {
+        studentSchoolID: {
+          eq: studentId,
+        },
+      },
+    });
+
+    let config = {
+      method: 'post',
+      url: process.env.REGISTRY_URL + 'api/v1/StudentDetail/search',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      data: data,
+    };
+    let sb_rc_search = null;
+    await axios(config)
+      .then(function (response) {
+        //console.log(JSON.stringify(response.data));
+        sb_rc_search = response.data;
+      })
+      .catch(function (error) {
+        //console.log(error);
+        sb_rc_search = { error: error };
+      });
+    return sb_rc_search;
+  }
+
+  //search student
+  async sbrcStudentSearch1(aadhaar_enc_text: string) {
+    let data = JSON.stringify({
+      filters: {
+        aadhaar_enc: {
+          eq: aadhaar_enc_text,
+        },
+      },
+    });
+    //console.log(data);
+    let config = {
+      method: 'post',
+      url: process.env.REGISTRY_URL + 'api/v1/StudentV2/search',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      data: data,
+    };
+    let sb_rc_search = null;
+    await axios(config)
+      .then(function (response) {
+        //console.log(JSON.stringify(response.data));
+        sb_rc_search = response.data;
+      })
+      .catch(function (error) {
+        //console.log(error);
+        sb_rc_search = { error: error };
+      });
+    return sb_rc_search;
+  }
+
+  //search student
+  async sbrcStudentSearch(aadhar_token: string) {
+    let data = JSON.stringify({
+      filters: {
+        aadhar_token: {
+          eq: aadhar_token,
+        },
+      },
+    });
+    //console.log(data);
+    let config = {
+      method: 'post',
+      url: process.env.REGISTRY_URL + 'api/v1/StudentV2/search',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      data: data,
+    };
+    let sb_rc_search = null;
+    await axios(config)
+      .then(function (response) {
+        //console.log(JSON.stringify(response.data));
+        sb_rc_search = response.data;
+      })
+      .catch(function (error) {
+        //console.log(error);
+        sb_rc_search = { error: error };
+      });
+    return sb_rc_search;
+  }
+
+  //search entity username
+  async searchUsernameEntity(entity: string, searchkey: string) {
+    let data = JSON.stringify({
+      filters: {
+        username: {
+          eq: searchkey.toString(),
+        },
+      },
+    });
+
+    let url = process.env.REGISTRY_URL + 'api/v1/' + entity + '/search';
+    //console.log(data + ' ' + url);
+    let config = {
+      method: 'post',
+      url: url,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      data: data,
+    };
+    let sb_rc_search = null;
+    await axios(config)
+      .then(function (response) {
+        //console.log(JSON.stringify(response.data));
+        sb_rc_search = response.data;
+      })
+      .catch(function (error) {
+        //console.log(error);
+        sb_rc_search = { error: error };
+      });
+    return sb_rc_search;
+  }
+
+  //searchEntity
+  async searchEntity(entity: string, filter: any) {
+    let data = JSON.stringify(filter);
+
+    let url = process.env.REGISTRY_URL + 'api/v1/' + entity + '/search';
+    //console.log(data + ' ' + url);
+    let config = {
+      method: 'post',
+      url: url,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      data: data,
+    };
+    let sb_rc_search = null;
+    await axios(config)
+      .then(function (response) {
+        //console.log(JSON.stringify(response.data));
+        sb_rc_search = response.data;
+      })
+      .catch(function (error) {
+        //console.log(error);
+        sb_rc_search = { error: error };
+      });
+    return sb_rc_search;
+  }
+
+  //search entity udise
+  async searchUdiseEntity(entity: string, searchkey: string) {
+    let data = JSON.stringify({
+      filters: {
+        udiseCode: {
+          eq: searchkey.toString(),
+        },
+      },
+    });
+
+    let url = process.env.REGISTRY_URL + 'api/v1/' + entity + '/search';
+    console.log(data + ' ' + url);
+    let config = {
+      method: 'post',
+      url: url,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      data: data,
+    };
+    let sb_rc_search = null;
+    await axios(config)
+      .then(function (response) {
+        //console.log(JSON.stringify(response.data));
+        sb_rc_search = response.data;
+      })
+      .catch(function (error) {
+        //console.log(error);
+        sb_rc_search = { error: error };
+      });
+    return sb_rc_search;
+  }
+
+  //verify student token
+  async verifyStudentToken(token: string) {
+    let config = {
+      method: 'get',
+      url:
+        process.env.KEYCLOAK_URL +
+        'realms/' +
+        process.env.REALM_ID +
+        '/protocol/openid-connect/userinfo',
+      headers: {
+        'content-type': 'application/x-www-form-urlencoded',
+        Authorization: 'Bearer ' + token,
+      },
+    };
+
+    let response_text = null;
+    await axios(config)
+      .then(function (response) {
+        //console.log(JSON.stringify(response.data));
+        response_text = response?.data;
+      })
+      .catch(function (error) {
+        //console.log(error);
+        response_text = { error: error };
+      });
+
+    return response_text;
+  }
+
+  // register student keycloak
+  async registerStudentKeycloak(user, clientToken) {
+    let data = JSON.stringify({
+      enabled: 'true',
+      username: user.studentId,
+      credentials: [
+        {
+          type: 'password',
+          value: '1234',
+          temporary: false,
+        },
+      ],
+    });
+
+    let config = {
+      method: 'post',
+      url:
+        process.env.KEYCLOAK_URL +
+        'admin/realms/' +
+        process.env.REALM_ID +
+        '/users',
+      headers: {
+        'content-type': 'application/json',
+        Authorization: 'Bearer ' + clientToken?.access_token,
+      },
+      data: data,
+    };
+    var response_text = null;
+    await axios(config)
+      .then(function (response) {
+        //console.log(JSON.stringify(response.data));
+        response_text = response.data;
+      })
+      .catch(function (error) {
+        //console.log(error);
+        response_text = { error: error };
+      });
+
+    return response_text;
+  }
+
+  // sbrc registery
+  async sbrcRegistery(did, user) {
+    let data = JSON.stringify({
+      did: did,
+      aadhaarID: user.aadhaarId,
+      studentName: user.studentName,
+      schoolName: user.schoolName,
+      schoolID: user.schoolId,
+      studentSchoolID: user.studentId,
+      phoneNo: user.phoneNo,
+    });
+
+    let config_sb_rc = {
+      method: 'post',
+      url: process.env.REGISTRY_URL + 'api/v1/StudentDetail/invite',
+      headers: {
+        'content-type': 'application/json',
+      },
+      data: data,
+    };
+
+    var sb_rc_response_text = null;
+    await axios(config_sb_rc)
+      .then(function (response) {
+        //console.log(JSON.stringify(response.data));
+        sb_rc_response_text = response.data;
+      })
+      .catch(function (error) {
+        //console.log(error);
+        sb_rc_response_text = { error: error };
+      });
+
+    return sb_rc_response_text;
+  }
+
+  // register user in keycloak
+  async registerUserKeycloak(username, password, clientToken) {
+    let data = JSON.stringify({
+      enabled: 'true',
+      username: username,
+      credentials: [
+        {
+          type: 'password',
+          value: password,
+          temporary: false,
+        },
+      ],
+    });
+
+    let config = {
+      method: 'post',
+      url:
+        process.env.KEYCLOAK_URL +
+        'admin/realms/' +
+        process.env.REALM_ID +
+        '/users',
+      headers: {
+        'content-type': 'application/json',
+        Authorization: 'Bearer ' + clientToken?.access_token,
+      },
+      data: data,
+    };
+    var response_text = null;
+    await axios(config)
+      .then(function (response) {
+        //console.log(JSON.stringify(response.data));
+        response_text = response.data;
+      })
+      .catch(function (error) {
+        //console.log(error);
+        response_text = { error: error };
+      });
+
+    return response_text;
+  }
+
+  // invite entity in registery
+  async sbrcInvite(inviteSchema, entityName) {
+    let data = JSON.stringify(inviteSchema);
+
+    let config_sb_rc = {
+      method: 'post',
+      url: process.env.REGISTRY_URL + 'api/v1/' + entityName + '/invite',
+      headers: {
+        'content-type': 'application/json',
+      },
+      data: data,
+    };
+
+    var sb_rc_response_text = null;
+    await axios(config_sb_rc)
+      .then(function (response) {
+        //console.log(JSON.stringify(response.data));
+        sb_rc_response_text = response.data;
+      })
+      .catch(function (error) {
+        //console.log(error);
+        sb_rc_response_text = { error: error };
+      });
+
+    return sb_rc_response_text;
+  }
+
+  // invite entity in registery
+  async sbrcUpdate(updateSchema, entityName, osid) {
+    let data = JSON.stringify(updateSchema);
+
+    let config_sb_rc = {
+      method: 'put',
+      url: process.env.REGISTRY_URL + 'api/v1/' + entityName + '/' + osid,
+      headers: {
+        'content-type': 'application/json',
+      },
+      data: data,
+    };
+
+    var sb_rc_response_text = null;
+    await axios(config_sb_rc)
+      .then(function (response) {
+        //console.log(JSON.stringify(response.data));
+        sb_rc_response_text = response.data;
+      })
+      .catch(function (error) {
+        //console.log(error);
+        sb_rc_response_text = { error: error };
+      });
+
+    return sb_rc_response_text;
+  }
+
+  // cred search
+  async credSearch(sb_rc_search) {
+    console.log('sb_rc_search', sb_rc_search);
+
+    let data = JSON.stringify({
+      subject: {
+        id: sb_rc_search[0]?.did ? sb_rc_search[0].did : '',
+      },
+    });
+    // let data = JSON.stringify({
+    //   subjectId: sb_rc_search[0]?.did ? sb_rc_search[0].did : '',
+    // });
+
+    let config = {
+      method: 'post',
+      url: process.env.CRED_URL + '/credentials/search',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      data: data,
+    };
+    let cred_search = null;
+    await axios(config)
+      .then(function (response) {
+        //console.log(JSON.stringify(response.data));
+        cred_search = response.data;
+      })
+      .catch(function (error) {
+        //console.log(error);
+        cred_search = { error: error };
+      });
+
+    return cred_search;
+  }
+
+  // student details
+  async studentDetails(requestbody) {
+    console.log('requestbody', requestbody);
+    var data = JSON.stringify(requestbody);
+
+    var config = {
+      method: 'post',
+      maxBodyLength: Infinity,
+      url: `${process.env.REGISTRY_URL}api/v1/StudentDetail/search`,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      data: data,
+    };
+
+    try {
+      let stdentDetailRes = await axios(config);
+      return stdentDetailRes.data;
+    } catch (err) {
+      console.log('err');
+    }
+  }
+
+  //generateSchema
+  async generateSchema(schemaId) {
+    var config = {
+      method: 'get',
+      maxBodyLength: Infinity,
+      url: `${process.env.SCHEMA_URL}/schema/jsonld?id=${schemaId}`,
+      headers: {},
+    };
+
+    try {
+      const response = await axios(config);
+      console.log('response schema', response.data);
+      return response.data;
+    } catch (error) {
+      console.log('error schema', error);
+    }
+  }
+
+  //issueCredentials
+  async issueCredentials(payload) {
+    var data = JSON.stringify({
+      credential: {
+        '@context': [
+          'https://www.w3.org/2018/credentials/v1',
+          'https://www.w3.org/2018/credentials/examples/v1',
+        ],
+        id: 'did:ulp:b4a191af-d86e-453c-9d0e-dd4771067235',
+        type: ['VerifiableCredential', 'UniversityDegreeCredential'],
+        issuer: `${payload.issuerId}`,
+        issuanceDate: payload.issuanceDate,
+        expirationDate: payload.expirationDate,
+        credentialSubject: payload.credentialSubject,
+        options: {
+          created: '2020-04-02T18:48:36Z',
+          credentialStatus: {
+            type: 'RevocationList2020Status',
+          },
+        },
+      },
+      credentialSchemaId: payload.credSchema.id,
+      tags: ['tag1', 'tag2', 'tag3'],
+    });
+    var config = {
+      method: 'post',
+      maxBodyLength: Infinity,
+      url: process.env.CRED_URL + '/credentials/issue',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      data: data,
+    };
+    try {
+      const response = await axios(config);
+      //console.log('cred response');
+      return response.data;
+    } catch (e) {
+      //console.log('cred error', e.message);
+      return { error: e };
+    }
+  }
+  async studentDetailsV2(requestbody) {
+    console.log('requestbody', requestbody);
+    var data = JSON.stringify(requestbody);
+
+    var config = {
+      method: 'post',
+      maxBodyLength: Infinity,
+      url: `${process.env.REGISTRY_URL}api/v1/StudentDetailV2/search`,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      data: data,
+    };
+
+    try {
+      let stdentDetailRes = await axios(config);
+      return stdentDetailRes.data;
+    } catch (err) {
+      console.log('err');
+    }
+  }
+
+  async studentV2(requestbody) {
+    const axios = require('axios');
+    let data = JSON.stringify(requestbody);
+
+    let config = {
+      method: 'post',
+      maxBodyLength: Infinity,
+      url: 'https://ulp.uniteframework.io/registry/api/v1/StudentV2/search',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      data: data,
+    };
+
+    try {
+      let stdentDetailRes = await axios(config);
+      return stdentDetailRes.data;
+    } catch (err) {
+      console.log('err');
+    }
+  }
+
+  async findStudent(osid) {
+    let config = {
+      method: 'get',
+      maxBodyLength: Infinity,
+      url: 'https://ulp.uniteframework.io/registry/api/v1/StudentV2/1-ea0b0d65-1124-4f2b-af34-0a1eb7a3a6ba',
+      headers: {},
+    };
+
+    axios
+      .request(config)
+      .then((response) => {
+        console.log('1899', JSON.stringify(response.data));
+      })
+      .catch((error) => {
+        console.log(error);
+      });
+  }
+>>>>>>> upstream/main
 }

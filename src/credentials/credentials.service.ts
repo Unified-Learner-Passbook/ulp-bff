@@ -161,7 +161,7 @@ export class CredentialsService {
                         if (cred) {
                             responseArray.push(cred)
                         } else {
-                            responseArray.push({ error: "unable to issue credentials!" })
+                            responseArray.push({student_name: iterator.student_name, dob: iterator.dob, error: "unable to issue credentials!" })
                         }
 
                     } else {
@@ -190,14 +190,14 @@ export class CredentialsService {
                                     if (cred) {
                                         responseArray.push(cred)
                                     } else {
-                                        responseArray.push({ error: "unable to issue credentials!" })
+                                        responseArray.push({student_name: iterator.student_name, dob: iterator.dob, error: "unable to issue credentials!" })
                                     }
                                 }
                             } else {
-                                responseArray.push({ error: "unable to update did inside RC!" })
+                                responseArray.push({student_name: iterator.student_name, dob: iterator.dob, error: "unable to update did inside RC!" })
                             }
                         } else {
-                            responseArray.push({ error: "unable to generate student did!" })
+                            responseArray.push({student_name: iterator.student_name, dob: iterator.dob, error: "unable to generate student did!" })
                         }
                     }
                 } else {
@@ -240,14 +240,14 @@ export class CredentialsService {
                                 if (cred) {
                                     responseArray.push(cred)
                                 } else {
-                                    responseArray.push({ error: "unable to issue credentials!" })
+                                    responseArray.push({student_name: iterator.student_name, dob: iterator.dob, error: "unable to issue credentials!" })
                                 }
                             } else {
-                                responseArray.push({ error: "unable to create student in RC!" })
+                                responseArray.push({student_name: iterator.student_name, dob: iterator.dob, error: "unable to create student in RC!" })
                             }
 
                         } else {
-                            responseArray.push({ error: "unable to generate student did!" })
+                            responseArray.push({student_name: iterator.student_name, dob: iterator.dob, error: "unable to generate student did!" })
                         }
                     } else {
                         responseArray.push({student_name: iterator.student_name, dob: iterator.dob, error: "aadhar_token not found!" })
