@@ -14,9 +14,13 @@ import {
   encryptaadhaar,
   decryptaadhaar,
 } from '../utils/aadhaar/aadhaar_api';
+import { CredService } from 'src/services/cred/cred.service';
+import { SbrcService } from 'src/services/sbrc/sbrc.service';
 
 @Injectable()
 export class SSOService {
+
+  constructor(private credService: CredService, private sbrcService: SbrcService) { }
   //axios call
   md5 = require('md5');
   qs = require('qs');
@@ -948,19 +952,19 @@ export class SSOService {
               digiacc === 'ewallet' ? 'StudentV2' : 'TeacherV1',
               digiacc === 'ewallet'
                 ? {
-                    filters: {
-                      meripehchan_id: {
-                        eq: response_data?.meripehchanid.toString(),
-                      },
-                    },
-                  }
-                : {
-                    filters: {
-                      meripehchanLoginId: {
-                        eq: response_data?.meripehchanid.toString(),
-                      },
+                  filters: {
+                    meripehchan_id: {
+                      eq: response_data?.meripehchanid.toString(),
                     },
                   },
+                }
+                : {
+                  filters: {
+                    meripehchanLoginId: {
+                      eq: response_data?.meripehchanid.toString(),
+                    },
+                  },
+                },
             );
             if (sb_rc_search?.error) {
               return response.status(501).send({
@@ -998,9 +1002,9 @@ export class SSOService {
               let auto_username =
                 digiacc === 'ewallet'
                   ? //response_data?.username
-                    sb_rc_search[0]?.username
+                  sb_rc_search[0]?.username
                   : //response_data?.meripehchanid + '_teacher'
-                    sb_rc_search[0]?.username;
+                  sb_rc_search[0]?.username;
               auto_username = auto_username.toLowerCase();
               const auto_password = await this.md5(
                 auto_username + 'MjQFlAJOQSlWIQJHOEDhod',
@@ -1223,19 +1227,19 @@ export class SSOService {
               digiacc === 'ewallet' ? 'StudentV2' : 'TeacherV1',
               digiacc === 'ewallet'
                 ? {
-                    filters: {
-                      aadhar_token: {
-                        eq: uuid.toString(),
-                      },
-                    },
-                  }
-                : {
-                    filters: {
-                      aadharId: {
-                        eq: uuid.toString(),
-                      },
+                  filters: {
+                    aadhar_token: {
+                      eq: uuid.toString(),
                     },
                   },
+                }
+                : {
+                  filters: {
+                    aadharId: {
+                      eq: uuid.toString(),
+                    },
+                  },
+                },
             );
             if (sb_rc_search?.error) {
               return response.status(501).send({
@@ -1259,11 +1263,11 @@ export class SSOService {
               let sb_rc_response_text = await this.sbrcUpdate(
                 digiacc === 'ewallet'
                   ? {
-                      meripehchan_id: digilocker_id,
-                    }
+                    meripehchan_id: digilocker_id,
+                  }
                   : {
-                      meripehchanLoginId: digilocker_id,
-                    },
+                    meripehchanLoginId: digilocker_id,
+                  },
                 digiacc === 'ewallet' ? 'StudentV2' : 'TeacherV1',
                 osid,
               );
@@ -1875,22 +1879,47 @@ export class SSOService {
   }
 
   async getStudentDetailV2(requestbody, response: Response) {
-    let students = await this.studentV2(requestbody);
-    console.log('students', students);
 
-    let studentDetails = await this.studentDetailsV2(requestbody);
-    console.log('studentDetails', studentDetails);
+    // var studentDetails = await this.studentDetailsV2(requestbody);
+    var studentDetails = await this.sbrcService.sbrcSearch(requestbody, 'StudentDetailV2')
+    console.log('studentDetails', studentDetails.length);
+    console.log('studentDetails1', studentDetails[1]);
+
+    let promises = []
+    for (const iterator of studentDetails) {
+      let searchSchema = {
+        "filters": {
+          "osid": {
+              "eq": iterator.student_id
+          }
+        }
+      }
+      //promises.push(this.studentV2(searchSchema))
+      promises.push(this.sbrcService.sbrcSearch(searchSchema, 'StudentV2'))
+    }
+    console.log("promises", promises.length)
+
+    var students = await Promise.all(promises)
+
+    let studentList = [];
+
+    for (const item of students) {
+      console.log("item", item)
+      for (const iterator of item) {
+        studentList.push(iterator)
+      }
+    }
 
     let completeStudentDetails = studentDetails.map((element) => {
-      let temp = students.find((item) => item.osid == element.student_id);
-      console.log('temp', temp);
+      let temp = studentList.find((item) => item.osid === element.student_id);
+      // console.log('temp', temp);
       element.student = temp ? temp : {};
       return element;
     });
-    //let completeStudentDetails = []
-    console.log('completeStudentDetails', completeStudentDetails);
 
-    if (completeStudentDetails) {
+    console.log('completeStudentDetails', completeStudentDetails.length);
+
+    if (completeStudentDetails.length === studentDetails.length) {
       return response.status(200).send({
         success: true,
         status: 'Success',
@@ -2214,22 +2243,22 @@ export class SSOService {
                 'StudentV2',
                 aadhaar_status === 'all'
                   ? {
-                      filters: {
-                        osid: {
-                          eq: sb_rc_search_student_detail[i].student_id,
-                        },
-                      },
-                    }
-                  : {
-                      filters: {
-                        osid: {
-                          eq: sb_rc_search_student_detail[i].student_id,
-                        },
-                        aadhaar_status: {
-                          eq: aadhaar_status,
-                        },
+                    filters: {
+                      osid: {
+                        eq: sb_rc_search_student_detail[i].student_id,
                       },
                     },
+                  }
+                  : {
+                    filters: {
+                      osid: {
+                        eq: sb_rc_search_student_detail[i].student_id,
+                      },
+                      aadhaar_status: {
+                        eq: aadhaar_status,
+                      },
+                    },
+                  },
               );
               if (sb_rc_search_student?.error) {
               } else if (sb_rc_search_student.length !== 0) {
@@ -3261,9 +3290,7 @@ export class SSOService {
 
   async studentV2(requestbody) {
     const axios = require('axios');
-    let data = JSON.stringify({
-      filters: {},
-    });
+    let data = JSON.stringify(requestbody);
 
     let config = {
       method: 'post',
