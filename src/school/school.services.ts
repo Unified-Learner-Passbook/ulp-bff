@@ -26,6 +26,12 @@ export class SchoolService {
         clientSecret: 'test@123',
         appKey: appKey,
       };
+      //production
+      /*const PLAIN_JSON = {
+        clientId: 'upra',
+        clientSecret: 'Upra@upra',
+        appKey: appKey,
+      };*/
       ////console.log(PLAIN_JSON);
       const PLAIN_TEXT_JSON = JSON.stringify(PLAIN_JSON);
       //console.log(PLAIN_TEXT_JSON);
