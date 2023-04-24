@@ -19,7 +19,7 @@ node() {
         sh '''
         docker build -t $docker_server/$docker_repo:$commit_id .
         '''
-        if (env.BRANCH_NAME == 'main' || env.BRANCH_NAME == 'master') {
+        if (env.BRANCH_NAME == 'staging') {
             sh '''
             docker build -t $docker_server/$docker_repo:latest .
             '''
@@ -30,16 +30,16 @@ node() {
         sh '''
         docker push $docker_server/$docker_repo:$commit_id
         '''
-        if (env.BRANCH_NAME == 'main' || env.BRANCH_NAME == 'master') {
+        if (env.BRANCH_NAME == 'staging') {
             sh '''
-            docker push $docker_server/$docker_repo:latest
+            docker push $docker_server/$docker_repo:staging
             '''
         }
     }
     
     stage('Start deploy job with latest tag') {
-         if (env.BRANCH_NAME == 'main' || env.BRANCH_NAME == 'master') { 
-                build job: 'ULP/deploy-staging/ulp-bff/', parameters: [string(name: 'tag', value: 'latest')]
+         if (env.BRANCH_NAME == 'staging') { 
+                build job: 'UAT/deploy-uat/ulp-bff/', parameters: [string(name: 'tag', value: 'staging')]
          }
     }
     
