@@ -6,8 +6,7 @@ node() {
                 string(name: 'docker_server', defaultValue: "$docker_server", description: 'Docker Registry URL'),
 				])
 				]) }
-
-                stages{  
+stages{  
       stage('Checkout') {
         cleanWs()
         checkout scm
