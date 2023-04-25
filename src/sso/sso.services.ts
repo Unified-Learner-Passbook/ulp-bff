@@ -1006,24 +1006,25 @@ export class SSOService {
               mobile: token_data[0]?.phone_number,
               dob: dob,
               username: '',
+              gender: token_data[0]?.gender,
             };
             const sb_rc_search = await this.sbrcService.sbrcSearchEL(
               digiacc === 'ewallet' ? 'StudentV2' : 'TeacherV1',
               digiacc === 'ewallet'
                 ? {
-                  filters: {
-                    meripehchan_id: {
-                      eq: response_data?.meripehchanid.toString(),
+                    filters: {
+                      meripehchan_id: {
+                        eq: response_data?.meripehchanid.toString(),
+                      },
                     },
-                  },
-                }
+                  }
                 : {
-                  filters: {
-                    meripehchanLoginId: {
-                      eq: response_data?.meripehchanid.toString(),
+                    filters: {
+                      meripehchanLoginId: {
+                        eq: response_data?.meripehchanid.toString(),
+                      },
                     },
                   },
-                },
             );
             if (sb_rc_search?.error) {
               return response.status(501).send({
@@ -1061,9 +1062,9 @@ export class SSOService {
               let auto_username =
                 digiacc === 'ewallet'
                   ? //response_data?.username
-                  sb_rc_search[0]?.username
+                    sb_rc_search[0]?.username
                   : //response_data?.meripehchanid + '_teacher'
-                  sb_rc_search[0]?.username;
+                    sb_rc_search[0]?.username;
               auto_username = auto_username.toLowerCase();
               const auto_password = await this.md5(
                 auto_username + 'MjQFlAJOQSlWIQJHOEDhod',
@@ -1260,12 +1261,23 @@ export class SSOService {
     digiacc: string,
     aadhaar_id: string,
     aadhaar_name: string,
+    aadhaar_dob: string,
+    aadhaar_gender: string,
     digilocker_id: string,
   ) {
-    if (digiacc && aadhaar_id && aadhaar_name && digilocker_id) {
+    if (
+      digiacc &&
+      aadhaar_id &&
+      aadhaar_name &&
+      aadhaar_dob &&
+      aadhaar_gender &&
+      digilocker_id
+    ) {
       const aadhar_data = await this.aadharService.aadhaarDemographic(
         aadhaar_id,
         aadhaar_name,
+        aadhaar_dob,
+        aadhaar_gender,
       );
 
       //console.log(aadhar_data);
@@ -1293,19 +1305,19 @@ export class SSOService {
               digiacc === 'ewallet' ? 'StudentV2' : 'TeacherV1',
               digiacc === 'ewallet'
                 ? {
-                  filters: {
-                    aadhar_token: {
-                      eq: uuid.toString(),
+                    filters: {
+                      aadhar_token: {
+                        eq: uuid.toString(),
+                      },
                     },
-                  },
-                }
+                  }
                 : {
-                  filters: {
-                    aadharId: {
-                      eq: uuid.toString(),
+                    filters: {
+                      aadharId: {
+                        eq: uuid.toString(),
+                      },
                     },
                   },
-                },
             );
             if (sb_rc_search?.error) {
               return response.status(501).send({
@@ -1329,11 +1341,11 @@ export class SSOService {
               let sb_rc_response_text = await this.sbrcService.sbrcUpdateEL(
                 digiacc === 'ewallet'
                   ? {
-                    meripehchan_id: digilocker_id,
-                  }
+                      meripehchan_id: digilocker_id,
+                    }
                   : {
-                    meripehchanLoginId: digilocker_id,
-                  },
+                      meripehchanLoginId: digilocker_id,
+                    },
                 digiacc === 'ewallet' ? 'StudentV2' : 'TeacherV1',
                 osid,
               );
@@ -1668,6 +1680,7 @@ export class SSOService {
                   username: userdata?.student?.username,
                   aadhaar_status: 'verified',
                   aadhaar_enc: '',
+                  gender: userdata?.student?.gender,
                 },
                 'StudentV2',
                 osid,
@@ -1722,6 +1735,7 @@ export class SSOService {
                       gaurdian_name: userdata?.studentdetail?.gaurdian_name,
                       mobile: userdata?.studentdetail?.mobile,
                       grade: userdata?.studentdetail?.grade,
+                      enrollon: userdata?.studentdetail?.enrollon,
                     },
                     'StudentDetailV2',
                     osid,
@@ -1963,34 +1977,36 @@ export class SSOService {
   }
 
   async getStudentDetailV2(requestbody, response: Response) {
-
     // var studentDetails = await this.studentDetailsV2(requestbody);
-    var studentDetails = await this.sbrcService.sbrcSearch(requestbody, 'StudentDetailV2')
+    var studentDetails = await this.sbrcService.sbrcSearch(
+      requestbody,
+      'StudentDetailV2',
+    );
     console.log('studentDetails', studentDetails.length);
     console.log('studentDetails1', studentDetails[1]);
 
-    let promises = []
+    let promises = [];
     for (const iterator of studentDetails) {
       let searchSchema = {
-        "filters": {
-          "osid": {
-              "eq": iterator.student_id
-          }
-        }
-      }
+        filters: {
+          osid: {
+            eq: iterator.student_id,
+          },
+        },
+      };
       //promises.push(this.studentV2(searchSchema))
-      promises.push(this.sbrcService.sbrcSearch(searchSchema, 'StudentV2'))
+      promises.push(this.sbrcService.sbrcSearch(searchSchema, 'StudentV2'));
     }
-    console.log("promises", promises.length)
+    console.log('promises', promises.length);
 
-    var students = await Promise.all(promises)
+    var students = await Promise.all(promises);
 
     let studentList = [];
 
     for (const item of students) {
-      console.log("item", item)
+      console.log('item', item);
       for (const iterator of item) {
-        studentList.push(iterator)
+        studentList.push(iterator);
       }
     }
 
@@ -2159,6 +2175,7 @@ export class SSOService {
                       username: auto_username,
                       aadhaar_status: '',
                       aadhaar_enc: aadhaar_enc_text,
+                      gender: student?.gender,
                     },
                     'StudentV2',
                   );
@@ -2190,6 +2207,7 @@ export class SSOService {
                           start_date: '',
                           end_date: '',
                           claim_status: claim_status,
+                          enrollon: student?.enrollon,
                         },
                         'StudentDetailV2',
                       );
@@ -2335,22 +2353,22 @@ export class SSOService {
                 'StudentV2',
                 aadhaar_status === 'all'
                   ? {
-                    filters: {
-                      osid: {
-                        eq: sb_rc_search_student_detail[i].student_id,
+                      filters: {
+                        osid: {
+                          eq: sb_rc_search_student_detail[i].student_id,
+                        },
                       },
-                    },
-                  }
+                    }
                   : {
-                    filters: {
-                      osid: {
-                        eq: sb_rc_search_student_detail[i].student_id,
-                      },
-                      aadhaar_status: {
-                        eq: aadhaar_status,
+                      filters: {
+                        osid: {
+                          eq: sb_rc_search_student_detail[i].student_id,
+                        },
+                        aadhaar_status: {
+                          eq: aadhaar_status,
+                        },
                       },
                     },
-                  },
               );
               if (sb_rc_search_student?.error) {
               } else if (sb_rc_search_student.length !== 0) {
@@ -2474,6 +2492,8 @@ export class SSOService {
         const aadhar_data = await this.aadharService.aadhaarDemographic(
           aadhaar_id,
           studentData?.student_name,
+          studentData?.dob,
+          studentData?.gender,
         );
         //console.log(aadhar_data);
         if (!aadhar_data?.success === true) {

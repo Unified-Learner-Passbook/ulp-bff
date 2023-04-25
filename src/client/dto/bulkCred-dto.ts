@@ -45,6 +45,7 @@ export class BulkCredentialDto {
       schoolName: string;
       school_name: string;
       school_id: string;
+      gender: string;
     },
   ];
 }

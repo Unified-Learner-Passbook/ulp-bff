@@ -9,10 +9,16 @@ const addhar_aua_url = 'https://uatauakua.auashreetron.com/clientgwapi';
 @Injectable()
 export class AadharService {
   constructor(private readonly httpService: HttpService) {}
-
+  //moment call
+  moment = require('moment');
   //aadhaarDemographic
-  async aadhaarDemographic(aadhaar_id: string, aadhaar_name: string) {
-    if (aadhaar_id && aadhaar_name) {
+  async aadhaarDemographic(
+    aadhaar_id: string,
+    aadhaar_name: string,
+    aadhaar_dob: string,
+    aadhaar_gender: string,
+  ) {
+    if (aadhaar_id && aadhaar_name && aadhaar_dob && aadhaar_gender) {
       let uuid = await md5(aadhaar_id + '_token');
 
       let response_text = null;
@@ -44,6 +50,7 @@ export class AadharService {
       return response_text;
 
       //call gov api
+      const aadhaar_dob_format = await this.getAadhaarDobFormat(aadhaar_dob);
       const rrn = await this.getRRN();
       let data = JSON.stringify({
         AUAKUAParameters: {
@@ -64,6 +71,8 @@ export class AadharService {
           ISPFA: 'false',
           ISPI: 'true',
           NAME: aadhaar_name,
+          PIGENDER: aadhaar_gender,
+          PIDOB: aadhaar_dob_format,
           AADHAARID: aadhaar_id,
         },
         PIDXml: '',
@@ -320,5 +329,20 @@ export class AadharService {
     let timestamp = Math.floor(Date.now() / 1000).toString();
     result += timestamp;
     return result;
+  }
+  //getAadhaarDobFormat
+  async getAadhaarDobFormat(aadhaar_dob) {
+    if (aadhaar_dob) {
+      try {
+        const datetest = this.moment(aadhaar_dob, 'DD/MM/YYYY').format(
+          'YYYY-MM-DD',
+        );
+        return datetest;
+      } catch (e) {
+        return '';
+      }
+    } else {
+      return '';
+    }
   }
 }

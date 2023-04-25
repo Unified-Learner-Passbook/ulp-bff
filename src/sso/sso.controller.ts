@@ -124,6 +124,8 @@ export class SSOController {
     @Body('digiacc') digiacc: string,
     @Body('aadhaar_id') aadhaar_id: string,
     @Body('aadhaar_name') aadhaar_name: string,
+    @Body('aadhaar_dob') aadhaar_dob: string,
+    @Body('aadhaar_gender') aadhaar_gender: string,
     @Body('digilocker_id') digilocker_id: string,
   ) {
     return this.ssoService.digilockerAadhaar(
@@ -131,6 +133,8 @@ export class SSOController {
       digiacc,
       aadhaar_id,
       aadhaar_name,
+      aadhaar_dob,
+      aadhaar_gender,
       digilocker_id,
     );
   }
