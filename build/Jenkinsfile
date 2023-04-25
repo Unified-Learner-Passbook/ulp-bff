@@ -4,18 +4,19 @@ node() {
             parameters([
                 string(name: 'docker_repo', defaultValue: 'samagragovernance/ulp-bff', description: 'Docker Image Name'),
                 string(name: 'docker_server', defaultValue: "$docker_server", description: 'Docker Registry URL'),
-				])
-				]) }
-stages{  
-      stage('Checkout') {
-        cleanWs()
-        checkout scm
-        env.commit_id = env.BRANCH_NAME
-        echo "${env.commit_id}"
+
+            ])
+        ])
+    }
+    stage('Checkout') {
+            cleanWs()
+            checkout scm
+            env.commit_id = env.BRANCH_NAME
+            echo "${env.commit_id}"
     }
 
     stage('docker-build') {
-     sh '''
+        sh '''
         docker build -t $docker_server/$docker_repo:$commit_id .
         '''
         if (env.BRANCH_NAME == 'main' || env.BRANCH_NAME == 'master') {
@@ -24,7 +25,8 @@ stages{
             '''
         }
     }
-stage('docker-push'){
+
+    stage('docker-push') {
         sh '''
         docker push $docker_server/$docker_repo:$commit_id
         '''
@@ -34,7 +36,7 @@ stage('docker-push'){
             '''
         }
     }
-
+    
     stage('Start deploy job with latest tag') {
          if (env.BRANCH_NAME == 'main' || env.BRANCH_NAME == 'master') { 
                 build job: 'ULP/deploy-staging/ulp-bff/', parameters: [string(name: 'tag', value: 'latest')]
@@ -42,6 +44,3 @@ stage('docker-push'){
     }
     
 }
-}
-    
-
