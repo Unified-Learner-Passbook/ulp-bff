@@ -122,7 +122,7 @@ export class SbrcService {
     };
     var sb_rc_response_text = null;
     try {
-      const observable = this.httpService.post(url, data, config);
+      const observable = this.httpService.put(url, data, config);
       const promise = observable.toPromise();
       const response = await promise;
       //console.log(JSON.stringify(response.data));
