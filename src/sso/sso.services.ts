@@ -948,6 +948,7 @@ export class SSOService {
         digi_client_secret = process.env.URP_CLIENT_SECRET;
         digi_url_call_back_uri = process.env.URP_CALL_BACK_URL;
       }
+      //nesjs/axios
       var data = this.qs.stringify({
         code: auth_code,
         grant_type: 'authorization_code',
@@ -971,7 +972,7 @@ export class SSOService {
         const promise = observable.toPromise();
         const response = await promise;
         //console.log(JSON.stringify(response.data));
-        response_digi = response.data;
+        response_digi = { data: response.data };
       } catch (e) {
         //console.log(e);
         response_digi = { error: null };
@@ -980,7 +981,7 @@ export class SSOService {
         return response.status(401).send({
           success: false,
           status: 'digilocker_token_bad_request',
-          message: 'Unauthorized',
+          message: 'Unauthorized sub2',
           result: response_digi?.error,
         });
       } else {
@@ -991,7 +992,7 @@ export class SSOService {
             return response.status(401).send({
               success: false,
               status: 'digilocker_token_bad_request',
-              message: 'Unauthorized',
+              message: 'Unauthorized sub',
               result: response_digi?.error,
             });
           } else {
@@ -1006,7 +1007,9 @@ export class SSOService {
               mobile: token_data[0]?.phone_number,
               dob: dob,
               username: '',
-              gender: token_data[0]?.gender ? token_data[0].gender : 'not found',
+              gender: token_data[0]?.gender
+                ? token_data[0].gender
+                : 'not found',
             };
             const sb_rc_search = await this.sbrcService.sbrcSearchEL(
               digiacc === 'ewallet' ? 'StudentV2' : 'TeacherV1',
@@ -1240,8 +1243,8 @@ export class SSOService {
           return response.status(401).send({
             success: false,
             status: 'digilocker_token_bad_request',
-            message: 'Unauthorized',
-            result: response_digi?.error,
+            message: 'Unauthorized sub3',
+            result: response_digi,
           });
         }
       }
@@ -1922,10 +1925,10 @@ export class SSOService {
         const promise = observable.toPromise();
         const response = await promise;
         //console.log(JSON.stringify(response.data));
-        response_digi = response.data;
+        response_digi = { data: response.data };
       } catch (e) {
         //console.log(e);
-        response_digi = { error: e };
+        response_digi = { error: null };
       }
       if (response_digi?.data?.revoked === true) {
         return response.status(200).send({
