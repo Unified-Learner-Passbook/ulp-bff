@@ -1006,7 +1006,7 @@ export class SSOService {
               mobile: token_data[0]?.phone_number,
               dob: dob,
               username: '',
-              gender: token_data[0]?.gender,
+              gender: token_data[0]?.gender ? token_data[0].gender : 'not found',
             };
             const sb_rc_search = await this.sbrcService.sbrcSearchEL(
               digiacc === 'ewallet' ? 'StudentV2' : 'TeacherV1',
