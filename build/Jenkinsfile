@@ -5,27 +5,6 @@ node() {
                 string(name: 'docker_repo', defaultValue: 'samagragovernance/ulp-bff', description: 'Docker Image Name'),
                 string(name: 'docker_server', defaultValue: "$docker_server", description: 'Docker Registry URL'),
 
-            ])
-        ])
-    }
-    stage('Checkout') {
-            cleanWs()
-            checkout scm
-            env.commit_id = env.BRANCH_NAME
-            echo "${env.commit_id}"
-    }
-
-    stage('docker-build') {
-     node() {
-    withCredentials([string(credentialsId: 'docker_server', variable: 'docker_server')]){
-        properties([
-            parameters([
-                string(name: 'docker_repo', defaultValue: 'samagragovernance/ulp-bff', description: 'Docker Image Name'),
-                string(name: 'docker_server', defaultValue: "$docker_server", description: 'Docker Registry URL'),
-
-            ])
-        ])
-    }
     stage('Checkout') {
             cleanWs()
             checkout scm
