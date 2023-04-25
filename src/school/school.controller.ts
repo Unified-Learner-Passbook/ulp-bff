@@ -14,16 +14,21 @@ import {
 import axios from 'axios';
 import { Response, Request } from 'express';
 import { SchoolService } from './school.services';
-import { decryptaadhaar, encryptaadhaar } from '../utils/aadhaar/aadhaar_api';
+import { AadharService } from '../services/aadhar/aadhar.service';
 
 @Controller('v1/school')
 export class SchoolController {
-  constructor(private readonly schoolService: SchoolService) {}
+  constructor(
+    private readonly schoolService: SchoolService,
+    private aadharService: AadharService,
+  ) {}
 
   @Get('/test')
   async getUser(@Res() response: Response) {
-    const adharencrypt = await encryptaadhaar('rushi');
-    const deadharencrypt = await decryptaadhaar(adharencrypt);
+    const adharencrypt = await this.aadharService.encryptaadhaar('test_key');
+    const deadharencrypt = await this.aadharService.decryptaadhaar(
+      adharencrypt,
+    );
     const result = {
       success: true,
       message:

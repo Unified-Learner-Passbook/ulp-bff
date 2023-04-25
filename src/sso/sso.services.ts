@@ -1,40 +1,36 @@
 import { Injectable, StreamableFile } from '@nestjs/common';
+import { HttpService } from '@nestjs/axios';
+import { AxiosRequestConfig } from 'axios';
 
 //custom imports
-import axios from 'axios';
 import jwt_decode from 'jwt-decode';
 import { createWriteStream, writeFile } from 'fs';
 import { Response, Request } from 'express';
 import * as wkhtmltopdf from 'wkhtmltopdf';
 import { UserDto } from './dto/user-dto';
 import { schoolList } from './constlist/schoollist';
-import {
-  aadhaarDemographic,
-  getUUID,
-  encryptaadhaar,
-  decryptaadhaar,
-} from '../utils/aadhaar/aadhaar_api';
-import { CredService } from 'src/services/cred/cred.service';
+import { AadharService } from '../services/aadhar/aadhar.service';
 import { SbrcService } from 'src/services/sbrc/sbrc.service';
+import { CredService } from 'src/services/cred/cred.service';
+import { KeycloakService } from 'src/services/keycloak/keycloak.service';
 
 @Injectable()
 export class SSOService {
-
-  constructor(private credService: CredService, private sbrcService: SbrcService) { }
+  constructor(
+    private readonly httpService: HttpService,
+    private aadharService: AadharService,
+    private sbrcService: SbrcService,
+    private credService: CredService,
+    private keycloakService: KeycloakService,
+  ) {}
   //axios call
   md5 = require('md5');
-  qs = require('qs');
   moment = require('moment');
-  //keycloak config
-  keycloakCred = {
-    grant_type: 'client_credentials',
-    client_id: process.env.KEYCLOAK_CLIENT_ID,
-    client_secret: process.env.KEYCLOAK_CLIENT_SECRET,
-  };
+  qs = require('qs');
   //registerStudent
   async registerStudent(user: UserDto, response: Response) {
     if (user) {
-      const clientToken = await this.getClientToken();
+      const clientToken = await this.keycloakService.getClientToken();
       if (clientToken?.error) {
         return response.status(401).send({
           success: false,
@@ -43,7 +39,7 @@ export class SSOService {
           result: null,
         });
       } else {
-        const issuerRes = await this.generateDid(user.studentId);
+        const issuerRes = await this.credService.generateDid(user.studentId);
         if (issuerRes?.error) {
           return response.status(400).send({
             success: false,
@@ -55,10 +51,11 @@ export class SSOService {
           var did = issuerRes[0].verificationMethod[0].controller;
 
           //register student keycloak
-          let response_text = await this.registerStudentKeycloak(
-            user,
-            clientToken,
-          );
+          let response_text =
+            await this.keycloakService.registerStudentKeycloak(
+              user,
+              clientToken,
+            );
           //comment
           if (response_text?.error && false) {
             return response.status(400).send({
@@ -69,7 +66,18 @@ export class SSOService {
             });
           } else {
             // sunbird registery
-            let sb_rc_response_text = await this.sbrcRegistery(did, user);
+            let sb_rc_response_text = await this.sbrcService.sbrcInviteEL(
+              {
+                did: did,
+                aadhaarID: user.aadhaarId,
+                studentName: user.studentName,
+                schoolName: user.schoolName,
+                schoolID: user.schoolId,
+                studentSchoolID: user.studentId,
+                phoneNo: user.phoneNo,
+              },
+              'StudentDetail',
+            );
 
             if (sb_rc_response_text?.error) {
               return response.status(400).send({
@@ -110,7 +118,10 @@ export class SSOService {
   //loginStudent
   async loginStudent(username: string, password: string, response: Response) {
     if (username && password) {
-      const studentToken = await this.getKeycloakToken(username, password);
+      const studentToken = await this.keycloakService.getKeycloakToken(
+        username,
+        password,
+      );
       if (studentToken?.error) {
         return response.status(501).send({
           success: false,
@@ -119,7 +130,16 @@ export class SSOService {
           result: null,
         });
       } else {
-        const sb_rc_search = await this.searchStudent(username);
+        const sb_rc_search = await this.sbrcService.sbrcSearchEL(
+          'StudentDetail',
+          {
+            filters: {
+              studentSchoolID: {
+                eq: username,
+              },
+            },
+          },
+        );
         if (sb_rc_search?.error) {
           return response.status(501).send({
             success: false,
@@ -159,7 +179,16 @@ export class SSOService {
   //getDIDStudent
   async getDIDStudent(studentid: string, response: Response) {
     if (studentid) {
-      const sb_rc_search = await this.searchStudent(studentid);
+      const sb_rc_search = await this.sbrcService.sbrcSearchEL(
+        'StudentDetail',
+        {
+          filters: {
+            studentSchoolID: {
+              eq: studentid,
+            },
+          },
+        },
+      );
       if (sb_rc_search?.error) {
         return response.status(501).send({
           success: false,
@@ -195,7 +224,7 @@ export class SSOService {
   //credentialsStudent
   async credentialsStudent(token: string, response: Response) {
     if (token) {
-      const studentUsername = await this.verifyStudentToken(token);
+      const studentUsername = await this.keycloakService.verifyUserToken(token);
       if (studentUsername?.error) {
         return response.status(401).send({
           success: false,
@@ -211,8 +240,15 @@ export class SSOService {
           result: null,
         });
       } else {
-        const sb_rc_search = await this.searchStudent(
-          studentUsername?.preferred_username,
+        const sb_rc_search = await this.sbrcService.sbrcSearchEL(
+          'StudentDetail',
+          {
+            filters: {
+              studentSchoolID: {
+                eq: studentUsername?.preferred_username,
+              },
+            },
+          },
         );
         if (sb_rc_search?.error) {
           return response.status(501).send({
@@ -229,7 +265,7 @@ export class SSOService {
             result: null,
           });
         } else {
-          let cred_search = await this.credSearch(sb_rc_search);
+          let cred_search = await this.credService.credSearch(sb_rc_search);
 
           if (cred_search?.error) {
             return response.status(501).send({
@@ -271,7 +307,7 @@ export class SSOService {
     requestbody: any,
   ): Promise<string | StreamableFile> {
     if (token) {
-      const studentUsername = await this.verifyStudentToken(token);
+      const studentUsername = await this.keycloakService.verifyUserToken(token);
       if (studentUsername?.error) {
         return 'Keycloak Student Token Expired';
       } else if (!studentUsername?.preferred_username) {
@@ -279,23 +315,25 @@ export class SSOService {
       } else {
         var data = JSON.stringify(requestbody);
 
-        var config = {
-          method: 'post',
-          url: process.env.CRED_URL + '/credentials/render',
+        const url = process.env.CRED_URL + '/credentials/render';
+
+        const config: AxiosRequestConfig = {
           headers: {
             'Content-Type': 'application/json',
           },
-          data: data,
         };
 
         let render_response = null;
-        await axios(config)
-          .then(function (response) {
-            render_response = response.data;
-          })
-          .catch(function (error) {
-            //console.log(error);
-          });
+        try {
+          const observable = this.httpService.post(url, data, config);
+          const promise = observable.toPromise();
+          const response = await promise;
+          //console.log(JSON.stringify(response.data));
+          render_response = response.data;
+        } catch (e) {
+          //console.log(e);
+          //render_response = { error: e };
+        }
         if (render_response == null) {
           return 'Cred Render API Failed';
         } else {
@@ -327,7 +365,7 @@ export class SSOService {
     response: Response,
   ) {
     if (token) {
-      const studentUsername = await this.verifyStudentToken(token);
+      const studentUsername = await this.keycloakService.verifyUserToken(token);
       if (studentUsername?.error) {
         return response.status(401).send({
           success: false,
@@ -345,24 +383,26 @@ export class SSOService {
       } else {
         var data = JSON.stringify(requestbody);
 
-        var config = {
-          method: 'post',
-          url: process.env.CRED_URL + '/credentials/render',
+        const url = process.env.CRED_URL + '/credentials/render';
+
+        const config: AxiosRequestConfig = {
           headers: {
             'Content-Type': 'application/json',
           },
-          data: data,
         };
 
         let render_response = null;
-        await axios(config)
-          .then(function (response) {
-            //console.log(JSON.stringify(response.data));
-            render_response = response.data;
-          })
-          .catch(function (error) {
-            //console.log(error);
-          });
+        try {
+          const observable = this.httpService.post(url, data, config);
+          const promise = observable.toPromise();
+          const response = await promise;
+          //console.log(JSON.stringify(response.data));
+          render_response = response.data;
+        } catch (e) {
+          //console.log(e);
+          //render_response = { error: e };
+        }
+
         if (render_response == null) {
           return response.status(400).send({
             success: false,
@@ -392,20 +432,23 @@ export class SSOService {
   //renderTemplate
   async renderTemplate(id: string, response: Response) {
     if (id) {
-      var config = {
-        method: 'get',
-        url: process.env.SCHEMA_URL + '/rendering-template?id=' + id,
+      const url = process.env.SCHEMA_URL + '/rendering-template?id=' + id;
+
+      const config: AxiosRequestConfig = {
         headers: {},
       };
       let response_text = null;
-      await axios(config)
-        .then(function (response) {
-          //console.log(JSON.stringify(response.data));
-          response_text = response.data;
-        })
-        .catch(function (error) {
-          //console.log(error);
-        });
+      try {
+        const observable = this.httpService.get(url, config);
+        const promise = observable.toPromise();
+        const response = await promise;
+        //console.log(JSON.stringify(response.data));
+        response_text = response.data;
+      } catch (error) {
+        //console.log(e);
+        //response_text = { error: error };
+      }
+
       if (response_text == null) {
         return response.status(400).send({
           success: false,
@@ -434,20 +477,23 @@ export class SSOService {
   //renderTemplateSchema
   async renderTemplateSchema(id: string, response: Response) {
     if (id) {
+      const url = process.env.SCHEMA_URL + '/rendering-template/' + id;
+
       var config = {
-        method: 'get',
-        url: process.env.SCHEMA_URL + '/rendering-template/' + id,
         headers: {},
       };
       let response_text = null;
-      await axios(config)
-        .then(function (response) {
-          //console.log(JSON.stringify(response.data));
-          response_text = response.data;
-        })
-        .catch(function (error) {
-          //console.log(error);
-        });
+
+      try {
+        const observable = this.httpService.get(url, config);
+        const promise = observable.toPromise();
+        const response = await promise;
+        //console.log(JSON.stringify(response.data));
+        response_text = response.data;
+      } catch (error) {
+        //console.log(e);
+        //response_text = { error: error };
+      }
       if (response_text == null) {
         return response.status(400).send({
           success: false,
@@ -476,7 +522,7 @@ export class SSOService {
   //credentialsSearch
   async credentialsSearch(token: string, requestbody: any, response: Response) {
     if (token && requestbody) {
-      const studentUsername = await this.verifyStudentToken(token);
+      const studentUsername = await this.keycloakService.verifyUserToken(token);
       if (studentUsername?.error) {
         return response.status(401).send({
           success: false,
@@ -493,25 +539,26 @@ export class SSOService {
         });
       } else {
         var data = JSON.stringify(requestbody);
-        var config = {
-          method: 'post',
-          url: process.env.CRED_URL + '/credentials/search',
+
+        const url = process.env.CRED_URL + '/credentials/search';
+
+        const config: AxiosRequestConfig = {
           headers: {
             'Content-Type': 'application/json',
           },
-          data: data,
         };
 
         let render_response = null;
-        await axios(config)
-          .then(function (response) {
-            //console.log(JSON.stringify(response.data));
-            render_response = response.data;
-          })
-          .catch(function (error) {
-            //console.log(error);
-            render_response = { error: error };
-          });
+        try {
+          const observable = this.httpService.post(url, data, config);
+          const promise = observable.toPromise();
+          const response = await promise;
+          //console.log(JSON.stringify(response.data));
+          render_response = response.data;
+        } catch (e) {
+          //console.log(e);
+          render_response = { error: e };
+        }
 
         if (render_response?.error) {
           return response.status(400).send({
@@ -542,7 +589,7 @@ export class SSOService {
   //credentialsIssue
   async credentialsIssue(token: string, requestbody: any, response: Response) {
     if (token && requestbody) {
-      const studentUsername = await this.verifyStudentToken(token);
+      const studentUsername = await this.keycloakService.verifyUserToken(token);
       if (studentUsername?.error) {
         return response.status(401).send({
           success: false,
@@ -559,25 +606,25 @@ export class SSOService {
         });
       } else {
         var data = JSON.stringify(requestbody);
+        const url = process.env.CRED_URL + '/credentials/issue';
+
         var config = {
-          method: 'post',
-          url: process.env.CRED_URL + '/credentials/issue',
           headers: {
             'Content-Type': 'application/json',
           },
-          data: data,
         };
 
         let render_response = null;
-        await axios(config)
-          .then(function (response) {
-            //console.log(JSON.stringify(response.data));
-            render_response = response.data;
-          })
-          .catch(function (error) {
-            //console.log(error);
-            render_response = { error: error };
-          });
+        try {
+          const observable = this.httpService.post(url, data, config);
+          const promise = observable.toPromise();
+          const response = await promise;
+          //console.log(JSON.stringify(response.data));
+          render_response = response.data;
+        } catch (e) {
+          //console.log(e);
+          render_response = { error: e };
+        }
 
         if (render_response?.error) {
           return response.status(400).send({
@@ -608,21 +655,23 @@ export class SSOService {
   //credentialsSchema
   async credentialsSchema(id: string, response: Response) {
     if (id) {
+      const url = process.env.CRED_URL + '/credentials/schema/' + id;
+
       var config = {
-        method: 'get',
-        url: process.env.CRED_URL + '/credentials/schema/' + id,
         headers: {},
       };
       let response_text = null;
-      await axios(config)
-        .then(function (response) {
-          //console.log(JSON.stringify(response.data));
-          response_text = response.data;
-        })
-        .catch(function (error) {
-          //console.log(error);
-          response_text = { error: error };
-        });
+
+      try {
+        const observable = this.httpService.get(url, config);
+        const promise = observable.toPromise();
+        const response = await promise;
+        //console.log(JSON.stringify(response.data));
+        response_text = response.data;
+      } catch (error) {
+        //console.log(e);
+        response_text = { error: error };
+      }
       if (response_text?.error) {
         return response.status(400).send({
           success: false,
@@ -651,21 +700,23 @@ export class SSOService {
   //credentialsSchemaJSON
   async credentialsSchemaJSON(id: string, response: Response) {
     if (id) {
-      var config = {
-        method: 'get',
-        url: process.env.SCHEMA_URL + '/schema/jsonld?id=' + id,
+      const url = process.env.SCHEMA_URL + '/schema/jsonld?id=' + id;
+
+      const config: AxiosRequestConfig = {
         headers: {},
       };
       let response_text = null;
-      await axios(config)
-        .then(function (response) {
-          //console.log(JSON.stringify(response.data));
-          response_text = response.data;
-        })
-        .catch(function (error) {
-          //console.log(error);
-          response_text = { error: error };
-        });
+
+      try {
+        const observable = this.httpService.get(url, config);
+        const promise = observable.toPromise();
+        const response = await promise;
+        //console.log(JSON.stringify(response.data));
+        response_text = response.data;
+      } catch (error) {
+        //console.log(e);
+        response_text = { error: error };
+      }
       if (response_text?.error) {
         return response.status(400).send({
           success: false,
@@ -694,7 +745,7 @@ export class SSOService {
   //userData
   async userData(token: string, digiacc: string, response: Response) {
     if (token && digiacc) {
-      const studentUsername = await this.verifyStudentToken(token);
+      const studentUsername = await this.keycloakService.verifyUserToken(token);
       if (studentUsername?.error) {
         return response.status(401).send({
           success: false,
@@ -712,7 +763,7 @@ export class SSOService {
       } else {
         //get user detail
         //find if student account present in sb rc or not
-        const sb_rc_search = await this.searchUsernameEntity(
+        const sb_rc_search = await this.sbrcService.sbrcSearchEL(
           digiacc === 'ewallet' ? 'StudentV2' : 'TeacherV1',
           studentUsername?.preferred_username,
         );
@@ -743,7 +794,7 @@ export class SSOService {
                 },
               },
             };
-            const sb_rc_search_detail = await this.searchEntity(
+            const sb_rc_search_detail = await this.sbrcService.sbrcSearchEL(
               'StudentDetailV2',
               filter,
             );
@@ -798,7 +849,7 @@ export class SSOService {
   //schoolData
   async schoolData(token: string, udise: string, response: Response) {
     if (token && udise) {
-      const studentUsername = await this.verifyStudentToken(token);
+      const studentUsername = await this.keycloakService.verifyUserToken(token);
       if (studentUsername?.error) {
         return response.status(401).send({
           success: false,
@@ -816,9 +867,15 @@ export class SSOService {
       } else {
         //get user detail
         //find if student account present in sb rc or not
-        const sb_rc_search = await this.searchUdiseEntity(
+        const sb_rc_search = await this.sbrcService.sbrcSearchEL(
           'SchoolDetail',
-          udise,
+          {
+            filters: {
+              udiseCode: {
+                eq: udise,
+              },
+            },
+          },
         );
         if (sb_rc_search?.error) {
           return response.status(501).send({
@@ -898,25 +955,27 @@ export class SSOService {
         client_secret: digi_client_secret,
         redirect_uri: digi_url_call_back_uri,
       });
-      var config = {
-        method: 'post',
-        url: 'https://digilocker.meripehchaan.gov.in/public/oauth2/2/token',
+
+      const url =
+        'https://digilocker.meripehchaan.gov.in/public/oauth2/2/token';
+
+      const config: AxiosRequestConfig = {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
         },
-        data: data,
       };
 
       let response_digi = null;
-      await axios(config)
-        .then(function (response) {
-          //console.log(JSON.stringify(response.data));
-          response_digi = { data: response.data };
-        })
-        .catch(function (error) {
-          //console.log(error);
-          response_digi = { error: null };
-        });
+      try {
+        const observable = this.httpService.post(url, data, config);
+        const promise = observable.toPromise();
+        const response = await promise;
+        //console.log(JSON.stringify(response.data));
+        response_digi = response.data;
+      } catch (e) {
+        //console.log(e);
+        response_digi = { error: null };
+      }
       if (response_digi?.error) {
         return response.status(401).send({
           success: false,
@@ -948,7 +1007,7 @@ export class SSOService {
               dob: dob,
               username: '',
             };
-            const sb_rc_search = await this.searchDigiEntity(
+            const sb_rc_search = await this.sbrcService.sbrcSearchEL(
               digiacc === 'ewallet' ? 'StudentV2' : 'TeacherV1',
               digiacc === 'ewallet'
                 ? {
@@ -1009,14 +1068,14 @@ export class SSOService {
               const auto_password = await this.md5(
                 auto_username + 'MjQFlAJOQSlWIQJHOEDhod',
               );
-              const userToken = await this.getKeycloakToken(
+              const userToken = await this.keycloakService.getKeycloakToken(
                 auto_username,
                 auto_password,
               );
               if (userToken?.error) {
                 //sbrc present but no keycloak
                 //create keycloak and then login
-                const clientToken = await this.getClientToken();
+                const clientToken = await this.keycloakService.getClientToken();
                 if (clientToken?.error) {
                   return response.status(401).send({
                     success: false,
@@ -1027,11 +1086,12 @@ export class SSOService {
                 } else {
                   //register in keycloak
                   //register student keycloak
-                  let response_text = await this.registerUserKeycloak(
-                    auto_username,
-                    auto_password,
-                    clientToken,
-                  );
+                  let response_text =
+                    await this.keycloakService.registerUserKeycloak(
+                      auto_username,
+                      auto_password,
+                      clientToken,
+                    );
                   if (response_text?.error && false) {
                     return response.status(400).send({
                       success: false,
@@ -1040,10 +1100,11 @@ export class SSOService {
                       result: null,
                     });
                   } else {
-                    const userToken = await this.getKeycloakToken(
-                      auto_username,
-                      auto_password,
-                    );
+                    const userToken =
+                      await this.keycloakService.getKeycloakToken(
+                        auto_username,
+                        auto_password,
+                      );
                     if (userToken?.error) {
                       //console.log(userToken?.error);
                       return response.status(501).send({
@@ -1062,10 +1123,11 @@ export class SSOService {
                             },
                           },
                         };
-                        const sb_rc_search_detail = await this.searchEntity(
-                          'StudentDetailV2',
-                          filter,
-                        );
+                        const sb_rc_search_detail =
+                          await this.sbrcService.sbrcSearchEL(
+                            'StudentDetailV2',
+                            filter,
+                          );
                         //console.log(sb_rc_search_detail);
                         if (sb_rc_search_detail?.error) {
                           return response.status(501).send({
@@ -1122,10 +1184,11 @@ export class SSOService {
                       },
                     },
                   };
-                  const sb_rc_search_detail = await this.searchEntity(
-                    'StudentDetailV2',
-                    filter,
-                  );
+                  const sb_rc_search_detail =
+                    await this.sbrcService.sbrcSearchEL(
+                      'StudentDetailV2',
+                      filter,
+                    );
                   //console.log(sb_rc_search_detail);
                   if (sb_rc_search_detail?.error) {
                     return response.status(501).send({
@@ -1200,7 +1263,10 @@ export class SSOService {
     digilocker_id: string,
   ) {
     if (digiacc && aadhaar_id && aadhaar_name && digilocker_id) {
-      const aadhar_data = await aadhaarDemographic(aadhaar_id, aadhaar_name);
+      const aadhar_data = await this.aadharService.aadhaarDemographic(
+        aadhaar_id,
+        aadhaar_name,
+      );
 
       //console.log(aadhar_data);
       if (!aadhar_data?.success === true) {
@@ -1213,7 +1279,7 @@ export class SSOService {
       } else {
         if (aadhar_data?.result?.ret === 'y') {
           const decodedxml = aadhar_data?.decodedxml;
-          const uuid = await getUUID(decodedxml);
+          const uuid = await this.aadharService.getUUID(decodedxml);
           if (uuid === null) {
             return response.status(400).send({
               success: false,
@@ -1223,7 +1289,7 @@ export class SSOService {
             });
           } else {
             //check uuid present in sbrc or not
-            const sb_rc_search = await this.searchDigiEntity(
+            const sb_rc_search = await this.sbrcService.sbrcSearchEL(
               digiacc === 'ewallet' ? 'StudentV2' : 'TeacherV1',
               digiacc === 'ewallet'
                 ? {
@@ -1260,7 +1326,7 @@ export class SSOService {
               //update meripehchan id in sb rc
               const osid = sb_rc_search[0]?.osid;
               // sunbird registery student
-              let sb_rc_response_text = await this.sbrcUpdate(
+              let sb_rc_response_text = await this.sbrcService.sbrcUpdateEL(
                 digiacc === 'ewallet'
                   ? {
                     meripehchan_id: digilocker_id,
@@ -1284,14 +1350,15 @@ export class SSOService {
                 const auto_password = await this.md5(
                   auto_username + 'MjQFlAJOQSlWIQJHOEDhod',
                 );
-                const userToken = await this.getKeycloakToken(
+                const userToken = await this.keycloakService.getKeycloakToken(
                   auto_username,
                   auto_password,
                 );
                 if (userToken?.error) {
                   //sbrc present but no keycloak
                   //create keycloak and then login
-                  const clientToken = await this.getClientToken();
+                  const clientToken =
+                    await this.keycloakService.getClientToken();
                   if (clientToken?.error) {
                     return response.status(401).send({
                       success: false,
@@ -1302,11 +1369,12 @@ export class SSOService {
                   } else {
                     //register in keycloak
                     //register student keycloak
-                    let response_text = await this.registerUserKeycloak(
-                      auto_username,
-                      auto_password,
-                      clientToken,
-                    );
+                    let response_text =
+                      await this.keycloakService.registerUserKeycloak(
+                        auto_username,
+                        auto_password,
+                        clientToken,
+                      );
                     if (response_text?.error && false) {
                       return response.status(400).send({
                         success: false,
@@ -1315,10 +1383,11 @@ export class SSOService {
                         result: null,
                       });
                     } else {
-                      const userToken = await this.getKeycloakToken(
-                        auto_username,
-                        auto_password,
-                      );
+                      const userToken =
+                        await this.keycloakService.getKeycloakToken(
+                          auto_username,
+                          auto_password,
+                        );
                       if (userToken?.error) {
                         //console.log(userToken?.error);
                         return response.status(501).send({
@@ -1337,10 +1406,11 @@ export class SSOService {
                               },
                             },
                           };
-                          const sb_rc_search_detail = await this.searchEntity(
-                            'StudentDetailV2',
-                            filter,
-                          );
+                          const sb_rc_search_detail =
+                            await this.sbrcService.sbrcSearchEL(
+                              'StudentDetailV2',
+                              filter,
+                            );
                           //console.log(sb_rc_search_detail);
                           if (sb_rc_search_detail?.error) {
                             return response.status(501).send({
@@ -1393,10 +1463,11 @@ export class SSOService {
                         },
                       },
                     };
-                    const sb_rc_search_detail = await this.searchEntity(
-                      'StudentDetailV2',
-                      filter,
-                    );
+                    const sb_rc_search_detail =
+                      await this.sbrcService.sbrcSearchEL(
+                        'StudentDetailV2',
+                        filter,
+                      );
                     //console.log(sb_rc_search_detail);
                     if (sb_rc_search_detail?.error) {
                       return response.status(501).send({
@@ -1474,7 +1545,7 @@ export class SSOService {
     digimpid: string,
   ) {
     if (digiacc && userdata && digimpid) {
-      const clientToken = await this.getClientToken();
+      const clientToken = await this.keycloakService.getClientToken();
       if (clientToken?.error) {
         return response.status(401).send({
           success: false,
@@ -1493,7 +1564,7 @@ export class SSOService {
           auto_username + 'MjQFlAJOQSlWIQJHOEDhod',
         );
         //register student keycloak
-        let response_text = await this.registerUserKeycloak(
+        let response_text = await this.keycloakService.registerUserKeycloak(
           auto_username,
           auto_password,
           clientToken,
@@ -1510,8 +1581,15 @@ export class SSOService {
           //ewallet registration student
           if (digiacc === 'ewallet') {
             //find if student account present in sb rc or not
-            const sb_rc_search = await this.sbrcStudentSearch(
-              userdata?.student?.aadhar_token,
+            const sb_rc_search = await this.sbrcService.sbrcSearchEL(
+              'StudentV2',
+              {
+                filters: {
+                  aadhar_token: {
+                    eq: userdata?.student?.aadhar_token,
+                  },
+                },
+              },
             );
             //console.log(sb_rc_search);
             if (sb_rc_search?.error) {
@@ -1529,7 +1607,7 @@ export class SSOService {
               userdata.student.school_type = 'private';
               userdata.student.aadhaar_status = 'verified';
               userdata.student.aadhaar_enc = '';
-              let sb_rc_response_text = await this.sbrcInvite(
+              let sb_rc_response_text = await this.sbrcService.sbrcInviteEL(
                 userdata.student,
                 'StudentV2',
               );
@@ -1546,10 +1624,11 @@ export class SSOService {
                 userdata.studentdetail.student_id =
                   sb_rc_response_text?.result?.StudentV2?.osid;
                 userdata.studentdetail.claim_status = 'pending';
-                let sb_rc_response_text_detail = await this.sbrcInvite(
-                  userdata.studentdetail,
-                  'StudentDetailV2',
-                );
+                let sb_rc_response_text_detail =
+                  await this.sbrcService.sbrcInviteEL(
+                    userdata.studentdetail,
+                    'StudentDetailV2',
+                  );
                 if (sb_rc_response_text_detail?.error) {
                   return response.status(400).send({
                     success: false,
@@ -1581,7 +1660,7 @@ export class SSOService {
               const osid = sb_rc_search[0]?.osid;
               userdata.student.DID = sb_rc_search[0]?.DID;
               // sunbird registery student
-              let sb_rc_response_text = await this.sbrcUpdate(
+              let sb_rc_response_text = await this.sbrcService.sbrcUpdateEL(
                 {
                   meripehchan_id: userdata?.student?.meripehchan_id,
                   aadhar_token: userdata?.student?.aadhar_token,
@@ -1610,7 +1689,7 @@ export class SSOService {
                     },
                   },
                 };
-                const sb_rc_search_detail = await this.searchEntity(
+                const sb_rc_search_detail = await this.sbrcService.sbrcSearchEL(
                   'StudentDetailV2',
                   filter,
                 );
@@ -1635,7 +1714,7 @@ export class SSOService {
                   //update value found id
                   const osid = sb_rc_search_detail[0]?.osid;
                   // sunbird registery student
-                  let sb_rc_response_text = await this.sbrcUpdate(
+                  let sb_rc_response_text = await this.sbrcService.sbrcUpdateEL(
                     {
                       acdemic_year: userdata?.studentdetail?.acdemic_year,
                       school_name: userdata?.studentdetail?.school_name,
@@ -1680,7 +1759,7 @@ export class SSOService {
           else {
             // sunbird registery teacher
             //get teacher did
-            const issuerRes = await this.generateDid(
+            const issuerRes = await this.credService.generateDid(
               userdata?.teacher?.meripehchanLoginId,
             );
             if (issuerRes?.error) {
@@ -1694,7 +1773,7 @@ export class SSOService {
               var did = issuerRes[0].verificationMethod[0].controller;
               userdata.teacher.did = did;
               userdata.teacher.username = auto_username;
-              let sb_rc_response_text = await this.sbrcInvite(
+              let sb_rc_response_text = await this.sbrcService.sbrcInviteEL(
                 userdata.teacher,
                 'TeacherV1',
               );
@@ -1708,7 +1787,7 @@ export class SSOService {
               } else if (sb_rc_response_text?.params?.status === 'SUCCESSFUL') {
                 // sunbird registery school
                 //get school did
-                const issuerRes = await this.generateDid(
+                const issuerRes = await this.credService.generateDid(
                   userdata?.school?.udiseCode,
                 );
                 if (issuerRes?.error) {
@@ -1721,7 +1800,7 @@ export class SSOService {
                 } else {
                   var did = issuerRes[0].verificationMethod[0].controller;
                   userdata.school.did = did;
-                  let sb_rc_response_text = await this.sbrcInvite(
+                  let sb_rc_response_text = await this.sbrcService.sbrcInviteEL(
                     userdata.school,
                     'SchoolDetail',
                   );
@@ -1755,7 +1834,7 @@ export class SSOService {
             }
           }
           //login and get token
-          const userToken = await this.getKeycloakToken(
+          const userToken = await this.keycloakService.getKeycloakToken(
             auto_username,
             auto_password,
           );
@@ -1813,25 +1892,27 @@ export class SSOService {
         client_id: digi_client_id,
         client_secret: digi_client_secret,
       });
-      var config = {
-        method: 'post',
-        url: 'https://digilocker.meripehchaan.gov.in/public/oauth2/1/revoke',
+
+      const url =
+        'https://digilocker.meripehchaan.gov.in/public/oauth2/1/revoke';
+
+      const config: AxiosRequestConfig = {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
         },
-        data: data,
       };
 
       let response_digi = null;
-      await axios(config)
-        .then(function (response) {
-          //console.log(JSON.stringify(response.data));
-          response_digi = { data: response.data };
-        })
-        .catch(function (error) {
-          //console.log(error);
-          response_digi = { error: error };
-        });
+      try {
+        const observable = this.httpService.post(url, data, config);
+        const promise = observable.toPromise();
+        const response = await promise;
+        //console.log(JSON.stringify(response.data));
+        response_digi = response.data;
+      } catch (e) {
+        //console.log(e);
+        response_digi = { error: e };
+      }
       if (response_digi?.data?.revoked === true) {
         return response.status(200).send({
           success: true,
@@ -1859,7 +1940,10 @@ export class SSOService {
 
   async getStudentDetail(requestbody, response: Response) {
     console.log('456');
-    let studentDetails = await this.studentDetails(requestbody);
+    let studentDetails = await this.sbrcService.sbrcSearch(
+      requestbody,
+      'StudentDetail',
+    );
     console.log('studentDetails', studentDetails);
     if (studentDetails) {
       return response.status(200).send({
@@ -1982,7 +2066,7 @@ export class SSOService {
     response: Response,
   ) {
     if (token) {
-      const studentUsername = await this.verifyStudentToken(token);
+      const studentUsername = await this.keycloakService.verifyUserToken(token);
       if (studentUsername?.error) {
         return response.status(401).send({
           success: false,
@@ -2025,12 +2109,19 @@ export class SSOService {
               );
               let auto_username = username_name + '@' + username_dob;
               auto_username = auto_username.toLowerCase();
-              const aadhaar_enc_text = await encryptaadhaar(
+              const aadhaar_enc_text = await this.aadharService.encryptaadhaar(
                 student?.aadhar_token,
               );
               //find if student account present in sb rc or not
-              const sb_rc_search = await this.sbrcStudentSearch1(
-                aadhaar_enc_text,
+              const sb_rc_search = await this.sbrcService.sbrcSearchEL(
+                'StudentV2',
+                {
+                  filters: {
+                    aadhar_token: {
+                      eq: aadhaar_enc_text,
+                    },
+                  },
+                },
               );
               //console.log(sb_rc_search);
               if (sb_rc_search?.error) {
@@ -2042,7 +2133,9 @@ export class SSOService {
               } else if (sb_rc_search.length === 0) {
                 //register student in sb rc
                 // sunbird registery student
-                const issuerRes = await this.generateDid(student?.student_id);
+                const issuerRes = await this.credService.generateDid(
+                  student?.student_id,
+                );
                 if (issuerRes?.error) {
                   iserror = true;
                   loglist[i].status = false;
@@ -2053,7 +2146,7 @@ export class SSOService {
                   var didGenerate =
                     issuerRes[0].verificationMethod[0].controller;
                   let reference_id = 'ULP_' + student?.student_id;
-                  let sb_rc_response_text = await this.sbrcInvite(
+                  let sb_rc_response_text = await this.sbrcService.sbrcInviteEL(
                     {
                       student_id: student?.student_id,
                       DID: didGenerate,
@@ -2083,22 +2176,23 @@ export class SSOService {
                     let os_student_id =
                       sb_rc_response_text?.result?.StudentV2?.osid;
                     let claim_status = 'approved';
-                    let sb_rc_response_text_detail = await this.sbrcInvite(
-                      {
-                        student_detail_id: '',
-                        student_id: os_student_id,
-                        mobile: student?.mobile,
-                        gaurdian_name: student?.gaurdian_name,
-                        school_udise: school_udise,
-                        school_name: school_name,
-                        grade: grade,
-                        acdemic_year: acdemic_year,
-                        start_date: '',
-                        end_date: '',
-                        claim_status: claim_status,
-                      },
-                      'StudentDetailV2',
-                    );
+                    let sb_rc_response_text_detail =
+                      await this.sbrcService.sbrcInviteEL(
+                        {
+                          student_detail_id: '',
+                          student_id: os_student_id,
+                          mobile: student?.mobile,
+                          gaurdian_name: student?.gaurdian_name,
+                          school_udise: school_udise,
+                          school_name: school_name,
+                          grade: grade,
+                          acdemic_year: acdemic_year,
+                          start_date: '',
+                          end_date: '',
+                          claim_status: claim_status,
+                        },
+                        'StudentDetailV2',
+                      );
                     if (sb_rc_response_text_detail?.error) {
                       iserror = true;
                       loglist[i].status = false;
@@ -2164,7 +2258,7 @@ export class SSOService {
     response: Response,
   ) {
     if (token && grade && acdemic_year) {
-      const studentUsername = await this.verifyStudentToken(token);
+      const studentUsername = await this.keycloakService.verifyUserToken(token);
       if (studentUsername?.error) {
         return response.status(401).send({
           success: false,
@@ -2180,7 +2274,7 @@ export class SSOService {
           result: null,
         });
       } else {
-        const sb_rc_search = await this.searchEntity('TeacherV1', {
+        const sb_rc_search = await this.sbrcService.sbrcSearchEL('TeacherV1', {
           filters: {
             username: {
               eq: studentUsername?.preferred_username,
@@ -2203,9 +2297,8 @@ export class SSOService {
           });
         } else {
           let schoolUdise = sb_rc_search[0]?.schoolUdise;
-          const sb_rc_search_student_detail = await this.searchEntity(
-            'StudentDetailV2',
-            {
+          const sb_rc_search_student_detail =
+            await this.sbrcService.sbrcSearchEL('StudentDetailV2', {
               filters: {
                 school_udise: {
                   eq: schoolUdise,
@@ -2220,8 +2313,7 @@ export class SSOService {
                   eq: 'approved',
                 },
               },
-            },
-          );
+            });
           if (sb_rc_search_student_detail?.error) {
             return response.status(501).send({
               success: false,
@@ -2239,7 +2331,7 @@ export class SSOService {
           } else {
             let student_list = [];
             for (let i = 0; i < sb_rc_search_student_detail.length; i++) {
-              const sb_rc_search_student = await this.searchEntity(
+              const sb_rc_search_student = await this.sbrcService.sbrcSearchEL(
                 'StudentV2',
                 aadhaar_status === 'all'
                   ? {
@@ -2295,7 +2387,7 @@ export class SSOService {
     response: Response,
   ) {
     if (token && studentNewData && osid) {
-      const studentUsername = await this.verifyStudentToken(token);
+      const studentUsername = await this.keycloakService.verifyUserToken(token);
       if (studentUsername?.error) {
         return response.status(401).send({
           success: false,
@@ -2313,7 +2405,7 @@ export class SSOService {
       } else {
         //update student
         // sunbird registery student
-        let sb_rc_response_text = await this.sbrcUpdate(
+        let sb_rc_response_text = await this.sbrcService.sbrcUpdateEL(
           studentNewData,
           'StudentV2',
           osid,
@@ -2360,7 +2452,7 @@ export class SSOService {
     response: Response,
   ) {
     if (token && studentData) {
-      const studentUsername = await this.verifyStudentToken(token);
+      const studentUsername = await this.keycloakService.verifyUserToken(token);
       if (studentUsername?.error) {
         return response.status(401).send({
           success: false,
@@ -2376,8 +2468,10 @@ export class SSOService {
           result: null,
         });
       } else {
-        const aadhaar_id = await decryptaadhaar(studentData?.aadhaar_enc);
-        const aadhar_data = await aadhaarDemographic(
+        const aadhaar_id = await this.aadharService.decryptaadhaar(
+          studentData?.aadhaar_enc,
+        );
+        const aadhar_data = await this.aadharService.aadhaarDemographic(
           aadhaar_id,
           studentData?.student_name,
         );
@@ -2392,7 +2486,7 @@ export class SSOService {
         } else {
           if (aadhar_data?.result?.ret === 'y') {
             const decodedxml = aadhar_data?.decodedxml;
-            const uuid = await getUUID(decodedxml);
+            const uuid = await this.aadharService.getUUID(decodedxml);
             if (uuid === null) {
               return response.status(400).send({
                 success: false,
@@ -2403,7 +2497,7 @@ export class SSOService {
             } else {
               //update student
               // sunbird registery student
-              let sb_rc_response_text = await this.sbrcUpdate(
+              let sb_rc_response_text = await this.sbrcService.sbrcUpdateEL(
                 {
                   aadhar_token: uuid,
                   aadhaar_status: 'verified',
@@ -2462,7 +2556,7 @@ export class SSOService {
     response: Response,
   ) {
     if (token) {
-      const studentUsername = await this.verifyStudentToken(token);
+      const studentUsername = await this.keycloakService.verifyUserToken(token);
       if (studentUsername?.error) {
         return response.status(401).send({
           success: false,
@@ -2487,7 +2581,7 @@ export class SSOService {
         let schoolName = requestbody?.issuerDetail?.schoolName;
         let schemaId = requestbody?.issuerDetail?.schemaId;
         //generate schema
-        var schemaRes = await this.generateSchema(schemaId);
+        var schemaRes = await this.credService.generateSchema(schemaId);
         const credentialSubject = requestbody?.credentialSubject;
         let iserror = false;
         let loglist = [];
@@ -2527,7 +2621,7 @@ export class SSOService {
                 expirationDate: expirationDate,
               };
               //console.log('obj', obj);
-              const cred = await this.issueCredentials(obj);
+              const cred = await this.credService.issueCredentialsEL(obj);
               if (cred?.error) {
                 iserror = true;
                 loglist[i].status = false;
@@ -2537,7 +2631,7 @@ export class SSOService {
               } else {
                 //update status
                 // sunbird registery student
-                let sb_rc_response_text = await this.sbrcUpdate(
+                let sb_rc_response_text = await this.sbrcService.sbrcUpdateEL(
                   {
                     claim_status: 'issued',
                   },
@@ -2621,710 +2715,5 @@ export class SSOService {
     }
     const decoded = jwt_decode(token);
     return [decoded];
-  }
-
-  //get client token
-  async getClientToken() {
-    let data = this.qs.stringify({
-      grant_type: this.keycloakCred.grant_type,
-      client_id: this.keycloakCred.client_id,
-      client_secret: this.keycloakCred.client_secret,
-    });
-    let config = {
-      method: 'post',
-      url:
-        process.env.KEYCLOAK_URL +
-        'realms/' +
-        process.env.REALM_ID +
-        '/protocol/openid-connect/token',
-      headers: {
-        'content-type': 'application/x-www-form-urlencoded',
-      },
-      data: data,
-    };
-
-    let response_text = null;
-    await axios(config)
-      .then(function (response) {
-        //console.log(JSON.stringify(response.data));
-        response_text = response.data;
-      })
-      .catch(function (error) {
-        //console.log(error);
-        response_text = { error: error };
-      });
-    return response_text;
-  }
-
-  //get keycloak token after login
-  async getKeycloakToken(username: string, password: string) {
-    let data = this.qs.stringify({
-      client_id: this.keycloakCred.client_id,
-      username: username.toString(),
-      password: password,
-      grant_type: 'password',
-      client_secret: this.keycloakCred.client_secret,
-    });
-
-    let config = {
-      method: 'post',
-      url:
-        process.env.KEYCLOAK_URL +
-        'realms/' +
-        process.env.REALM_ID +
-        '/protocol/openid-connect/token',
-      headers: {
-        'content-type': 'application/x-www-form-urlencoded',
-      },
-      data: data,
-    };
-
-    var response_text = null;
-    await axios(config)
-      .then(function (response) {
-        //console.log("data 516", JSON.stringify(response.data));
-        response_text = response.data;
-      })
-      .catch(function (error) {
-        console.log('error 520', error);
-        response_text = { error: error };
-      });
-
-    return response_text;
-  }
-
-  //generate did
-  async generateDid(studentId: string) {
-    let data = JSON.stringify({
-      content: [
-        {
-          alsoKnownAs: [`did.${studentId}`],
-          services: [
-            {
-              id: 'IdentityHub',
-              type: 'IdentityHub',
-              serviceEndpoint: {
-                '@context': 'schema.identity.foundation/hub',
-                '@type': 'UserServiceEndpoint',
-                instance: ['did:test:hub.id'],
-              },
-            },
-          ],
-        },
-      ],
-    });
-
-    let config = {
-      method: 'post',
-      maxBodyLength: Infinity,
-      url: `${process.env.DID_URL}/did/generate`,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      data: data,
-    };
-    let response_text = null;
-    try {
-      const response = await axios(config);
-      //console.log("response did", response.data)
-      response_text = response.data;
-    } catch (error) {
-      //console.log('error did', error);
-      response_text = { error: error };
-    }
-    return response_text;
-  }
-
-  //search entity meripehchan
-  async searchDigiEntity(entity: string, filter: any) {
-    let data = JSON.stringify(filter);
-
-    let url = process.env.REGISTRY_URL + 'api/v1/' + entity + '/search';
-    //console.log(data + ' ' + url);
-    let config = {
-      method: 'post',
-      url: url,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      data: data,
-    };
-    let sb_rc_search = null;
-    await axios(config)
-      .then(function (response) {
-        //console.log(JSON.stringify(response.data));
-        sb_rc_search = response.data;
-      })
-      .catch(function (error) {
-        //console.log(error);
-        sb_rc_search = { error: error };
-      });
-    return sb_rc_search;
-  }
-
-  //search student
-  async searchStudent(studentId: string) {
-    let data = JSON.stringify({
-      filters: {
-        studentSchoolID: {
-          eq: studentId,
-        },
-      },
-    });
-
-    let config = {
-      method: 'post',
-      url: process.env.REGISTRY_URL + 'api/v1/StudentDetail/search',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      data: data,
-    };
-    let sb_rc_search = null;
-    await axios(config)
-      .then(function (response) {
-        //console.log(JSON.stringify(response.data));
-        sb_rc_search = response.data;
-      })
-      .catch(function (error) {
-        //console.log(error);
-        sb_rc_search = { error: error };
-      });
-    return sb_rc_search;
-  }
-
-  //search student
-  async sbrcStudentSearch1(aadhaar_enc_text: string) {
-    let data = JSON.stringify({
-      filters: {
-        aadhaar_enc: {
-          eq: aadhaar_enc_text,
-        },
-      },
-    });
-    //console.log(data);
-    let config = {
-      method: 'post',
-      url: process.env.REGISTRY_URL + 'api/v1/StudentV2/search',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      data: data,
-    };
-    let sb_rc_search = null;
-    await axios(config)
-      .then(function (response) {
-        //console.log(JSON.stringify(response.data));
-        sb_rc_search = response.data;
-      })
-      .catch(function (error) {
-        //console.log(error);
-        sb_rc_search = { error: error };
-      });
-    return sb_rc_search;
-  }
-
-  //search student
-  async sbrcStudentSearch(aadhar_token: string) {
-    let data = JSON.stringify({
-      filters: {
-        aadhar_token: {
-          eq: aadhar_token,
-        },
-      },
-    });
-    //console.log(data);
-    let config = {
-      method: 'post',
-      url: process.env.REGISTRY_URL + 'api/v1/StudentV2/search',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      data: data,
-    };
-    let sb_rc_search = null;
-    await axios(config)
-      .then(function (response) {
-        //console.log(JSON.stringify(response.data));
-        sb_rc_search = response.data;
-      })
-      .catch(function (error) {
-        //console.log(error);
-        sb_rc_search = { error: error };
-      });
-    return sb_rc_search;
-  }
-
-  //search entity username
-  async searchUsernameEntity(entity: string, searchkey: string) {
-    let data = JSON.stringify({
-      filters: {
-        username: {
-          eq: searchkey.toString(),
-        },
-      },
-    });
-
-    let url = process.env.REGISTRY_URL + 'api/v1/' + entity + '/search';
-    //console.log(data + ' ' + url);
-    let config = {
-      method: 'post',
-      url: url,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      data: data,
-    };
-    let sb_rc_search = null;
-    await axios(config)
-      .then(function (response) {
-        //console.log(JSON.stringify(response.data));
-        sb_rc_search = response.data;
-      })
-      .catch(function (error) {
-        //console.log(error);
-        sb_rc_search = { error: error };
-      });
-    return sb_rc_search;
-  }
-
-  //searchEntity
-  async searchEntity(entity: string, filter: any) {
-    let data = JSON.stringify(filter);
-
-    let url = process.env.REGISTRY_URL + 'api/v1/' + entity + '/search';
-    //console.log(data + ' ' + url);
-    let config = {
-      method: 'post',
-      url: url,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      data: data,
-    };
-    let sb_rc_search = null;
-    await axios(config)
-      .then(function (response) {
-        //console.log(JSON.stringify(response.data));
-        sb_rc_search = response.data;
-      })
-      .catch(function (error) {
-        //console.log(error);
-        sb_rc_search = { error: error };
-      });
-    return sb_rc_search;
-  }
-
-  //search entity udise
-  async searchUdiseEntity(entity: string, searchkey: string) {
-    let data = JSON.stringify({
-      filters: {
-        udiseCode: {
-          eq: searchkey.toString(),
-        },
-      },
-    });
-
-    let url = process.env.REGISTRY_URL + 'api/v1/' + entity + '/search';
-    console.log(data + ' ' + url);
-    let config = {
-      method: 'post',
-      url: url,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      data: data,
-    };
-    let sb_rc_search = null;
-    await axios(config)
-      .then(function (response) {
-        //console.log(JSON.stringify(response.data));
-        sb_rc_search = response.data;
-      })
-      .catch(function (error) {
-        //console.log(error);
-        sb_rc_search = { error: error };
-      });
-    return sb_rc_search;
-  }
-
-  //verify student token
-  async verifyStudentToken(token: string) {
-    let config = {
-      method: 'get',
-      url:
-        process.env.KEYCLOAK_URL +
-        'realms/' +
-        process.env.REALM_ID +
-        '/protocol/openid-connect/userinfo',
-      headers: {
-        'content-type': 'application/x-www-form-urlencoded',
-        Authorization: 'Bearer ' + token,
-      },
-    };
-
-    let response_text = null;
-    await axios(config)
-      .then(function (response) {
-        //console.log(JSON.stringify(response.data));
-        response_text = response?.data;
-      })
-      .catch(function (error) {
-        //console.log(error);
-        response_text = { error: error };
-      });
-
-    return response_text;
-  }
-
-  // register student keycloak
-  async registerStudentKeycloak(user, clientToken) {
-    let data = JSON.stringify({
-      enabled: 'true',
-      username: user.studentId,
-      credentials: [
-        {
-          type: 'password',
-          value: '1234',
-          temporary: false,
-        },
-      ],
-    });
-
-    let config = {
-      method: 'post',
-      url:
-        process.env.KEYCLOAK_URL +
-        'admin/realms/' +
-        process.env.REALM_ID +
-        '/users',
-      headers: {
-        'content-type': 'application/json',
-        Authorization: 'Bearer ' + clientToken?.access_token,
-      },
-      data: data,
-    };
-    var response_text = null;
-    await axios(config)
-      .then(function (response) {
-        //console.log(JSON.stringify(response.data));
-        response_text = response.data;
-      })
-      .catch(function (error) {
-        //console.log(error);
-        response_text = { error: error };
-      });
-
-    return response_text;
-  }
-
-  // sbrc registery
-  async sbrcRegistery(did, user) {
-    let data = JSON.stringify({
-      did: did,
-      aadhaarID: user.aadhaarId,
-      studentName: user.studentName,
-      schoolName: user.schoolName,
-      schoolID: user.schoolId,
-      studentSchoolID: user.studentId,
-      phoneNo: user.phoneNo,
-    });
-
-    let config_sb_rc = {
-      method: 'post',
-      url: process.env.REGISTRY_URL + 'api/v1/StudentDetail/invite',
-      headers: {
-        'content-type': 'application/json',
-      },
-      data: data,
-    };
-
-    var sb_rc_response_text = null;
-    await axios(config_sb_rc)
-      .then(function (response) {
-        //console.log(JSON.stringify(response.data));
-        sb_rc_response_text = response.data;
-      })
-      .catch(function (error) {
-        //console.log(error);
-        sb_rc_response_text = { error: error };
-      });
-
-    return sb_rc_response_text;
-  }
-
-  // register user in keycloak
-  async registerUserKeycloak(username, password, clientToken) {
-    let data = JSON.stringify({
-      enabled: 'true',
-      username: username,
-      credentials: [
-        {
-          type: 'password',
-          value: password,
-          temporary: false,
-        },
-      ],
-    });
-
-    let config = {
-      method: 'post',
-      url:
-        process.env.KEYCLOAK_URL +
-        'admin/realms/' +
-        process.env.REALM_ID +
-        '/users',
-      headers: {
-        'content-type': 'application/json',
-        Authorization: 'Bearer ' + clientToken?.access_token,
-      },
-      data: data,
-    };
-    var response_text = null;
-    await axios(config)
-      .then(function (response) {
-        //console.log(JSON.stringify(response.data));
-        response_text = response.data;
-      })
-      .catch(function (error) {
-        //console.log(error);
-        response_text = { error: error };
-      });
-
-    return response_text;
-  }
-
-  // invite entity in registery
-  async sbrcInvite(inviteSchema, entityName) {
-    let data = JSON.stringify(inviteSchema);
-
-    let config_sb_rc = {
-      method: 'post',
-      url: process.env.REGISTRY_URL + 'api/v1/' + entityName + '/invite',
-      headers: {
-        'content-type': 'application/json',
-      },
-      data: data,
-    };
-
-    var sb_rc_response_text = null;
-    await axios(config_sb_rc)
-      .then(function (response) {
-        //console.log(JSON.stringify(response.data));
-        sb_rc_response_text = response.data;
-      })
-      .catch(function (error) {
-        //console.log(error);
-        sb_rc_response_text = { error: error };
-      });
-
-    return sb_rc_response_text;
-  }
-
-  // invite entity in registery
-  async sbrcUpdate(updateSchema, entityName, osid) {
-    let data = JSON.stringify(updateSchema);
-
-    let config_sb_rc = {
-      method: 'put',
-      url: process.env.REGISTRY_URL + 'api/v1/' + entityName + '/' + osid,
-      headers: {
-        'content-type': 'application/json',
-      },
-      data: data,
-    };
-
-    var sb_rc_response_text = null;
-    await axios(config_sb_rc)
-      .then(function (response) {
-        //console.log(JSON.stringify(response.data));
-        sb_rc_response_text = response.data;
-      })
-      .catch(function (error) {
-        //console.log(error);
-        sb_rc_response_text = { error: error };
-      });
-
-    return sb_rc_response_text;
-  }
-
-  // cred search
-  async credSearch(sb_rc_search) {
-    console.log('sb_rc_search', sb_rc_search);
-
-    let data = JSON.stringify({
-      subject: {
-        id: sb_rc_search[0]?.did ? sb_rc_search[0].did : '',
-      },
-    });
-    // let data = JSON.stringify({
-    //   subjectId: sb_rc_search[0]?.did ? sb_rc_search[0].did : '',
-    // });
-
-    let config = {
-      method: 'post',
-      url: process.env.CRED_URL + '/credentials/search',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      data: data,
-    };
-    let cred_search = null;
-    await axios(config)
-      .then(function (response) {
-        //console.log(JSON.stringify(response.data));
-        cred_search = response.data;
-      })
-      .catch(function (error) {
-        //console.log(error);
-        cred_search = { error: error };
-      });
-
-    return cred_search;
-  }
-
-  // student details
-  async studentDetails(requestbody) {
-    console.log('requestbody', requestbody);
-    var data = JSON.stringify(requestbody);
-
-    var config = {
-      method: 'post',
-      maxBodyLength: Infinity,
-      url: `${process.env.REGISTRY_URL}api/v1/StudentDetail/search`,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      data: data,
-    };
-
-    try {
-      let stdentDetailRes = await axios(config);
-      return stdentDetailRes.data;
-    } catch (err) {
-      console.log('err');
-    }
-  }
-
-  //generateSchema
-  async generateSchema(schemaId) {
-    var config = {
-      method: 'get',
-      maxBodyLength: Infinity,
-      url: `${process.env.SCHEMA_URL}/schema/jsonld?id=${schemaId}`,
-      headers: {},
-    };
-
-    try {
-      const response = await axios(config);
-      console.log('response schema', response.data);
-      return response.data;
-    } catch (error) {
-      console.log('error schema', error);
-    }
-  }
-
-  //issueCredentials
-  async issueCredentials(payload) {
-    var data = JSON.stringify({
-      credential: {
-        '@context': [
-          'https://www.w3.org/2018/credentials/v1',
-          'https://www.w3.org/2018/credentials/examples/v1',
-        ],
-        id: 'did:ulp:b4a191af-d86e-453c-9d0e-dd4771067235',
-        type: ['VerifiableCredential', 'UniversityDegreeCredential'],
-        issuer: `${payload.issuerId}`,
-        issuanceDate: payload.issuanceDate,
-        expirationDate: payload.expirationDate,
-        credentialSubject: payload.credentialSubject,
-        options: {
-          created: '2020-04-02T18:48:36Z',
-          credentialStatus: {
-            type: 'RevocationList2020Status',
-          },
-        },
-      },
-      credentialSchemaId: payload.credSchema.id,
-      tags: ['tag1', 'tag2', 'tag3'],
-    });
-    var config = {
-      method: 'post',
-      maxBodyLength: Infinity,
-      url: process.env.CRED_URL + '/credentials/issue',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      data: data,
-    };
-    try {
-      const response = await axios(config);
-      //console.log('cred response');
-      return response.data;
-    } catch (e) {
-      //console.log('cred error', e.message);
-      return { error: e };
-    }
-  }
-  async studentDetailsV2(requestbody) {
-    console.log('requestbody', requestbody);
-    var data = JSON.stringify(requestbody);
-
-    var config = {
-      method: 'post',
-      maxBodyLength: Infinity,
-      url: `${process.env.REGISTRY_URL}api/v1/StudentDetailV2/search`,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      data: data,
-    };
-
-    try {
-      let stdentDetailRes = await axios(config);
-      return stdentDetailRes.data;
-    } catch (err) {
-      console.log('err');
-    }
-  }
-
-  async studentV2(requestbody) {
-    const axios = require('axios');
-    let data = JSON.stringify(requestbody);
-
-    let config = {
-      method: 'post',
-      maxBodyLength: Infinity,
-      url: 'https://ulp.uniteframework.io/registry/api/v1/StudentV2/search',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      data: data,
-    };
-
-    try {
-      let stdentDetailRes = await axios(config);
-      return stdentDetailRes.data;
-    } catch (err) {
-      console.log('err');
-    }
-  }
-
-  async findStudent(osid) {
-    let config = {
-      method: 'get',
-      maxBodyLength: Infinity,
-      url: 'https://ulp.uniteframework.io/registry/api/v1/StudentV2/1-ea0b0d65-1124-4f2b-af34-0a1eb7a3a6ba',
-      headers: {},
-    };
-
-    axios
-      .request(config)
-      .then((response) => {
-        console.log('1899', JSON.stringify(response.data));
-      })
-      .catch((error) => {
-        console.log(error);
-      });
   }
 }
