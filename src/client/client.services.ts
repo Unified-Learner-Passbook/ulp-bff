@@ -454,6 +454,7 @@ export class ClientService {
                     username: iterator.aadhar_token,
                     aadhaar_status: 'verified',
                     aadhaar_enc: '',
+                    gender:iterator?.gender ? iterator.gender : ""
                   };
                   console.log('inviteSchema', inviteSchema);
                   let createStudent = await this.sbrcService.sbrcInvite(
