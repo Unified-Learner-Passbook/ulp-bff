@@ -765,7 +765,13 @@ export class SSOService {
         //find if student account present in sb rc or not
         const sb_rc_search = await this.sbrcService.sbrcSearchEL(
           digiacc === 'ewallet' ? 'StudentV2' : 'TeacherV1',
-          studentUsername?.preferred_username,
+          {
+            filters: {
+              username: {
+                eq: studentUsername?.preferred_username,
+              },
+            },
+          },
         );
         //console.log(sb_rc_search);
         if (sb_rc_search?.error) {
