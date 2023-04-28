@@ -183,7 +183,14 @@ export class PortalService {
 
               if (render_response?.error) {
               } else {
-                fieldcount = render_response.length;
+                //check only student count
+                let fieldcount_student = 0;
+                for (let i = 0; i < render_response.length; i++) {
+                  if (render_response[i]?.credentialSubject?.student_name) {
+                    fieldcount_student++;
+                  }
+                }
+                fieldcount = fieldcount_student;
               }
             }
             countlog[field] = fieldcount;
