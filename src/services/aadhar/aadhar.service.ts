@@ -25,7 +25,7 @@ export class AadharService {
       response_text = {
         success: true,
         status: 'aadhaar_success',
-        message: 'Aadhaar Success',
+        message: 'Aadhaar Verification Completed Successfully.',
         result: {
           ret: 'y',
           code: '80796040edc9414287bf035becc4f9a3',
@@ -99,7 +99,7 @@ export class AadharService {
         return {
           success: false,
           status: 'aadhaar_error',
-          message: 'Aadhaar Error',
+          message: 'Aadhaar Verification Failed.',
           result: response_text?.error,
         };
       } else {
@@ -109,7 +109,7 @@ export class AadharService {
         return {
           success: true,
           status: 'aadhaar_success',
-          message: 'Aadhaar Success',
+          message: 'Aadhaar Verification Completed Successfully.',
           result: response_text,
           decodedxml: decodedxml,
         };
@@ -174,7 +174,7 @@ export class AadharService {
         return {
           success: false,
           status: 'aadhaar_error',
-          message: 'Aadhaar Error',
+          message: 'Aadhaar Verification Failed.',
           result: response_text?.error,
         };
       } else {
@@ -184,7 +184,7 @@ export class AadharService {
         return {
           success: true,
           status: 'aadhaar_success',
-          message: 'Aadhaar Success',
+          message: 'Aadhaar Verification Completed Successfully.',
           result: response_text,
           decodedxml: decodedxml,
         };
@@ -255,7 +255,7 @@ export class AadharService {
         return {
           success: false,
           status: 'aadhaar_error',
-          message: 'Aadhaar Error',
+          message: 'Aadhaar Verification Failed.',
           result: response_text?.error,
         };
       } else {
@@ -265,7 +265,7 @@ export class AadharService {
         return {
           success: true,
           status: 'aadhaar_success',
-          message: 'Aadhaar Success',
+          message: 'Aadhaar Verification Completed Successfully.',
           result: response_text,
           decodedxml: decodedxml,
         };

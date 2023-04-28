@@ -25,14 +25,14 @@ export class PortalService {
         return response.status(401).send({
           success: false,
           status: 'keycloak_token_bad_request',
-          message: 'Unauthorized',
+          message: 'You do not have access for this request.',
           result: null,
         });
       } else if (!username?.preferred_username) {
         return response.status(401).send({
           success: false,
           status: 'keycloak_token_error',
-          message: 'Keycloak Token Expired',
+          message: 'Your Login Session Expired.',
           result: null,
         });
       } else {
@@ -53,8 +53,8 @@ export class PortalService {
         } else if (sb_rc_search.length === 0) {
           return response.status(404).send({
             success: false,
-            status: 'sb_rc_no_did_found',
-            message: 'Teacher not Found in Sunbird RC',
+            status: 'sb_rc_search_no_found',
+            message: 'Data Not Found in System.',
             result: null,
           });
         } else {
@@ -66,16 +66,14 @@ export class PortalService {
             let fieldcount = 0;
             //students_registered
             if (field === 'students_registered') {
-              const sb_rc_search_student_detail = await this.sbrcService.sbrcSearchEL(
-                'StudentDetailV2',
-                {
+              const sb_rc_search_student_detail =
+                await this.sbrcService.sbrcSearchEL('StudentDetailV2', {
                   filters: {
                     school_udise: {
                       eq: schoolUdise,
                     },
                   },
-                },
-              );
+                });
               if (sb_rc_search_student_detail?.error) {
               } else {
                 fieldcount = sb_rc_search_student_detail.length;
@@ -83,9 +81,8 @@ export class PortalService {
             }
             //claims_pending
             if (field === 'claims_pending') {
-              const sb_rc_search_student_detail = await this.sbrcService.sbrcSearchEL(
-                'StudentDetailV2',
-                {
+              const sb_rc_search_student_detail =
+                await this.sbrcService.sbrcSearchEL('StudentDetailV2', {
                   filters: {
                     school_udise: {
                       eq: schoolUdise,
@@ -94,8 +91,7 @@ export class PortalService {
                       eq: 'pending',
                     },
                   },
-                },
-              );
+                });
               if (sb_rc_search_student_detail?.error) {
               } else {
                 fieldcount = sb_rc_search_student_detail.length;
@@ -103,9 +99,8 @@ export class PortalService {
             }
             //claims_approved
             if (field === 'claims_approved') {
-              const sb_rc_search_student_detail = await this.sbrcService.sbrcSearchEL(
-                'StudentDetailV2',
-                {
+              const sb_rc_search_student_detail =
+                await this.sbrcService.sbrcSearchEL('StudentDetailV2', {
                   filters: {
                     school_udise: {
                       eq: schoolUdise,
@@ -114,8 +109,7 @@ export class PortalService {
                       eq: 'approved',
                     },
                   },
-                },
-              );
+                });
               if (sb_rc_search_student_detail?.error) {
               } else {
                 fieldcount = sb_rc_search_student_detail.length;
@@ -123,9 +117,8 @@ export class PortalService {
             }
             //claims_rejected
             if (field === 'claims_rejected') {
-              const sb_rc_search_student_detail = await this.sbrcService.sbrcSearchEL(
-                'StudentDetailV2',
-                {
+              const sb_rc_search_student_detail =
+                await this.sbrcService.sbrcSearchEL('StudentDetailV2', {
                   filters: {
                     school_udise: {
                       eq: schoolUdise,
@@ -134,8 +127,7 @@ export class PortalService {
                       eq: 'rejected',
                     },
                   },
-                },
-              );
+                });
               if (sb_rc_search_student_detail?.error) {
               } else {
                 fieldcount = sb_rc_search_student_detail.length;
@@ -146,13 +138,16 @@ export class PortalService {
               //find school did from school udise id
               let did = '';
               //find if student account present in sb rc or not
-              const sb_rc_search = await this.sbrcService.sbrcSearchEL('SchoolDetail', {
-                filters: {
-                  udiseCode: {
-                    eq: schoolUdise,
+              const sb_rc_search = await this.sbrcService.sbrcSearchEL(
+                'SchoolDetail',
+                {
+                  filters: {
+                    udiseCode: {
+                      eq: schoolUdise,
+                    },
                   },
                 },
-              });
+              );
               if (sb_rc_search?.error) {
               } else if (sb_rc_search.length === 0) {
                 // no school found
