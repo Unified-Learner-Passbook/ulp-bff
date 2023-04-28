@@ -48,7 +48,7 @@ export class ClientService {
         return response.status(501).send({
           success: false,
           status: 'sb_rc_search_error',
-          message: 'Sunbird Search Failed',
+          message: 'System Search Error ! Please try again.',
           result: sb_rc_search_detail?.error,
         });
       } else if (sb_rc_search_detail.length === 0) {
@@ -66,21 +66,21 @@ export class ClientService {
           return response.status(400).send({
             success: false,
             status: 'sb_rc_register_error',
-            message: 'Sunbird RC Registration Failed',
+            message: 'System Register Error ! Please try again.',
             result: sb_rc_response_text?.error,
           });
         } else if (sb_rc_response_text?.params?.status === 'SUCCESSFUL') {
           return response.status(200).send({
             success: true,
             status: 'sb_rc_registred',
-            message: 'Client Registered in Subird RC',
+            message: 'System Register Success.',
             result: null,
           });
         } else {
           return response.status(400).send({
             success: false,
             status: 'sb_rc_register_duplicate',
-            message: 'Client Already Registered in Sunbird RC',
+            message: 'Duplicate Data Found.',
             result: sb_rc_response_text,
           });
         }
@@ -88,7 +88,7 @@ export class ClientService {
         return response.status(200).send({
           success: true,
           status: 'sb_rc_search_found',
-          message: 'Client Already Found in Subird RC',
+          message: 'Data Found in System.',
           result: null,
         });
       }
@@ -121,7 +121,7 @@ export class ClientService {
         return response.status(501).send({
           success: false,
           status: 'sb_rc_search_error',
-          message: 'Sunbird Search Failed',
+          message: 'System Search Error ! Please try again.',
           result: sb_rc_search_detail?.error,
         });
       } else if (sb_rc_search_detail.length === 0) {
@@ -129,14 +129,14 @@ export class ClientService {
         return response.status(501).send({
           success: false,
           status: 'sb_rc_search_no_found',
-          message: 'Sunbird Search No Found',
+          message: 'Data Not Found in System.',
           result: sb_rc_search_detail,
         });
       } else {
         return response.status(200).send({
           success: true,
           status: 'sb_rc_search_found',
-          message: 'Client Found in Subird RC',
+          message: 'Data Found in System.',
           result: sb_rc_search_detail,
         });
       }
@@ -178,7 +178,7 @@ export class ClientService {
         return response.status(501).send({
           success: false,
           status: 'sb_rc_search_error',
-          message: 'Sunbird Search Failed',
+          message: 'System Search Error ! Please try again.',
           result: sb_rc_search_detail?.error,
         });
       } else if (sb_rc_search_detail.length === 0) {
@@ -241,16 +241,16 @@ export class ClientService {
             } else {
               return response.status(200).send({
                 success: false,
-                status: 'Success',
-                message: 'Unable to create schoolDetail',
+                status: 'sb_rc_register_error',
+                message: 'System Register Error ! Please try again.',
                 result: null,
               });
             }
           } else {
             return response.status(200).send({
               success: false,
-              status: 'Success',
-              message: 'Unable to generate schoolDid',
+              status: 'did_generate_error',
+              message: 'Identity Generation Failed ! Please Try Again.',
               result: null,
             });
           }
@@ -367,7 +367,8 @@ export class ClientService {
                     });
                     iserror = true;
                     loglist[i_count].status = false;
-                    loglist[i_count].error = 'unable to issue credentials!';
+                    loglist[i_count].error =
+                      'Unable to Issue Credentials ! Please Try Again.';
                     //loglist[i_count].errorlog = {};
                     error_count++;
                   }
@@ -409,7 +410,7 @@ export class ClientService {
                           iserror = true;
                           loglist[i_count].status = false;
                           loglist[i_count].error =
-                            'unable to issue credentials!';
+                            'Unable to Issue Credentials ! Please Try Again.';
                           //loglist[i_count].errorlog = {};
                           error_count++;
                         }
@@ -421,7 +422,7 @@ export class ClientService {
                       iserror = true;
                       loglist[i_count].status = false;
                       loglist[i_count].error =
-                        'unable to update did inside RC!';
+                        'Unable to Update Student Identity ! Please Try Again.';
                       //loglist[i_count].errorlog = {};
                       error_count++;
                     }
@@ -431,7 +432,8 @@ export class ClientService {
                     });
                     iserror = true;
                     loglist[i_count].status = false;
-                    loglist[i_count].error = 'unable to generate student did!';
+                    loglist[i_count].error =
+                      'Unable to Generate Student DID ! Please Try Again.';
                     //loglist[i_count].errorlog = {};
                     error_count++;
                   }
@@ -454,7 +456,7 @@ export class ClientService {
                     username: iterator.aadhar_token,
                     aadhaar_status: 'verified',
                     aadhaar_enc: '',
-                    gender:iterator?.gender ? iterator.gender : ""
+                    gender: iterator?.gender ? iterator.gender : '',
                   };
                   console.log('inviteSchema', inviteSchema);
                   let createStudent = await this.sbrcService.sbrcInvite(
@@ -486,7 +488,8 @@ export class ClientService {
                       });
                       iserror = true;
                       loglist[i_count].status = false;
-                      loglist[i_count].error = 'unable to issue credentials!';
+                      loglist[i_count].error =
+                        'Unable to Issue Credentials ! Please Try Again.';
                       //loglist[i_count].errorlog = {};
                       error_count++;
                     }
@@ -496,7 +499,8 @@ export class ClientService {
                     });
                     iserror = true;
                     loglist[i_count].status = false;
-                    loglist[i_count].error = 'unable to create student in RC!';
+                    loglist[i_count].error =
+                      'Unable to Create Student Account ! Please Try Again.';
                     //loglist[i_count].errorlog = {};
                     error_count++;
                   }
@@ -506,7 +510,8 @@ export class ClientService {
                   });
                   iserror = true;
                   loglist[i_count].status = false;
-                  loglist[i_count].error = 'unable to generate student did!';
+                  loglist[i_count].error =
+                    'Unable to Generate Student DID ! Please Try Again.';
                   //loglist[i_count].errorlog = {};
                   error_count++;
                 }
@@ -515,7 +520,7 @@ export class ClientService {
               console.log(e);
               iserror = true;
               loglist[i_count].status = false;
-              loglist[i_count].error = 'Exception Occured';
+              loglist[i_count].error = 'System Exception ! Please Try Again.';
               loglist[i_count].errorlog = JSON.stringify(e);
               error_count++;
             }
@@ -527,15 +532,15 @@ export class ClientService {
           /*if (responseArray.length > 0) {
             return response.status(200).send({
               success: true,
-              status: 'Success',
-              message: 'Bulk upload result!',
+              status: 'student_cred_bulk_api_success',
+              message: 'Student Cred Bulk API Success',
               result: responseArray,
             });
           } else {
             return response.status(200).send({
               success: false,
-              status: 'Success',
-              message: 'Unable to generate did or crdentials',
+              status: 'did_cred_generate_error',
+              message: 'User Identity and Credentials Generation Failed. Try Again.',
               result: null,
             });
           }*/
@@ -552,8 +557,9 @@ export class ClientService {
         } else {
           return response.status(200).send({
             success: false,
-            status: 'Success',
-            message: 'Unable to create schema',
+            status: 'did_cred_generate_error',
+            message:
+              'User Identity and Credentials Generation Failed. Try Again.',
             result: null,
           });
         }

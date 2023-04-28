@@ -35,7 +35,7 @@ export class SSOService {
         return response.status(401).send({
           success: false,
           status: 'keycloak_client_token_error',
-          message: 'Bad Request for Keycloak Client Token',
+          message: 'System Authentication Failed ! Please Try Again.',
           result: null,
         });
       } else {
@@ -44,7 +44,7 @@ export class SSOService {
           return response.status(400).send({
             success: false,
             status: 'did_generate_error',
-            message: 'DID Generate Failed. Try Again.',
+            message: 'Identity Generation Failed ! Please Try Again.',
             result: issuerRes?.error,
           });
         } else {
@@ -61,7 +61,7 @@ export class SSOService {
             return response.status(400).send({
               success: false,
               status: 'keycloak_register_duplicate',
-              message: 'Student Already Registered in Keycloak',
+              message: 'Duplicate User.',
               result: null,
             });
           } else {
@@ -83,22 +83,21 @@ export class SSOService {
               return response.status(400).send({
                 success: false,
                 status: 'sb_rc_register_error',
-                message: 'Sunbird RC Student Registration Failed',
+                message: 'System Register Error ! Please try again.',
                 result: sb_rc_response_text?.error,
               });
             } else if (sb_rc_response_text?.params?.status === 'SUCCESSFUL') {
               return response.status(201).send({
                 success: true,
                 status: 'registered',
-                message:
-                  'Student Account Created in Keycloak and Registered in Sunbird RC',
+                message: 'Student Registered Successfully.',
                 result: sb_rc_response_text,
               });
             } else {
               return response.status(400).send({
                 success: false,
                 status: 'sb_rc_register_duplicate',
-                message: 'Student Already Registered in Sunbird RC',
+                message: 'Duplicate Data Found.',
                 result: sb_rc_response_text,
               });
             }
@@ -144,14 +143,14 @@ export class SSOService {
           return response.status(501).send({
             success: false,
             status: 'sb_rc_search_error',
-            message: 'Sunbird RC Student Search Failed',
+            message: 'System Search Error ! Please try again.',
             result: sb_rc_search?.error,
           });
         } else if (sb_rc_search.length !== 1) {
           return response.status(404).send({
             success: false,
-            status: 'sb_rc_no_found',
-            message: 'Student Not Found in Sunbird RC',
+            status: 'sb_rc_search_no_found',
+            message: 'Data Not Found in System.',
             result: null,
           });
         } else {
@@ -193,21 +192,21 @@ export class SSOService {
         return response.status(501).send({
           success: false,
           status: 'sb_rc_search_error',
-          message: 'Sunbird RC Student Search Failed',
+          message: 'System Search Error ! Please try again.',
           result: null,
         });
       } else if (sb_rc_search.length !== 1) {
         return response.status(404).send({
           success: false,
-          status: 'sb_rc_no_did_found',
-          message: 'Student DID not Found in Sunbird RC',
+          status: 'sb_rc_search_no_found',
+          message: 'Data Not Found in System.',
           result: null,
         });
       } else {
         return response.status(200).send({
           success: true,
           status: 'did_success',
-          message: 'DID Found',
+          message: 'Identity Found.',
           result: sb_rc_search[0]?.did ? sb_rc_search[0].did : '',
         });
       }
@@ -228,15 +227,15 @@ export class SSOService {
       if (studentUsername?.error) {
         return response.status(401).send({
           success: false,
-          status: 'keycloak_student_token_bad_request',
-          message: 'Unauthorized',
+          status: 'keycloak_token_bad_request',
+          message: 'You do not have access for this request.',
           result: null,
         });
       } else if (!studentUsername?.preferred_username) {
         return response.status(401).send({
           success: false,
-          status: 'keycloak_student_token_error',
-          message: 'Keycloak Student Token Expired',
+          status: 'keycloak_token_error',
+          message: 'Your Login Session Expired.',
           result: null,
         });
       } else {
@@ -254,14 +253,14 @@ export class SSOService {
           return response.status(501).send({
             success: false,
             status: 'sb_rc_search_error',
-            message: 'Sunbird RC Student Search Failed',
+            message: 'System Search Error ! Please try again.',
             result: sb_rc_search?.error.message,
           });
         } else if (sb_rc_search.length !== 1) {
           return response.status(404).send({
             success: false,
-            status: 'sb_rc_no_did_found',
-            message: 'Student DID not Found in Sunbird RC',
+            status: 'sb_rc_search_no_found',
+            message: 'Data Not Found in System.',
             result: null,
           });
         } else {
@@ -271,21 +270,21 @@ export class SSOService {
             return response.status(501).send({
               success: false,
               status: 'cred_search_error',
-              message: 'Student Credentials Search Failed',
+              message: 'Credentials Search Failed ! Please Try Again.',
               result: cred_search?.error,
             });
           } else if (cred_search.length === 0) {
             return response.status(404).send({
               success: false,
               status: 'cred_search_no_found',
-              message: 'Student Credentials Not Found',
+              message: 'Credentials Not Found',
               result: null,
             });
           } else {
             return response.status(200).send({
               success: true,
               status: 'cred_success',
-              message: 'Student Credentials Found',
+              message: 'Credentials Found',
               result: cred_search,
             });
           }
@@ -335,7 +334,7 @@ export class SSOService {
           //render_response = { error: e };
         }
         if (render_response == null) {
-          return 'Cred Render API Failed';
+          return 'Credentials Render Failed ! Please Try Again.';
         } else {
           //return render_response;
           try {
@@ -369,15 +368,15 @@ export class SSOService {
       if (studentUsername?.error) {
         return response.status(401).send({
           success: false,
-          status: 'keycloak_student_token_bad_request',
-          message: 'Unauthorized',
+          status: 'keycloak_token_bad_request',
+          message: 'You do not have access for this request.',
           result: null,
         });
       } else if (!studentUsername?.preferred_username) {
         return response.status(400).send({
           success: false,
-          status: 'keycloak_student_token_error',
-          message: 'Keycloak Student Token Expired',
+          status: 'keycloak_token_error',
+          message: 'Your Login Session Expired.',
           result: null,
         });
       } else {
@@ -407,7 +406,7 @@ export class SSOService {
           return response.status(400).send({
             success: false,
             status: 'render_api_failed',
-            message: 'Cred Render API Failed',
+            message: 'Credentials Render Failed ! Please Try Again.',
             result: null,
           });
         } else {
@@ -453,7 +452,7 @@ export class SSOService {
         return response.status(400).send({
           success: false,
           status: 'render_template_api_failed',
-          message: 'Render Template API Failed',
+          message: 'Render Template Failed ! Please Try Again.',
           result: null,
         });
       } else {
@@ -498,7 +497,7 @@ export class SSOService {
         return response.status(400).send({
           success: false,
           status: 'render_template_schema_api_failed',
-          message: 'Render Template Schema API Failed',
+          message: 'Render Template Schema Failed ! Please Try Again.',
           result: null,
         });
       } else {
@@ -527,14 +526,14 @@ export class SSOService {
         return response.status(401).send({
           success: false,
           status: 'keycloak_token_bad_request',
-          message: 'Unauthorized',
+          message: 'You do not have access for this request.',
           result: null,
         });
       } else if (!studentUsername?.preferred_username) {
         return response.status(400).send({
           success: false,
           status: 'keycloak_token_error',
-          message: 'Keycloak Token Expired',
+          message: 'Your Login Session Expired.',
           result: null,
         });
       } else {
@@ -564,7 +563,7 @@ export class SSOService {
           return response.status(400).send({
             success: false,
             status: 'cred_search_api_failed',
-            message: 'Cred Search API Failed',
+            message: 'Credentials Search Failed ! Please Try Again.',
             result: render_response,
           });
         } else {
@@ -594,14 +593,14 @@ export class SSOService {
         return response.status(401).send({
           success: false,
           status: 'keycloak_bad_request',
-          message: 'Unauthorized',
+          message: 'You do not have access for this request.',
           result: null,
         });
       } else if (!studentUsername?.preferred_username) {
         return response.status(400).send({
           success: false,
           status: 'keycloak_token_error',
-          message: 'Keycloak Token Expired',
+          message: 'Your Login Session Expired.',
           result: null,
         });
       } else {
@@ -630,7 +629,7 @@ export class SSOService {
           return response.status(400).send({
             success: false,
             status: 'cred_issue_api_failed',
-            message: 'Cred Issue API Failed',
+            message: 'Credentials Issue Failed ! Please Try Again.',
             result: render_response,
           });
         } else {
@@ -676,7 +675,7 @@ export class SSOService {
         return response.status(400).send({
           success: false,
           status: 'cred_schema_api_failed',
-          message: 'Cred Schema API Failed',
+          message: 'Credentials Schema Failed ! Please Try Again.',
           result: response_text,
         });
       } else {
@@ -721,7 +720,7 @@ export class SSOService {
         return response.status(400).send({
           success: false,
           status: 'cred_schema_json_api_failed',
-          message: 'Cred Schema JSON API Failed',
+          message: 'Credentials Schema JSON Failed ! Please Try Again.',
           result: response_text,
         });
       } else {
@@ -749,15 +748,15 @@ export class SSOService {
       if (studentUsername?.error) {
         return response.status(401).send({
           success: false,
-          status: 'keycloak_user_token_bad_request',
-          message: 'Unauthorized',
+          status: 'keycloak_token_bad_request',
+          message: 'You do not have access for this request.',
           result: null,
         });
       } else if (!studentUsername?.preferred_username) {
         return response.status(400).send({
           success: false,
-          status: 'keycloak_user_token_error',
-          message: 'Keycloak User Token Expired',
+          status: 'keycloak_token_error',
+          message: 'Your Login Session Expired.',
           result: null,
         });
       } else {
@@ -778,7 +777,7 @@ export class SSOService {
           return response.status(501).send({
             success: false,
             status: 'sb_rc_search_error',
-            message: 'Sunbird RC User Search Failed',
+            message: 'System Search Error ! Please try again.',
             result: sb_rc_search?.error,
           });
         } else if (sb_rc_search.length === 0) {
@@ -786,7 +785,7 @@ export class SSOService {
           return response.status(501).send({
             success: false,
             status: 'sb_rc_search_no_found',
-            message: 'Sunbird RC User No Found',
+            message: 'Data Not Found in System.',
             result: sb_rc_search?.error,
           });
         } else {
@@ -809,7 +808,7 @@ export class SSOService {
               return response.status(501).send({
                 success: false,
                 status: 'sb_rc_search_error',
-                message: 'Sunbird RC User Search Failed',
+                message: 'System Search Error ! Please try again.',
                 result: sb_rc_search_detail?.error,
               });
             } else if (sb_rc_search_detail.length === 0) {
@@ -817,7 +816,7 @@ export class SSOService {
               return response.status(501).send({
                 success: false,
                 status: 'sb_rc_search_no_found',
-                message: 'Sunbird RC User No Found',
+                message: 'Data Not Found in System.',
                 result: sb_rc_search_detail?.error,
               });
             } else {
@@ -825,7 +824,7 @@ export class SSOService {
               return response.status(200).send({
                 success: true,
                 status: 'sb_rc_search_found',
-                message: 'Sunbird RC User Found',
+                message: 'Data Found in System.',
                 result: sb_rc_search[0],
                 detail: sb_rc_search_detail[0],
               });
@@ -835,7 +834,7 @@ export class SSOService {
             return response.status(200).send({
               success: true,
               status: 'sb_rc_search_found',
-              message: 'Sunbird RC User Found',
+              message: 'Data Found in System.',
               result: sb_rc_search[0],
               detail: null,
             });
@@ -859,15 +858,15 @@ export class SSOService {
       if (studentUsername?.error) {
         return response.status(401).send({
           success: false,
-          status: 'keycloak_user_token_bad_request',
-          message: 'Unauthorized',
+          status: 'keycloak_token_bad_request',
+          message: 'You do not have access for this request.',
           result: null,
         });
       } else if (!studentUsername?.preferred_username) {
         return response.status(400).send({
           success: false,
-          status: 'keycloak_user_token_error',
-          message: 'Keycloak User Token Expired',
+          status: 'keycloak_token_error',
+          message: 'Your Login Session Expired.',
           result: null,
         });
       } else {
@@ -887,7 +886,7 @@ export class SSOService {
           return response.status(501).send({
             success: false,
             status: 'sb_rc_search_error',
-            message: 'Sunbird RC School Search Failed',
+            message: 'System Search Error ! Please try again.',
             result: sb_rc_search?.error,
           });
         } else if (sb_rc_search.length === 0) {
@@ -895,7 +894,7 @@ export class SSOService {
           return response.status(501).send({
             success: false,
             status: 'sb_rc_search_no_found',
-            message: 'Sunbird RC School No Found',
+            message: 'Data Not Found in System.',
             result: sb_rc_search?.error,
           });
         } else {
@@ -903,7 +902,7 @@ export class SSOService {
           return response.status(200).send({
             success: true,
             status: 'sb_rc_search_found',
-            message: 'Sunbird RC School Found',
+            message: 'Data Found in System.',
             result: sb_rc_search[0],
           });
         }
@@ -987,7 +986,7 @@ export class SSOService {
         return response.status(401).send({
           success: false,
           status: 'digilocker_token_bad_request',
-          message: 'Unauthorized sub2',
+          message: 'You do not have access to use Digilocker.',
           result: response_digi?.error,
         });
       } else {
@@ -998,7 +997,7 @@ export class SSOService {
             return response.status(401).send({
               success: false,
               status: 'digilocker_token_bad_request',
-              message: 'Unauthorized sub',
+              message: 'You do not have access to use Digilocker.',
               result: response_digi?.error,
             });
           } else {
@@ -1039,7 +1038,7 @@ export class SSOService {
               return response.status(501).send({
                 success: false,
                 status: 'sb_rc_search_error',
-                message: 'Sunbird RC Search Failed',
+                message: 'System Search Error ! Please try again.',
                 result: sb_rc_search?.error.message,
               });
             } else if (sb_rc_search.length === 0) {
@@ -1090,7 +1089,7 @@ export class SSOService {
                   return response.status(401).send({
                     success: false,
                     status: 'keycloak_client_token_error',
-                    message: 'Bad Request for Keycloak Client Token',
+                    message: 'System Authentication Failed ! Please Try Again.',
                     result: null,
                   });
                 } else {
@@ -1106,7 +1105,7 @@ export class SSOService {
                     return response.status(400).send({
                       success: false,
                       status: 'keycloak_register_duplicate',
-                      message: 'User Already Registered in Keycloak',
+                      message: 'Duplicate User.',
                       result: null,
                     });
                   } else {
@@ -1143,7 +1142,7 @@ export class SSOService {
                           return response.status(501).send({
                             success: false,
                             status: 'sb_rc_search_error',
-                            message: 'Sunbird RC User Search Failed',
+                            message: 'System Search Error ! Please try again.',
                             result: sb_rc_search_detail?.error,
                           });
                         } else if (sb_rc_search_detail.length === 0) {
@@ -1151,7 +1150,7 @@ export class SSOService {
                           return response.status(501).send({
                             success: false,
                             status: 'sb_rc_search_no_found',
-                            message: 'Sunbird RC User No Found',
+                            message: 'Data Not Found in System.',
                             result: sb_rc_search_detail,
                           });
                         } else {
@@ -1204,7 +1203,7 @@ export class SSOService {
                     return response.status(501).send({
                       success: false,
                       status: 'sb_rc_search_error',
-                      message: 'Sunbird RC User Search Failed',
+                      message: 'System Search Error ! Please try again.',
                       result: sb_rc_search_detail?.error,
                     });
                   } else if (sb_rc_search_detail.length === 0) {
@@ -1212,7 +1211,7 @@ export class SSOService {
                     return response.status(501).send({
                       success: false,
                       status: 'sb_rc_search_no_found',
-                      message: 'Sunbird RC User No Found',
+                      message: 'Data Not Found in System.',
                       result: sb_rc_search_detail,
                     });
                   } else {
@@ -1249,7 +1248,7 @@ export class SSOService {
           return response.status(401).send({
             success: false,
             status: 'digilocker_token_bad_request',
-            message: 'Unauthorized sub3',
+            message: 'You do not have access to use Digilocker.',
             result: response_digi,
           });
         }
@@ -1304,7 +1303,7 @@ export class SSOService {
           if (uuid === null) {
             return response.status(400).send({
               success: false,
-              status: 'aadhaar_api_error',
+              status: 'aadhaar_api_uuid_error',
               message: 'Aadhar API UUID Not Found',
               result: uuid,
             });
@@ -1332,7 +1331,7 @@ export class SSOService {
               return response.status(501).send({
                 success: false,
                 status: 'sb_rc_search_error',
-                message: 'Sunbird RC Search Failed',
+                message: 'System Search Error ! Please try again.',
                 result: sb_rc_search?.error.message,
               });
             } else if (sb_rc_search.length === 0) {
@@ -1362,7 +1361,7 @@ export class SSOService {
                 return response.status(400).send({
                   success: false,
                   status: 'sb_rc_update_error',
-                  message: 'Sunbird RC Digilocker Id Update Failed',
+                  message: 'System Update Error ! Please try again.',
                   result: sb_rc_response_text?.error,
                 });
               } else if (sb_rc_response_text?.params?.status === 'SUCCESSFUL') {
@@ -1384,7 +1383,8 @@ export class SSOService {
                     return response.status(401).send({
                       success: false,
                       status: 'keycloak_client_token_error',
-                      message: 'Bad Request for Keycloak Client Token',
+                      message:
+                        'System Authentication Failed ! Please Try Again.',
                       result: null,
                     });
                   } else {
@@ -1400,7 +1400,7 @@ export class SSOService {
                       return response.status(400).send({
                         success: false,
                         status: 'keycloak_register_duplicate',
-                        message: 'User Already Registered in Keycloak',
+                        message: 'Duplicate User.',
                         result: null,
                       });
                     } else {
@@ -1437,7 +1437,8 @@ export class SSOService {
                             return response.status(501).send({
                               success: false,
                               status: 'sb_rc_search_error',
-                              message: 'Sunbird RC User Search Failed',
+                              message:
+                                'System Search Error ! Please try again.',
                               result: sb_rc_search_detail?.error,
                             });
                           } else if (sb_rc_search_detail.length === 0) {
@@ -1445,7 +1446,7 @@ export class SSOService {
                             return response.status(501).send({
                               success: false,
                               status: 'sb_rc_search_no_found',
-                              message: 'Sunbird RC User No Found',
+                              message: 'Data Not Found in System.',
                               result: sb_rc_search_detail?.error,
                             });
                           } else {
@@ -1494,7 +1495,7 @@ export class SSOService {
                       return response.status(501).send({
                         success: false,
                         status: 'sb_rc_search_error',
-                        message: 'Sunbird RC User Search Failed',
+                        message: 'System Search Error ! Please try again.',
                         result: sb_rc_search_detail?.error,
                       });
                     } else if (sb_rc_search_detail.length === 0) {
@@ -1502,7 +1503,7 @@ export class SSOService {
                       return response.status(501).send({
                         success: false,
                         status: 'sb_rc_search_no_found',
-                        message: 'Sunbird RC User No Found',
+                        message: 'Data Not Found in System.',
                         result: sb_rc_search_detail?.error,
                       });
                     } else {
@@ -1533,7 +1534,7 @@ export class SSOService {
                 return response.status(400).send({
                   success: false,
                   status: 'sb_rc_update_error',
-                  message: 'Sunbird RC Digilocker Id Update Failed',
+                  message: 'System Update Error ! Please try again.',
                   result: sb_rc_response_text,
                 });
               }
@@ -1542,7 +1543,7 @@ export class SSOService {
         } else {
           return response.status(200).send({
             success: false,
-            status: 'aadhaar_api_success',
+            status: 'invalid_aadhaar',
             message: 'Invalid Aadhaar',
             result: null,
           });
@@ -1571,7 +1572,7 @@ export class SSOService {
         return response.status(401).send({
           success: false,
           status: 'keycloak_client_token_error',
-          message: 'Bad Request for Keycloak Client Token',
+          message: 'System Authentication Failed ! Please Try Again.',
           result: null,
         });
       } else {
@@ -1595,7 +1596,7 @@ export class SSOService {
           return response.status(400).send({
             success: false,
             status: 'keycloak_register_duplicate',
-            message: 'User Already Registered in Keycloak',
+            message: 'Duplicate User.',
             result: null,
           });
         } else {
@@ -1617,7 +1618,7 @@ export class SSOService {
               return response.status(501).send({
                 success: false,
                 status: 'sb_rc_search_error',
-                message: 'Sunbird RC Student Search Failed',
+                message: 'System Search Error ! Please try again.',
                 result: sb_rc_search?.error,
               });
             } else if (sb_rc_search.length === 0) {
@@ -1636,7 +1637,7 @@ export class SSOService {
                 return response.status(400).send({
                   success: false,
                   status: 'sb_rc_register_error',
-                  message: 'Sunbird RC Student Registration Failed',
+                  message: 'System Register Error ! Please try again.',
                   result: sb_rc_response_text?.error,
                 });
               } else if (sb_rc_response_text?.params?.status === 'SUCCESSFUL') {
@@ -1654,7 +1655,7 @@ export class SSOService {
                   return response.status(400).send({
                     success: false,
                     status: 'sb_rc_register_error',
-                    message: 'Sunbird RC Student Registration Failed',
+                    message: 'System Register Error ! Please try again.',
                     result: sb_rc_response_text_detail?.error,
                   });
                 } else if (
@@ -1664,7 +1665,7 @@ export class SSOService {
                   return response.status(400).send({
                     success: false,
                     status: 'sb_rc_register_duplicate',
-                    message: 'Student Already Registered in Sunbird RC',
+                    message: 'Duplicate Data Found.',
                     result: sb_rc_response_text_detail,
                   });
                 }
@@ -1672,7 +1673,7 @@ export class SSOService {
                 return response.status(400).send({
                   success: false,
                   status: 'sb_rc_register_duplicate',
-                  message: 'Student Already Registered in Sunbird RC',
+                  message: 'Duplicate Data Found.',
                   result: sb_rc_response_text,
                 });
               }
@@ -1698,7 +1699,7 @@ export class SSOService {
                 return response.status(400).send({
                   success: false,
                   status: 'sb_rc_update_error',
-                  message: 'Sunbird RC Student Update Failed',
+                  message: 'System Update Error ! Please try again.',
                   result: sb_rc_response_text?.error,
                 });
               } else if (sb_rc_response_text?.params?.status === 'SUCCESSFUL') {
@@ -1720,7 +1721,7 @@ export class SSOService {
                   return response.status(501).send({
                     success: false,
                     status: 'sb_rc_search_error',
-                    message: 'Sunbird RC User Search Failed',
+                    message: 'System Search Error ! Please try again.',
                     result: sb_rc_search_detail?.error,
                   });
                 } else if (sb_rc_search_detail.length === 0) {
@@ -1728,7 +1729,7 @@ export class SSOService {
                   return response.status(501).send({
                     success: false,
                     status: 'sb_rc_search_no_found',
-                    message: 'Sunbird RC User No Found',
+                    message: 'Data Not Found in System.',
                     result: sb_rc_search_detail?.error,
                   });
                 } else {
@@ -1753,7 +1754,7 @@ export class SSOService {
                     return response.status(400).send({
                       success: false,
                       status: 'sb_rc_update_error',
-                      message: 'Sunbird RC Student Update Failed',
+                      message: 'System Update Error ! Please try again.',
                       result: sb_rc_response_text?.error,
                     });
                   } else if (
@@ -1763,7 +1764,7 @@ export class SSOService {
                     return response.status(400).send({
                       success: false,
                       status: 'sb_rc_update_error',
-                      message: 'Sunbird RC Student Update Failed',
+                      message: 'System Update Error ! Please try again.',
                       result: sb_rc_response_text,
                     });
                   }
@@ -1772,7 +1773,7 @@ export class SSOService {
                 return response.status(400).send({
                   success: false,
                   status: 'sb_rc_update_error',
-                  message: 'Sunbird RC Student Update Failed',
+                  message: 'System Update Error ! Please try again.',
                   result: sb_rc_response_text,
                 });
               }
@@ -1788,8 +1789,8 @@ export class SSOService {
             if (issuerRes?.error) {
               return response.status(400).send({
                 success: false,
-                status: 'did_generate_error_teacher',
-                message: 'DID Generate Failed for Teacher. Try Again.',
+                status: 'did_generate_error',
+                message: 'Identity Generation Failed ! Please Try Again.',
                 result: issuerRes?.error,
               });
             } else {
@@ -1804,7 +1805,7 @@ export class SSOService {
                 return response.status(400).send({
                   success: false,
                   status: 'sb_rc_register_error',
-                  message: 'Sunbird RC Teacher Registration Failed',
+                  message: 'System Register Error ! Please try again.',
                   result: sb_rc_response_text?.error,
                 });
               } else if (sb_rc_response_text?.params?.status === 'SUCCESSFUL') {
@@ -1816,8 +1817,8 @@ export class SSOService {
                 if (issuerRes?.error) {
                   return response.status(400).send({
                     success: false,
-                    status: 'did_generate_error_school',
-                    message: 'DID Generate Failed for School. Try Again.',
+                    status: 'did_generate_error',
+                    message: 'Identity Generation Failed ! Please Try Again.',
                     result: issuerRes?.error,
                   });
                 } else {
@@ -1831,7 +1832,7 @@ export class SSOService {
                     return response.status(400).send({
                       success: false,
                       status: 'sb_rc_register_error',
-                      message: 'Sunbird RC SchoolDetail Registration Failed',
+                      message: 'System Register Error ! Please try again.',
                       result: sb_rc_response_text?.error,
                     });
                   } else if (
@@ -1841,7 +1842,7 @@ export class SSOService {
                     return response.status(400).send({
                       success: false,
                       status: 'sb_rc_register_duplicate',
-                      message: 'SchoolDetail Already Registered in Sunbird RC',
+                      message: 'Duplicate Data Found.',
                       result: sb_rc_response_text,
                     });
                   }
@@ -1850,7 +1851,7 @@ export class SSOService {
                 return response.status(400).send({
                   success: false,
                   status: 'sb_rc_register_duplicate',
-                  message: 'Teacher Already Registered in Sunbird RC',
+                  message: 'Duplicate Data Found.',
                   result: sb_rc_response_text,
                 });
               }
@@ -1971,15 +1972,15 @@ export class SSOService {
     if (studentDetails) {
       return response.status(200).send({
         success: true,
-        status: 'Success',
-        message: 'Student details fetched successfully!',
+        status: 'sb_rc_search_success',
+        message: 'System Search Success',
         result: studentDetails,
       });
     } else {
       return response.status(200).send({
         success: false,
-        status: 'Success',
-        message: 'Unable to fetch student details!',
+        status: 'sb_rc_search_error',
+        message: 'System Search Error ! Please try again.',
         result: null,
       });
     }
@@ -2031,15 +2032,15 @@ export class SSOService {
     if (completeStudentDetails.length === studentDetails.length) {
       return response.status(200).send({
         success: true,
-        status: 'Success',
-        message: 'Student details fetched successfully!',
+        status: 'sb_rc_search_success',
+        message: 'System Search Success',
         result: completeStudentDetails,
       });
     } else {
       return response.status(200).send({
         success: false,
-        status: 'Success',
-        message: 'Unable to fetch student details!',
+        status: 'sb_rc_search_error',
+        message: 'System Search Error ! Please try again.',
         result: null,
       });
     }
@@ -2096,14 +2097,14 @@ export class SSOService {
         return response.status(401).send({
           success: false,
           status: 'keycloak_token_bad_request',
-          message: 'Unauthorized',
+          message: 'You do not have access for this request.',
           result: null,
         });
       } else if (!studentUsername?.preferred_username) {
         return response.status(400).send({
           success: false,
           status: 'keycloak_token_error',
-          message: 'Keycloak Token Expired',
+          message: 'Your Login Session Expired.',
           result: null,
         });
       } else {
@@ -2152,7 +2153,7 @@ export class SSOService {
               if (sb_rc_search?.error) {
                 iserror = true;
                 loglist[i].status = false;
-                loglist[i].error = 'SBRC Student Search Failed';
+                loglist[i].error = 'System Error ! Please try again.';
                 loglist[i].errorlog = sb_rc_search?.error;
                 error_count++;
               } else if (sb_rc_search.length === 0) {
@@ -2164,7 +2165,8 @@ export class SSOService {
                 if (issuerRes?.error) {
                   iserror = true;
                   loglist[i].status = false;
-                  loglist[i].error = 'DID Generate Failed';
+                  loglist[i].error =
+                    'Student Identity Generation Failed ! Please Try Again.';
                   loglist[i].errorlog = issuerRes?.error;
                   error_count++;
                 } else {
@@ -2191,7 +2193,8 @@ export class SSOService {
                   if (sb_rc_response_text?.error) {
                     iserror = true;
                     loglist[i].status = false;
-                    loglist[i].error = 'SBRC Student Register Failed';
+                    loglist[i].error =
+                      'Student Register Failed ! Please Try Again.';
                     loglist[i].errorlog = sb_rc_response_text?.error;
                     error_count++;
                   } else if (
@@ -2223,7 +2226,8 @@ export class SSOService {
                     if (sb_rc_response_text_detail?.error) {
                       iserror = true;
                       loglist[i].status = false;
-                      loglist[i].error = 'SBRC Student Detail Register Failed';
+                      loglist[i].error =
+                        'Student Detail Register Failed ! Please Try Again.';
                       loglist[i].errorlog = sb_rc_response_text_detail?.error;
                       error_count++;
                     } else if (
@@ -2236,20 +2240,20 @@ export class SSOService {
                     }
                   } else {
                     loglist[i].status = false;
-                    loglist[i].error = 'duplicate entry';
+                    loglist[i].error = 'Duplicate Entry Found.';
                     duplicate_count++;
                   }
                 }
               } else {
                 loglist[i].status = false;
-                loglist[i].error = 'duplicate entry';
+                loglist[i].error = 'Duplicate Entry Found.';
                 duplicate_count++;
               }
             } catch (e) {
               console.log(e);
               iserror = true;
               loglist[i].status = false;
-              loglist[i].error = 'Exception Occured';
+              loglist[i].error = 'System Exception ! Please Try Again.';
               loglist[i].errorlog = JSON.stringify(e);
               error_count++;
             }
@@ -2270,7 +2274,7 @@ export class SSOService {
       return response.status(400).send({
         success: false,
         status: 'invalid_request',
-        message: 'Invalid Request. Not received token.',
+        message: 'Invalid Request. Not received All Parameters.',
         result: null,
       });
     }
@@ -2290,14 +2294,14 @@ export class SSOService {
         return response.status(401).send({
           success: false,
           status: 'keycloak_token_bad_request',
-          message: 'Unauthorized',
+          message: 'You do not have access for this request.',
           result: null,
         });
       } else if (!studentUsername?.preferred_username) {
         return response.status(401).send({
           success: false,
           status: 'keycloak_token_error',
-          message: 'Keycloak Token Expired',
+          message: 'Your Login Session Expired.',
           result: null,
         });
       } else {
@@ -2312,14 +2316,14 @@ export class SSOService {
           return response.status(501).send({
             success: false,
             status: 'sb_rc_search_error',
-            message: 'Sunbird RC Teacher Search Failed',
+            message: 'System Search Error ! Please try again.',
             result: sb_rc_search?.error,
           });
         } else if (sb_rc_search.length === 0) {
           return response.status(404).send({
             success: false,
-            status: 'sb_rc_no_did_found',
-            message: 'Teacher not Found in Sunbird RC',
+            status: 'sb_rc_search_no_found',
+            message: 'Data Not Found in System.',
             result: null,
           });
         } else {
@@ -2345,14 +2349,14 @@ export class SSOService {
             return response.status(501).send({
               success: false,
               status: 'sb_rc_search_error',
-              message: 'Sunbird RC Student Search Failed',
+              message: 'System Search Error ! Please try again.',
               result: sb_rc_search_student_detail?.error,
             });
           } else if (sb_rc_search_student_detail.length === 0) {
             return response.status(200).send({
               success: true,
-              status: 'sb_rc_no_found',
-              message: 'Student not Found in Sunbird RC',
+              status: 'sb_rc_search_no_found',
+              message: 'Data Not Found in System.',
               result: [],
             });
           } else {
@@ -2389,8 +2393,8 @@ export class SSOService {
             }
             return response.status(200).send({
               success: true,
-              status: 'sb_rc_found',
-              message: 'Student Found in Sunbird RC',
+              status: 'sb_rc_search_found',
+              message: 'Data Found in System.',
               result: student_list,
             });
           }
@@ -2400,7 +2404,7 @@ export class SSOService {
       return response.status(400).send({
         success: false,
         status: 'invalid_request',
-        message: 'Invalid Request. Not received token or request body.',
+        message: 'Invalid Request. Not received All Parameters.',
         result: null,
       });
     }
@@ -2419,14 +2423,14 @@ export class SSOService {
         return response.status(401).send({
           success: false,
           status: 'keycloak_token_bad_request',
-          message: 'Unauthorized',
+          message: 'You do not have access for this request.',
           result: null,
         });
       } else if (!studentUsername?.preferred_username) {
         return response.status(401).send({
           success: false,
           status: 'keycloak_token_error',
-          message: 'Keycloak Token Expired',
+          message: 'Your Login Session Expired.',
           result: null,
         });
       } else {
@@ -2441,7 +2445,7 @@ export class SSOService {
           return response.status(400).send({
             success: false,
             status: 'sb_rc_update_error',
-            message: 'Sunbird RC Student Update Failed',
+            message: 'System Update Error ! Please try again.',
             result: sb_rc_response_text?.error,
           });
         } else if (sb_rc_response_text?.params?.status === 'SUCCESSFUL') {
@@ -2449,7 +2453,7 @@ export class SSOService {
           return response.status(200).send({
             success: true,
             status: 'sb_rc_update_success',
-            message: 'Sunbird RC Student Update Success',
+            message: 'System Update Success',
             result: sb_rc_response_text,
             studentNewData: studentNewData,
           });
@@ -2457,7 +2461,7 @@ export class SSOService {
           return response.status(400).send({
             success: false,
             status: 'sb_rc_update_error',
-            message: 'Sunbird RC Student Update Failed',
+            message: 'System Update Error ! Please try again.',
             result: sb_rc_response_text,
           });
         }
@@ -2466,7 +2470,7 @@ export class SSOService {
       return response.status(400).send({
         success: false,
         status: 'invalid_request',
-        message: 'Invalid Request. Not received token or request body.',
+        message: 'Invalid Request. Not received All Parameters.',
         result: null,
       });
     }
@@ -2484,14 +2488,14 @@ export class SSOService {
         return response.status(401).send({
           success: false,
           status: 'keycloak_token_bad_request',
-          message: 'Unauthorized',
+          message: 'You do not have access for this request.',
           result: null,
         });
       } else if (!studentUsername?.preferred_username) {
         return response.status(401).send({
           success: false,
           status: 'keycloak_token_error',
-          message: 'Keycloak Token Expired',
+          message: 'Your Login Session Expired.',
           result: null,
         });
       } else {
@@ -2519,7 +2523,7 @@ export class SSOService {
             if (uuid === null) {
               return response.status(400).send({
                 success: false,
-                status: 'aadhaar_api_error',
+                status: 'aadhaar_api_uuid_error',
                 message: 'Aadhar API UUID Not Found',
                 result: uuid,
               });
@@ -2538,7 +2542,7 @@ export class SSOService {
                 return response.status(400).send({
                   success: false,
                   status: 'sb_rc_update_error',
-                  message: 'Sunbird RC Student Update Failed',
+                  message: 'System Update Error ! Please try again.',
                   result: sb_rc_response_text?.error,
                 });
               } else if (sb_rc_response_text?.params?.status === 'SUCCESSFUL') {
@@ -2546,14 +2550,14 @@ export class SSOService {
                 return response.status(200).send({
                   success: true,
                   status: 'sb_rc_aadhar_verify_success',
-                  message: 'Sunbird RC Student Aadhar Verify Success',
+                  message: 'Aadhaar Verification Completed.',
                   result: sb_rc_response_text,
                 });
               } else {
                 return response.status(400).send({
                   success: false,
                   status: 'sb_rc_update_error',
-                  message: 'Sunbird RC Student Update Failed',
+                  message: 'System Update Error ! Please try again.',
                   result: sb_rc_response_text,
                 });
               }
@@ -2561,7 +2565,7 @@ export class SSOService {
           } else {
             return response.status(200).send({
               success: false,
-              status: 'aadhaar_api_success',
+              status: 'invalid_aadhaar',
               message: 'Invalid Aadhaar',
               result: null,
             });
@@ -2572,7 +2576,7 @@ export class SSOService {
       return response.status(400).send({
         success: false,
         status: 'invalid_request',
-        message: 'Invalid Request. Not received token or request body.',
+        message: 'Invalid Request. Not received All Parameters.',
         result: null,
       });
     }
@@ -2590,14 +2594,14 @@ export class SSOService {
         return response.status(401).send({
           success: false,
           status: 'keycloak_token_bad_request',
-          message: 'Unauthorized',
+          message: 'You do not have access for this request.',
           result: null,
         });
       } else if (!studentUsername?.preferred_username) {
         return response.status(400).send({
           success: false,
           status: 'keycloak_token_error',
-          message: 'Keycloak Token Expired',
+          message: 'Your Login Session Expired.',
           result: null,
         });
       } else {
@@ -2654,7 +2658,8 @@ export class SSOService {
               if (cred?.error) {
                 iserror = true;
                 loglist[i].status = false;
-                loglist[i].error = 'Error in Issue Credentials API';
+                loglist[i].error =
+                  'Unable to Issue Credentials ! Please Try Again.';
                 loglist[i].errorlog = cred?.error;
                 error_count++;
               } else {
@@ -2670,7 +2675,8 @@ export class SSOService {
                 if (sb_rc_response_text?.error) {
                   iserror = true;
                   loglist[i].status = false;
-                  loglist[i].error = 'SBRC Student Detail Update Failed';
+                  loglist[i].error =
+                    'Unable to Update Student Data ! Please Try Again.';
                   loglist[i].errorlog = sb_rc_response_text?.error;
                   error_count++;
                 } else if (
@@ -2682,7 +2688,8 @@ export class SSOService {
                 } else {
                   iserror = true;
                   loglist[i].status = false;
-                  loglist[i].error = 'SBRC Student Detail Update Failed';
+                  loglist[i].error =
+                    'Unable to Update Student Details ! Please Try Again.';
                   loglist[i].errorlog = sb_rc_response_text;
                   error_count++;
                 }
@@ -2690,7 +2697,7 @@ export class SSOService {
             } catch (e) {
               iserror = true;
               loglist[i].status = false;
-              loglist[i].error = 'Exception Occured';
+              loglist[i].error = 'System Exception ! Please Try Again.';
               loglist[i].errorlog = JSON.stringify(e);
               error_count++;
             }
@@ -2710,7 +2717,7 @@ export class SSOService {
       return response.status(400).send({
         success: false,
         status: 'invalid_request',
-        message: 'Invalid Request. Not received token.',
+        message: 'Invalid Request. Not received All Parameters.',
         result: null,
       });
     }
