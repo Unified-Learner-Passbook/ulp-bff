@@ -567,11 +567,17 @@ export class SSOService {
             result: render_response,
           });
         } else {
+          let render_response_student = [];
+          for (let i = 0; i < render_response.length; i++) {
+            if (render_response[i]?.credentialSubject?.student_name) {
+              render_response_student.push(render_response[i]);
+            }
+          }
           return response.status(200).send({
             success: true,
             status: 'cred_search_api_success',
             message: 'Cred Search API Success',
-            result: render_response,
+            result: render_response_student,
           });
         }
       }
