@@ -24,7 +24,7 @@ export class ClientController {
   getUser(@Res() response: Response) {
     const result = {
       success: true,
-      message: 'Client API Working 3 April ' + process.env.TESTVAR,
+      message: 'Client API Working 2 May ' + process.env.TESTVAR,
     };
     response.status(200).send(result);
   }
