@@ -519,7 +519,12 @@ export class SSOService {
   }
 
   //credentialsSearch
-  async credentialsSearch(token: string, requestbody: any, response: Response) {
+  async credentialsSearch(
+    token: string,
+    type: string,
+    requestbody: any,
+    response: Response,
+  ) {
     if (token && requestbody) {
       const studentUsername = await this.keycloakService.verifyUserToken(token);
       if (studentUsername?.error) {
@@ -568,10 +573,20 @@ export class SSOService {
           });
         } else {
           let render_response_student = [];
-          for (let i = 0; i < render_response.length; i++) {
-            if (render_response[i]?.credentialSubject?.student_name) {
-              render_response_student.push(render_response[i]);
+          if (type === 'student') {
+            for (let i = 0; i < render_response.length; i++) {
+              if (render_response[i]?.credentialSubject?.student_name) {
+                render_response_student.push(render_response[i]);
+              }
             }
+          } else if (type === 'teacher') {
+            for (let i = 0; i < render_response.length; i++) {
+              if (!render_response[i]?.credentialSubject?.student_name) {
+                render_response_student.push(render_response[i]);
+              }
+            }
+          } else {
+            render_response_student = render_response;
           }
           return response.status(200).send({
             success: true,
@@ -2081,13 +2096,16 @@ export class SSOService {
     response.status(200).send(schoolList);
   }
   //getSchoolListUdise
-  async getSchoolListUdise(udise, response: Response) {
+  async getSchoolListUdise(udise, password, response: Response) {
     //console.log('hi');
+    if(password==="1234"){
     let obj = schoolList.find((o) => o.udiseCode === udise);
     if (obj) {
       response.status(200).send({ success: true, status: 'found', data: obj });
     } else {
       response.status(400).send({ success: false, status: 'no_found' });
+    }} else {
+      response.status(200).send({ success: false, status: 'wrong_password' });
     }
   }
 

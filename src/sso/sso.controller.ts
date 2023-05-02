@@ -195,24 +195,26 @@ export class SSOController {
   async getSchoolList(@Res() response: Response) {
     return this.ssoService.getSchoolList(response);
   }
-  //get school list id
-  @Get('/udise/school/list/:udise')
+  //post school list id
+  @Post('/udise/school/list')
   async getSchoolListUdise(
-    @Param('udise') udise: string,
+    @Body('udise') udise: string,
+    @Body('password') password: string,
     @Res() response: Response,
   ) {
-    return this.ssoService.getSchoolListUdise(udise, response);
+    return this.ssoService.getSchoolListUdise(udise,password, response);
   }
   //new credentials list schema id schema template
   //credentialsSearch
-  @Post('/student/credentials/search')
+  @Post('/student/credentials/search/:type')
   async credentialsSearch(
     @Headers('Authorization') auth: string,
+    @Param('type') type: string,
     @Body() requestbody: any,
     @Res() response: Response,
   ) {
     const jwt = auth.replace('Bearer ', '');
-    return this.ssoService.credentialsSearch(jwt, requestbody, response);
+    return this.ssoService.credentialsSearch(jwt,type, requestbody, response);
   }
   //credentialsIssue
   @Post('/student/credentials/issue')
