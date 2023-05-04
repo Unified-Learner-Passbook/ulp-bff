@@ -47,6 +47,7 @@ export class SingleCredentialDto {
         student_id: string,
         dob: string,
         reference_id: string,
+        enrolled_on: string,
         
     }
 }
