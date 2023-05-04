@@ -395,13 +395,13 @@ export class CredentialsService {
       const didRes = await this.credService.generateDid(aadhar_token);
       console.log('didRes 191', didRes);
 
-      if (didRes) {
+      if (!didRes?.error) {
         var did = didRes[0].verificationMethod[0].controller;
         payload.credentialSubject.id = did;
         delete payload.credentialSubject.osid;
         delete payload.credentialSubject.student_osid;
         //fix for enroll on 4 may
-        let enrolled_on=payload.credentialSubject.enrollon
+        let enrolled_on = payload.credentialSubject.enrollon;
         delete payload.credentialSubject.enrollon;
         payload.credentialSubject.enrolled_on = enrolled_on;
 
@@ -412,56 +412,63 @@ export class CredentialsService {
           issuanceDate: payload.vcData.issuanceDate,
           expirationDate: payload.vcData.expirationDate,
         };
-        console.log('obj', obj);
+        //console.log('obj', obj);
         //const cred = await this.issueCredentials(obj)
         //const cred = await this.credService.issueCredentials(obj)
         //if (cred) {
         //update did inside sbrc
 
         //let updateStudentDetail = await this.sbrcUpdate({ "claim_status": "issued" }, 'StudentDetailV2', osid)
-        let updateStudentDetail = await this.sbrcService.sbrcUpdate(
+        let updateStudentDetail = await this.sbrcService.sbrcUpdateEL(
           { claim_status: 'issued' },
           'StudentDetailV2',
           osid,
         );
-        console.log('updateStudentDetail', updateStudentDetail);
-
-        //let updateStudent = await this.sbrcUpdate({ DID: did }, 'StudentV2', student_osid)
-        let updateStudent = await this.sbrcService.sbrcUpdate(
-          { DID: did },
-          'StudentV2',
-          student_osid,
-        );
-        console.log('updateStudent', updateStudent);
-
-        if (updateStudentDetail && updateStudent) {
-          const cred = await this.credService.issueCredentials(obj);
-
-          if (cred) {
-            return response.status(200).send({
-              success: true,
-              status: 'Success',
-              message: 'Credentials generated successfully!',
-              result: cred,
-            });
-          } else {
-            return response.status(200).send({
-              success: false,
-              status: 'cred_issue_api_success',
-              message: 'Cred Issue API Success',
-              result: null,
-            });
-          }
-        } else {
-          return response.status(200).send({
+        if (updateStudentDetail?.error) {
+          return response.status(400).send({
             success: false,
             status: 'sb_rc_update_error',
             message: 'System Update Error ! Please try again.',
-            result: updateStudentDetail,
-            result1: updateStudent,
+            result: updateStudentDetail?.error,
           });
         }
+        //console.log('updateStudentDetail', updateStudentDetail);
+        else {
+          //let updateStudent = await this.sbrcUpdate({ DID: did }, 'StudentV2', student_osid)
+          let updateStudent = await this.sbrcService.sbrcUpdateEL(
+            { DID: did },
+            'StudentV2',
+            student_osid,
+          );
+          //console.log('updateStudent', updateStudent);
 
+          if (updateStudent?.error) {
+            return response.status(400).send({
+              success: false,
+              status: 'sb_rc_update_error',
+              message: 'System Update Error ! Please try again.',
+              result: updateStudent?.error,
+            });
+          } else {
+            const cred = await this.credService.issueCredentials(obj);
+
+            if (cred) {
+              return response.status(200).send({
+                success: true,
+                status: 'Success',
+                message: 'Credentials generated successfully!',
+                result: cred,
+              });
+            } else {
+              return response.status(200).send({
+                success: false,
+                status: 'cred_issue_api_success',
+                message: 'Cred Issue API Success',
+                result: null,
+              });
+            }
+          }
+        }
         // } else {
         //     return response.status(200).send({
         //         success: false,
