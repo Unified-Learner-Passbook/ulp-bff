@@ -1908,6 +1908,9 @@ export class SSOService {
                         });
                       }
                     }
+                  } else {
+                    //set school did
+                    userdata.school.did = sb_rc_search_school[0].did;
                   }
                 } else {
                   return response.status(400).send({
@@ -1919,6 +1922,8 @@ export class SSOService {
                 }
               }
             } else {
+              //set teacher did
+              userdata.teacher.did = sb_rc_search[0].did;
               // sunbird registery school
               //find if teacher account present in sb rc or not
               const sb_rc_search_school = await this.sbrcService.sbrcSearchEL(
@@ -1976,6 +1981,9 @@ export class SSOService {
                     });
                   }
                 }
+              } else {
+                //set school did
+                userdata.school.did = sb_rc_search_school[0].did;
               }
             }
           }
