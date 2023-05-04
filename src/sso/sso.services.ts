@@ -1,96 +1,103 @@
 import { Injectable, StreamableFile } from '@nestjs/common';
+import { HttpService } from '@nestjs/axios';
+import { AxiosRequestConfig } from 'axios';
 
 //custom imports
-import axios from 'axios';
 import jwt_decode from 'jwt-decode';
 import { createWriteStream, writeFile } from 'fs';
 import { Response, Request } from 'express';
 import * as wkhtmltopdf from 'wkhtmltopdf';
 import { UserDto } from './dto/user-dto';
 import { schoolList } from './constlist/schoollist';
-import {
-  aadhaarDemographic,
-  getUUID,
-  encryptaadhaar,
-  decryptaadhaar,
-} from '../utils/aadhaar/aadhaar_api';
-import { CredService } from 'src/services/cred/cred.service';
+import { AadharService } from '../services/aadhar/aadhar.service';
 import { SbrcService } from 'src/services/sbrc/sbrc.service';
+import { CredService } from 'src/services/cred/cred.service';
+import { KeycloakService } from 'src/services/keycloak/keycloak.service';
 
 @Injectable()
 export class SSOService {
-
-  constructor(private credService: CredService, private sbrcService: SbrcService) { }
+  constructor(
+    private readonly httpService: HttpService,
+    private aadharService: AadharService,
+    private sbrcService: SbrcService,
+    private credService: CredService,
+    private keycloakService: KeycloakService,
+  ) {}
   //axios call
   md5 = require('md5');
-  qs = require('qs');
   moment = require('moment');
-  //keycloak config
-  keycloakCred = {
-    grant_type: 'client_credentials',
-    client_id: process.env.KEYCLOAK_CLIENT_ID,
-    client_secret: process.env.KEYCLOAK_CLIENT_SECRET,
-  };
+  qs = require('qs');
   //registerStudent
   async registerStudent(user: UserDto, response: Response) {
     if (user) {
-      const clientToken = await this.getClientToken();
+      const clientToken = await this.keycloakService.getClientToken();
       if (clientToken?.error) {
         return response.status(401).send({
           success: false,
           status: 'keycloak_client_token_error',
-          message: 'Bad Request for Keycloak Client Token',
+          message: 'System Authentication Failed ! Please Try Again.',
           result: null,
         });
       } else {
-        const issuerRes = await this.generateDid(user.studentId);
+        const issuerRes = await this.credService.generateDid(user.studentId);
         if (issuerRes?.error) {
           return response.status(400).send({
             success: false,
             status: 'did_generate_error',
-            message: 'DID Generate Failed. Try Again.',
+            message: 'Identity Generation Failed ! Please Try Again.',
             result: issuerRes?.error,
           });
         } else {
           var did = issuerRes[0].verificationMethod[0].controller;
 
           //register student keycloak
-          let response_text = await this.registerStudentKeycloak(
-            user,
-            clientToken,
-          );
+          let response_text =
+            await this.keycloakService.registerStudentKeycloak(
+              user,
+              clientToken,
+            );
           //comment
           if (response_text?.error && false) {
             return response.status(400).send({
               success: false,
               status: 'keycloak_register_duplicate',
-              message: 'Student Already Registered in Keycloak',
+              message: 'Duplicate User.',
               result: null,
             });
           } else {
             // sunbird registery
-            let sb_rc_response_text = await this.sbrcRegistery(did, user);
+            let sb_rc_response_text = await this.sbrcService.sbrcInviteEL(
+              {
+                did: did,
+                aadhaarID: user.aadhaarId,
+                studentName: user.studentName,
+                schoolName: user.schoolName,
+                schoolID: user.schoolId,
+                studentSchoolID: user.studentId,
+                phoneNo: user.phoneNo,
+              },
+              'StudentDetail',
+            );
 
             if (sb_rc_response_text?.error) {
               return response.status(400).send({
                 success: false,
                 status: 'sb_rc_register_error',
-                message: 'Sunbird RC Student Registration Failed',
+                message: 'System Register Error ! Please try again.',
                 result: sb_rc_response_text?.error,
               });
             } else if (sb_rc_response_text?.params?.status === 'SUCCESSFUL') {
               return response.status(201).send({
                 success: true,
                 status: 'registered',
-                message:
-                  'Student Account Created in Keycloak and Registered in Sunbird RC',
+                message: 'Student Registered Successfully.',
                 result: sb_rc_response_text,
               });
             } else {
               return response.status(400).send({
                 success: false,
                 status: 'sb_rc_register_duplicate',
-                message: 'Student Already Registered in Sunbird RC',
+                message: 'Duplicate Data Found.',
                 result: sb_rc_response_text,
               });
             }
@@ -110,7 +117,10 @@ export class SSOService {
   //loginStudent
   async loginStudent(username: string, password: string, response: Response) {
     if (username && password) {
-      const studentToken = await this.getKeycloakToken(username, password);
+      const studentToken = await this.keycloakService.getKeycloakToken(
+        username,
+        password,
+      );
       if (studentToken?.error) {
         return response.status(501).send({
           success: false,
@@ -119,19 +129,28 @@ export class SSOService {
           result: null,
         });
       } else {
-        const sb_rc_search = await this.searchStudent(username);
+        const sb_rc_search = await this.sbrcService.sbrcSearchEL(
+          'StudentDetail',
+          {
+            filters: {
+              studentSchoolID: {
+                eq: username,
+              },
+            },
+          },
+        );
         if (sb_rc_search?.error) {
           return response.status(501).send({
             success: false,
             status: 'sb_rc_search_error',
-            message: 'Sunbird RC Student Search Failed',
+            message: 'System Search Error ! Please try again.',
             result: sb_rc_search?.error,
           });
         } else if (sb_rc_search.length !== 1) {
           return response.status(404).send({
             success: false,
-            status: 'sb_rc_no_found',
-            message: 'Student Not Found in Sunbird RC',
+            status: 'sb_rc_search_no_found',
+            message: 'Data Not Found in System.',
             result: null,
           });
         } else {
@@ -159,26 +178,35 @@ export class SSOService {
   //getDIDStudent
   async getDIDStudent(studentid: string, response: Response) {
     if (studentid) {
-      const sb_rc_search = await this.searchStudent(studentid);
+      const sb_rc_search = await this.sbrcService.sbrcSearchEL(
+        'StudentDetail',
+        {
+          filters: {
+            studentSchoolID: {
+              eq: studentid,
+            },
+          },
+        },
+      );
       if (sb_rc_search?.error) {
         return response.status(501).send({
           success: false,
           status: 'sb_rc_search_error',
-          message: 'Sunbird RC Student Search Failed',
+          message: 'System Search Error ! Please try again.',
           result: null,
         });
       } else if (sb_rc_search.length !== 1) {
         return response.status(404).send({
           success: false,
-          status: 'sb_rc_no_did_found',
-          message: 'Student DID not Found in Sunbird RC',
+          status: 'sb_rc_search_no_found',
+          message: 'Data Not Found in System.',
           result: null,
         });
       } else {
         return response.status(200).send({
           success: true,
           status: 'did_success',
-          message: 'DID Found',
+          message: 'Identity Found.',
           result: sb_rc_search[0]?.did ? sb_rc_search[0].did : '',
         });
       }
@@ -195,61 +223,68 @@ export class SSOService {
   //credentialsStudent
   async credentialsStudent(token: string, response: Response) {
     if (token) {
-      const studentUsername = await this.verifyStudentToken(token);
+      const studentUsername = await this.keycloakService.verifyUserToken(token);
       if (studentUsername?.error) {
         return response.status(401).send({
           success: false,
-          status: 'keycloak_student_token_bad_request',
-          message: 'Unauthorized',
+          status: 'keycloak_token_bad_request',
+          message: 'You do not have access for this request.',
           result: null,
         });
       } else if (!studentUsername?.preferred_username) {
         return response.status(401).send({
           success: false,
-          status: 'keycloak_student_token_error',
-          message: 'Keycloak Student Token Expired',
+          status: 'keycloak_token_error',
+          message: 'Your Login Session Expired.',
           result: null,
         });
       } else {
-        const sb_rc_search = await this.searchStudent(
-          studentUsername?.preferred_username,
+        const sb_rc_search = await this.sbrcService.sbrcSearchEL(
+          'StudentDetail',
+          {
+            filters: {
+              studentSchoolID: {
+                eq: studentUsername?.preferred_username,
+              },
+            },
+          },
         );
         if (sb_rc_search?.error) {
           return response.status(501).send({
             success: false,
             status: 'sb_rc_search_error',
-            message: 'Sunbird RC Student Search Failed',
+            message: 'System Search Error ! Please try again.',
             result: sb_rc_search?.error.message,
           });
         } else if (sb_rc_search.length !== 1) {
           return response.status(404).send({
             success: false,
-            status: 'sb_rc_no_did_found',
-            message: 'Student DID not Found in Sunbird RC',
+            status: 'sb_rc_search_no_found',
+            message: 'Data Not Found in System.',
             result: null,
           });
         } else {
-          let cred_search = await this.credSearch(sb_rc_search);
+          let cred_search = await this.credService.credSearch(sb_rc_search);
 
           if (cred_search?.error) {
             return response.status(501).send({
               success: false,
               status: 'cred_search_error',
-              message: 'Student Credentials Search Failed',
+              message: 'Credentials Search Failed ! Please Try Again.',
               result: cred_search?.error,
             });
           } else if (cred_search.length === 0) {
             return response.status(404).send({
               success: false,
               status: 'cred_search_no_found',
-              message: 'Student Credentials Not Found',
+              message: 'Credentials Not Found',
               result: null,
             });
           } else {
             return response.status(200).send({
               success: true,
               status: 'cred_success',
-              message: 'Student Credentials Found',
+              message: 'Credentials Found',
               result: cred_search,
             });
           }
@@ -271,7 +306,7 @@ export class SSOService {
     requestbody: any,
   ): Promise<string | StreamableFile> {
     if (token) {
-      const studentUsername = await this.verifyStudentToken(token);
+      const studentUsername = await this.keycloakService.verifyUserToken(token);
       if (studentUsername?.error) {
         return 'Keycloak Student Token Expired';
       } else if (!studentUsername?.preferred_username) {
@@ -279,25 +314,27 @@ export class SSOService {
       } else {
         var data = JSON.stringify(requestbody);
 
-        var config = {
-          method: 'post',
-          url: process.env.CRED_URL + '/credentials/render',
+        const url = process.env.CRED_URL + '/credentials/render';
+
+        const config: AxiosRequestConfig = {
           headers: {
             'Content-Type': 'application/json',
           },
-          data: data,
         };
 
         let render_response = null;
-        await axios(config)
-          .then(function (response) {
-            render_response = response.data;
-          })
-          .catch(function (error) {
-            //console.log(error);
-          });
+        try {
+          const observable = this.httpService.post(url, data, config);
+          const promise = observable.toPromise();
+          const response = await promise;
+          //console.log(JSON.stringify(response.data));
+          render_response = response.data;
+        } catch (e) {
+          //console.log(e);
+          //render_response = { error: e };
+        }
         if (render_response == null) {
-          return 'Cred Render API Failed';
+          return 'Credentials Render Failed ! Please Try Again.';
         } else {
           //return render_response;
           try {
@@ -327,47 +364,49 @@ export class SSOService {
     response: Response,
   ) {
     if (token) {
-      const studentUsername = await this.verifyStudentToken(token);
+      const studentUsername = await this.keycloakService.verifyUserToken(token);
       if (studentUsername?.error) {
         return response.status(401).send({
           success: false,
-          status: 'keycloak_student_token_bad_request',
-          message: 'Unauthorized',
+          status: 'keycloak_token_bad_request',
+          message: 'You do not have access for this request.',
           result: null,
         });
       } else if (!studentUsername?.preferred_username) {
         return response.status(400).send({
           success: false,
-          status: 'keycloak_student_token_error',
-          message: 'Keycloak Student Token Expired',
+          status: 'keycloak_token_error',
+          message: 'Your Login Session Expired.',
           result: null,
         });
       } else {
         var data = JSON.stringify(requestbody);
 
-        var config = {
-          method: 'post',
-          url: process.env.CRED_URL + '/credentials/render',
+        const url = process.env.CRED_URL + '/credentials/render';
+
+        const config: AxiosRequestConfig = {
           headers: {
             'Content-Type': 'application/json',
           },
-          data: data,
         };
 
         let render_response = null;
-        await axios(config)
-          .then(function (response) {
-            //console.log(JSON.stringify(response.data));
-            render_response = response.data;
-          })
-          .catch(function (error) {
-            //console.log(error);
-          });
+        try {
+          const observable = this.httpService.post(url, data, config);
+          const promise = observable.toPromise();
+          const response = await promise;
+          //console.log(JSON.stringify(response.data));
+          render_response = response.data;
+        } catch (e) {
+          //console.log(e);
+          //render_response = { error: e };
+        }
+
         if (render_response == null) {
           return response.status(400).send({
             success: false,
             status: 'render_api_failed',
-            message: 'Cred Render API Failed',
+            message: 'Credentials Render Failed ! Please Try Again.',
             result: null,
           });
         } else {
@@ -392,25 +431,28 @@ export class SSOService {
   //renderTemplate
   async renderTemplate(id: string, response: Response) {
     if (id) {
-      var config = {
-        method: 'get',
-        url: process.env.SCHEMA_URL + '/rendering-template?id=' + id,
+      const url = process.env.SCHEMA_URL + '/rendering-template?id=' + id;
+
+      const config: AxiosRequestConfig = {
         headers: {},
       };
       let response_text = null;
-      await axios(config)
-        .then(function (response) {
-          //console.log(JSON.stringify(response.data));
-          response_text = response.data;
-        })
-        .catch(function (error) {
-          //console.log(error);
-        });
+      try {
+        const observable = this.httpService.get(url, config);
+        const promise = observable.toPromise();
+        const response = await promise;
+        //console.log(JSON.stringify(response.data));
+        response_text = response.data;
+      } catch (error) {
+        //console.log(e);
+        //response_text = { error: error };
+      }
+
       if (response_text == null) {
         return response.status(400).send({
           success: false,
           status: 'render_template_api_failed',
-          message: 'Render Template API Failed',
+          message: 'Render Template Failed ! Please Try Again.',
           result: null,
         });
       } else {
@@ -434,25 +476,28 @@ export class SSOService {
   //renderTemplateSchema
   async renderTemplateSchema(id: string, response: Response) {
     if (id) {
+      const url = process.env.SCHEMA_URL + '/rendering-template/' + id;
+
       var config = {
-        method: 'get',
-        url: process.env.SCHEMA_URL + '/rendering-template/' + id,
         headers: {},
       };
       let response_text = null;
-      await axios(config)
-        .then(function (response) {
-          //console.log(JSON.stringify(response.data));
-          response_text = response.data;
-        })
-        .catch(function (error) {
-          //console.log(error);
-        });
+
+      try {
+        const observable = this.httpService.get(url, config);
+        const promise = observable.toPromise();
+        const response = await promise;
+        //console.log(JSON.stringify(response.data));
+        response_text = response.data;
+      } catch (error) {
+        //console.log(e);
+        //response_text = { error: error };
+      }
       if (response_text == null) {
         return response.status(400).send({
           success: false,
           status: 'render_template_schema_api_failed',
-          message: 'Render Template Schema API Failed',
+          message: 'Render Template Schema Failed ! Please Try Again.',
           result: null,
         });
       } else {
@@ -474,58 +519,80 @@ export class SSOService {
   }
 
   //credentialsSearch
-  async credentialsSearch(token: string, requestbody: any, response: Response) {
+  async credentialsSearch(
+    token: string,
+    type: string,
+    requestbody: any,
+    response: Response,
+  ) {
     if (token && requestbody) {
-      const studentUsername = await this.verifyStudentToken(token);
+      const studentUsername = await this.keycloakService.verifyUserToken(token);
       if (studentUsername?.error) {
         return response.status(401).send({
           success: false,
           status: 'keycloak_token_bad_request',
-          message: 'Unauthorized',
+          message: 'You do not have access for this request.',
           result: null,
         });
       } else if (!studentUsername?.preferred_username) {
         return response.status(400).send({
           success: false,
           status: 'keycloak_token_error',
-          message: 'Keycloak Token Expired',
+          message: 'Your Login Session Expired.',
           result: null,
         });
       } else {
         var data = JSON.stringify(requestbody);
-        var config = {
-          method: 'post',
-          url: process.env.CRED_URL + '/credentials/search',
+
+        const url = process.env.CRED_URL + '/credentials/search';
+
+        const config: AxiosRequestConfig = {
           headers: {
             'Content-Type': 'application/json',
           },
-          data: data,
         };
 
         let render_response = null;
-        await axios(config)
-          .then(function (response) {
-            //console.log(JSON.stringify(response.data));
-            render_response = response.data;
-          })
-          .catch(function (error) {
-            //console.log(error);
-            render_response = { error: error };
-          });
+        try {
+          const observable = this.httpService.post(url, data, config);
+          const promise = observable.toPromise();
+          const response = await promise;
+          //console.log(JSON.stringify(response.data));
+          render_response = response.data;
+        } catch (e) {
+          //console.log(e);
+          render_response = { error: e };
+        }
 
         if (render_response?.error) {
           return response.status(400).send({
             success: false,
             status: 'cred_search_api_failed',
-            message: 'Cred Search API Failed',
+            message: 'Credentials Search Failed ! Please Try Again.',
             result: render_response,
           });
         } else {
+          let render_response_student = [];
+          if (type === 'student') {
+            for (let i = 0; i < render_response.length; i++) {
+              if (render_response[i]?.credentialSubject?.student_name) {
+                render_response_student.push(render_response[i]);
+              }
+            }
+          } else if (type === 'teacher') {
+            for (let i = 0; i < render_response.length; i++) {
+              if (!render_response[i]?.credentialSubject?.student_name) {
+                render_response_student.push(render_response[i]);
+              }
+            }
+          } else {
+            render_response_student = render_response;
+          }
           return response.status(200).send({
             success: true,
             status: 'cred_search_api_success',
             message: 'Cred Search API Success',
-            result: render_response,
+            result: render_response_student,
           });
         }
       }
@@ -542,48 +609,48 @@ export class SSOService {
   //credentialsIssue
   async credentialsIssue(token: string, requestbody: any, response: Response) {
     if (token && requestbody) {
-      const studentUsername = await this.verifyStudentToken(token);
+      const studentUsername = await this.keycloakService.verifyUserToken(token);
       if (studentUsername?.error) {
         return response.status(401).send({
           success: false,
           status: 'keycloak_bad_request',
-          message: 'Unauthorized',
+          message: 'You do not have access for this request.',
           result: null,
         });
       } else if (!studentUsername?.preferred_username) {
         return response.status(400).send({
           success: false,
           status: 'keycloak_token_error',
-          message: 'Keycloak Token Expired',
+          message: 'Your Login Session Expired.',
           result: null,
         });
       } else {
         var data = JSON.stringify(requestbody);
+        const url = process.env.CRED_URL + '/credentials/issue';
+
         var config = {
-          method: 'post',
-          url: process.env.CRED_URL + '/credentials/issue',
           headers: {
             'Content-Type': 'application/json',
           },
-          data: data,
         };
 
         let render_response = null;
-        await axios(config)
-          .then(function (response) {
-            //console.log(JSON.stringify(response.data));
-            render_response = response.data;
-          })
-          .catch(function (error) {
-            //console.log(error);
-            render_response = { error: error };
-          });
+        try {
+          const observable = this.httpService.post(url, data, config);
+          const promise = observable.toPromise();
+          const response = await promise;
+          //console.log(JSON.stringify(response.data));
+          render_response = response.data;
+        } catch (e) {
+          //console.log(e);
+          render_response = { error: e };
+        }
 
         if (render_response?.error) {
           return response.status(400).send({
             success: false,
             status: 'cred_issue_api_failed',
-            message: 'Cred Issue API Failed',
+            message: 'Credentials Issue Failed ! Please Try Again.',
             result: render_response,
           });
         } else {
@@ -608,26 +675,28 @@ export class SSOService {
   //credentialsSchema
   async credentialsSchema(id: string, response: Response) {
     if (id) {
+      const url = process.env.CRED_URL + '/credentials/schema/' + id;
+
       var config = {
-        method: 'get',
-        url: process.env.CRED_URL + '/credentials/schema/' + id,
         headers: {},
       };
       let response_text = null;
-      await axios(config)
-        .then(function (response) {
-          //console.log(JSON.stringify(response.data));
-          response_text = response.data;
-        })
-        .catch(function (error) {
-          //console.log(error);
-          response_text = { error: error };
-        });
+
+      try {
+        const observable = this.httpService.get(url, config);
+        const promise = observable.toPromise();
+        const response = await promise;
+        //console.log(JSON.stringify(response.data));
+        response_text = response.data;
+      } catch (error) {
+        //console.log(e);
+        response_text = { error: error };
+      }
       if (response_text?.error) {
         return response.status(400).send({
           success: false,
           status: 'cred_schema_api_failed',
-          message: 'Cred Schema API Failed',
+          message: 'Credentials Schema Failed ! Please Try Again.',
           result: response_text,
         });
       } else {
@@ -651,26 +720,28 @@ export class SSOService {
   //credentialsSchemaJSON
   async credentialsSchemaJSON(id: string, response: Response) {
     if (id) {
-      var config = {
-        method: 'get',
-        url: process.env.SCHEMA_URL + '/schema/jsonld?id=' + id,
+      const url = process.env.SCHEMA_URL + '/schema/jsonld?id=' + id;
+
+      const config: AxiosRequestConfig = {
         headers: {},
       };
       let response_text = null;
-      await axios(config)
-        .then(function (response) {
-          //console.log(JSON.stringify(response.data));
-          response_text = response.data;
-        })
-        .catch(function (error) {
-          //console.log(error);
-          response_text = { error: error };
-        });
+
+      try {
+        const observable = this.httpService.get(url, config);
+        const promise = observable.toPromise();
+        const response = await promise;
+        //console.log(JSON.stringify(response.data));
+        response_text = response.data;
+      } catch (error) {
+        //console.log(e);
+        response_text = { error: error };
+      }
       if (response_text?.error) {
         return response.status(400).send({
           success: false,
           status: 'cred_schema_json_api_failed',
-          message: 'Cred Schema JSON API Failed',
+          message: 'Credentials Schema JSON Failed ! Please Try Again.',
           result: response_text,
         });
       } else {
@@ -694,34 +765,40 @@ export class SSOService {
   //userData
   async userData(token: string, digiacc: string, response: Response) {
     if (token && digiacc) {
-      const studentUsername = await this.verifyStudentToken(token);
+      const studentUsername = await this.keycloakService.verifyUserToken(token);
       if (studentUsername?.error) {
         return response.status(401).send({
           success: false,
-          status: 'keycloak_user_token_bad_request',
-          message: 'Unauthorized',
+          status: 'keycloak_token_bad_request',
+          message: 'You do not have access for this request.',
           result: null,
         });
       } else if (!studentUsername?.preferred_username) {
         return response.status(400).send({
           success: false,
-          status: 'keycloak_user_token_error',
-          message: 'Keycloak User Token Expired',
+          status: 'keycloak_token_error',
+          message: 'Your Login Session Expired.',
           result: null,
         });
       } else {
         //get user detail
         //find if student account present in sb rc or not
-        const sb_rc_search = await this.searchUsernameEntity(
+        const sb_rc_search = await this.sbrcService.sbrcSearchEL(
           digiacc === 'ewallet' ? 'StudentV2' : 'TeacherV1',
-          studentUsername?.preferred_username,
+          {
+            filters: {
+              username: {
+                eq: studentUsername?.preferred_username,
+              },
+            },
+          },
         );
         //console.log(sb_rc_search);
         if (sb_rc_search?.error) {
           return response.status(501).send({
             success: false,
             status: 'sb_rc_search_error',
-            message: 'Sunbird RC User Search Failed',
+            message: 'System Search Error ! Please try again.',
             result: sb_rc_search?.error,
           });
         } else if (sb_rc_search.length === 0) {
@@ -729,7 +806,7 @@ export class SSOService {
           return response.status(501).send({
             success: false,
             status: 'sb_rc_search_no_found',
-            message: 'Sunbird RC User No Found',
+            message: 'Data Not Found in System.',
             result: sb_rc_search?.error,
           });
         } else {
@@ -743,7 +820,7 @@ export class SSOService {
                 },
               },
             };
-            const sb_rc_search_detail = await this.searchEntity(
+            const sb_rc_search_detail = await this.sbrcService.sbrcSearchEL(
               'StudentDetailV2',
               filter,
             );
@@ -752,7 +829,7 @@ export class SSOService {
               return response.status(501).send({
                 success: false,
                 status: 'sb_rc_search_error',
-                message: 'Sunbird RC User Search Failed',
+                message: 'System Search Error ! Please try again.',
                 result: sb_rc_search_detail?.error,
               });
             } else if (sb_rc_search_detail.length === 0) {
@@ -760,7 +837,7 @@ export class SSOService {
               return response.status(501).send({
                 success: false,
                 status: 'sb_rc_search_no_found',
-                message: 'Sunbird RC User No Found',
+                message: 'Data Not Found in System.',
                 result: sb_rc_search_detail?.error,
               });
             } else {
@@ -768,7 +845,7 @@ export class SSOService {
               return response.status(200).send({
                 success: true,
                 status: 'sb_rc_search_found',
-                message: 'Sunbird RC User Found',
+                message: 'Data Found in System.',
                 result: sb_rc_search[0],
                 detail: sb_rc_search_detail[0],
               });
@@ -778,7 +855,7 @@ export class SSOService {
             return response.status(200).send({
               success: true,
               status: 'sb_rc_search_found',
-              message: 'Sunbird RC User Found',
+              message: 'Data Found in System.',
               result: sb_rc_search[0],
               detail: null,
             });
@@ -798,33 +875,39 @@ export class SSOService {
   //schoolData
   async schoolData(token: string, udise: string, response: Response) {
     if (token && udise) {
-      const studentUsername = await this.verifyStudentToken(token);
+      const studentUsername = await this.keycloakService.verifyUserToken(token);
       if (studentUsername?.error) {
         return response.status(401).send({
           success: false,
-          status: 'keycloak_user_token_bad_request',
-          message: 'Unauthorized',
+          status: 'keycloak_token_bad_request',
+          message: 'You do not have access for this request.',
           result: null,
         });
       } else if (!studentUsername?.preferred_username) {
         return response.status(400).send({
           success: false,
-          status: 'keycloak_user_token_error',
-          message: 'Keycloak User Token Expired',
+          status: 'keycloak_token_error',
+          message: 'Your Login Session Expired.',
           result: null,
         });
       } else {
         //get user detail
         //find if student account present in sb rc or not
-        const sb_rc_search = await this.searchUdiseEntity(
+        const sb_rc_search = await this.sbrcService.sbrcSearchEL(
           'SchoolDetail',
-          udise,
+          {
+            filters: {
+              udiseCode: {
+                eq: udise,
+              },
+            },
+          },
         );
         if (sb_rc_search?.error) {
           return response.status(501).send({
             success: false,
             status: 'sb_rc_search_error',
-            message: 'Sunbird RC School Search Failed',
+            message: 'System Search Error ! Please try again.',
             result: sb_rc_search?.error,
           });
         } else if (sb_rc_search.length === 0) {
@@ -832,7 +915,7 @@ export class SSOService {
           return response.status(501).send({
             success: false,
             status: 'sb_rc_search_no_found',
-            message: 'Sunbird RC School No Found',
+            message: 'Data Not Found in System.',
             result: sb_rc_search?.error,
           });
         } else {
@@ -840,7 +923,7 @@ export class SSOService {
           return response.status(200).send({
             success: true,
             status: 'sb_rc_search_found',
-            message: 'Sunbird RC School Found',
+            message: 'Data Found in System.',
             result: sb_rc_search[0],
           });
         }
@@ -891,6 +974,7 @@ export class SSOService {
         digi_client_secret = process.env.URP_CLIENT_SECRET;
         digi_url_call_back_uri = process.env.URP_CALL_BACK_URL;
       }
+      //nesjs/axios
       var data = this.qs.stringify({
         code: auth_code,
         grant_type: 'authorization_code',
@@ -898,30 +982,32 @@ export class SSOService {
         client_secret: digi_client_secret,
         redirect_uri: digi_url_call_back_uri,
       });
-      var config = {
-        method: 'post',
-        url: 'https://digilocker.meripehchaan.gov.in/public/oauth2/2/token',
+
+      const url =
+        'https://digilocker.meripehchaan.gov.in/public/oauth2/2/token';
+
+      const config: AxiosRequestConfig = {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
         },
-        data: data,
       };
 
       let response_digi = null;
-      await axios(config)
-        .then(function (response) {
-          //console.log(JSON.stringify(response.data));
-          response_digi = { data: response.data };
-        })
-        .catch(function (error) {
-          //console.log(error);
-          response_digi = { error: null };
-        });
+      try {
+        const observable = this.httpService.post(url, data, config);
+        const promise = observable.toPromise();
+        const response = await promise;
+        //console.log(JSON.stringify(response.data));
+        response_digi = { data: response.data };
+      } catch (e) {
+        //console.log(e);
+        response_digi = { error: null };
+      }
       if (response_digi?.error) {
         return response.status(401).send({
           success: false,
           status: 'digilocker_token_bad_request',
-          message: 'Unauthorized',
+          message: 'You do not have access to use Digilocker.',
           result: response_digi?.error,
         });
       } else {
@@ -932,7 +1018,7 @@ export class SSOService {
             return response.status(401).send({
               success: false,
               status: 'digilocker_token_bad_request',
-              message: 'Unauthorized',
+              message: 'You do not have access to use Digilocker.',
               result: response_digi?.error,
             });
           } else {
@@ -947,30 +1033,33 @@ export class SSOService {
               mobile: token_data[0]?.phone_number,
               dob: dob,
               username: '',
+              gender: token_data[0]?.gender
+                ? token_data[0].gender
+                : 'not found',
             };
-            const sb_rc_search = await this.searchDigiEntity(
+            const sb_rc_search = await this.sbrcService.sbrcSearchEL(
               digiacc === 'ewallet' ? 'StudentV2' : 'TeacherV1',
               digiacc === 'ewallet'
                 ? {
-                  filters: {
-                    meripehchan_id: {
-                      eq: response_data?.meripehchanid.toString(),
+                    filters: {
+                      meripehchan_id: {
+                        eq: response_data?.meripehchanid.toString(),
+                      },
                     },
-                  },
-                }
+                  }
                 : {
-                  filters: {
-                    meripehchanLoginId: {
-                      eq: response_data?.meripehchanid.toString(),
+                    filters: {
+                      meripehchanLoginId: {
+                        eq: response_data?.meripehchanid.toString(),
+                      },
                     },
                   },
-                },
             );
             if (sb_rc_search?.error) {
               return response.status(501).send({
                 success: false,
                 status: 'sb_rc_search_error',
-                message: 'Sunbird RC Search Failed',
+                message: 'System Search Error ! Please try again.',
                 result: sb_rc_search?.error.message,
               });
             } else if (sb_rc_search.length === 0) {
@@ -1002,48 +1091,50 @@ export class SSOService {
               let auto_username =
                 digiacc === 'ewallet'
                   ? //response_data?.username
-                  sb_rc_search[0]?.username
+                    sb_rc_search[0]?.username
                   : //response_data?.meripehchanid + '_teacher'
-                  sb_rc_search[0]?.username;
+                    sb_rc_search[0]?.username;
               auto_username = auto_username.toLowerCase();
               const auto_password = await this.md5(
                 auto_username + 'MjQFlAJOQSlWIQJHOEDhod',
               );
-              const userToken = await this.getKeycloakToken(
+              const userToken = await this.keycloakService.getKeycloakToken(
                 auto_username,
                 auto_password,
               );
               if (userToken?.error) {
                 //sbrc present but no keycloak
                 //create keycloak and then login
-                const clientToken = await this.getClientToken();
+                const clientToken = await this.keycloakService.getClientToken();
                 if (clientToken?.error) {
                   return response.status(401).send({
                     success: false,
                     status: 'keycloak_client_token_error',
-                    message: 'Bad Request for Keycloak Client Token',
+                    message: 'System Authentication Failed ! Please Try Again.',
                     result: null,
                   });
                 } else {
                   //register in keycloak
                   //register student keycloak
-                  let response_text = await this.registerUserKeycloak(
-                    auto_username,
-                    auto_password,
-                    clientToken,
-                  );
+                  let response_text =
+                    await this.keycloakService.registerUserKeycloak(
+                      auto_username,
+                      auto_password,
+                      clientToken,
+                    );
                   if (response_text?.error && false) {
                     return response.status(400).send({
                       success: false,
                       status: 'keycloak_register_duplicate',
-                      message: 'User Already Registered in Keycloak',
+                      message: 'Duplicate User.',
                       result: null,
                     });
                   } else {
-                    const userToken = await this.getKeycloakToken(
-                      auto_username,
-                      auto_password,
-                    );
+                    const userToken =
+                      await this.keycloakService.getKeycloakToken(
+                        auto_username,
+                        auto_password,
+                      );
                     if (userToken?.error) {
                       //console.log(userToken?.error);
                       return response.status(501).send({
@@ -1062,16 +1153,17 @@ export class SSOService {
                             },
                           },
                         };
-                        const sb_rc_search_detail = await this.searchEntity(
-                          'StudentDetailV2',
-                          filter,
-                        );
+                        const sb_rc_search_detail =
+                          await this.sbrcService.sbrcSearchEL(
+                            'StudentDetailV2',
+                            filter,
+                          );
                         //console.log(sb_rc_search_detail);
                         if (sb_rc_search_detail?.error) {
                           return response.status(501).send({
                             success: false,
                             status: 'sb_rc_search_error',
-                            message: 'Sunbird RC User Search Failed',
+                            message: 'System Search Error ! Please try again.',
                             result: sb_rc_search_detail?.error,
                           });
                         } else if (sb_rc_search_detail.length === 0) {
@@ -1079,7 +1171,7 @@ export class SSOService {
                           return response.status(501).send({
                             success: false,
                             status: 'sb_rc_search_no_found',
-                            message: 'Sunbird RC User No Found',
+                            message: 'Data Not Found in System.',
                             result: sb_rc_search_detail,
                           });
                         } else {
@@ -1122,16 +1214,17 @@ export class SSOService {
                       },
                     },
                   };
-                  const sb_rc_search_detail = await this.searchEntity(
-                    'StudentDetailV2',
-                    filter,
-                  );
+                  const sb_rc_search_detail =
+                    await this.sbrcService.sbrcSearchEL(
+                      'StudentDetailV2',
+                      filter,
+                    );
                   //console.log(sb_rc_search_detail);
                   if (sb_rc_search_detail?.error) {
                     return response.status(501).send({
                       success: false,
                       status: 'sb_rc_search_error',
-                      message: 'Sunbird RC User Search Failed',
+                      message: 'System Search Error ! Please try again.',
                       result: sb_rc_search_detail?.error,
                     });
                   } else if (sb_rc_search_detail.length === 0) {
@@ -1139,7 +1232,7 @@ export class SSOService {
                     return response.status(501).send({
                       success: false,
                       status: 'sb_rc_search_no_found',
-                      message: 'Sunbird RC User No Found',
+                      message: 'Data Not Found in System.',
                       result: sb_rc_search_detail,
                     });
                   } else {
@@ -1176,8 +1269,8 @@ export class SSOService {
           return response.status(401).send({
             success: false,
             status: 'digilocker_token_bad_request',
-            message: 'Unauthorized',
-            result: response_digi?.error,
+            message: 'You do not have access to use Digilocker.',
+            result: response_digi,
           });
         }
       }
@@ -1197,10 +1290,24 @@ export class SSOService {
     digiacc: string,
     aadhaar_id: string,
     aadhaar_name: string,
+    aadhaar_dob: string,
+    aadhaar_gender: string,
     digilocker_id: string,
   ) {
-    if (digiacc && aadhaar_id && aadhaar_name && digilocker_id) {
-      const aadhar_data = await aadhaarDemographic(aadhaar_id, aadhaar_name);
+    if (
+      digiacc &&
+      aadhaar_id &&
+      aadhaar_name &&
+      aadhaar_dob &&
+      aadhaar_gender &&
+      digilocker_id
+    ) {
+      const aadhar_data = await this.aadharService.aadhaarDemographic(
+        aadhaar_id,
+        aadhaar_name,
+        aadhaar_dob,
+        aadhaar_gender,
+      );
 
       //console.log(aadhar_data);
       if (!aadhar_data?.success === true) {
@@ -1213,39 +1320,39 @@ export class SSOService {
       } else {
         if (aadhar_data?.result?.ret === 'y') {
           const decodedxml = aadhar_data?.decodedxml;
-          const uuid = await getUUID(decodedxml);
+          const uuid = await this.aadharService.getUUID(decodedxml);
           if (uuid === null) {
             return response.status(400).send({
               success: false,
-              status: 'aadhaar_api_error',
+              status: 'aadhaar_api_uuid_error',
               message: 'Aadhar API UUID Not Found',
               result: uuid,
             });
           } else {
             //check uuid present in sbrc or not
-            const sb_rc_search = await this.searchDigiEntity(
+            const sb_rc_search = await this.sbrcService.sbrcSearchEL(
               digiacc === 'ewallet' ? 'StudentV2' : 'TeacherV1',
               digiacc === 'ewallet'
                 ? {
-                  filters: {
-                    aadhar_token: {
-                      eq: uuid.toString(),
+                    filters: {
+                      aadhar_token: {
+                        eq: uuid.toString(),
+                      },
                     },
-                  },
-                }
+                  }
                 : {
-                  filters: {
-                    aadharId: {
-                      eq: uuid.toString(),
+                    filters: {
+                      aadharId: {
+                        eq: uuid.toString(),
+                      },
                     },
                   },
-                },
             );
             if (sb_rc_search?.error) {
               return response.status(501).send({
                 success: false,
                 status: 'sb_rc_search_error',
-                message: 'Sunbird RC Search Failed',
+                message: 'System Search Error ! Please try again.',
                 result: sb_rc_search?.error.message,
               });
             } else if (sb_rc_search.length === 0) {
@@ -1260,14 +1367,14 @@ export class SSOService {
               //update meripehchan id in sb rc
               const osid = sb_rc_search[0]?.osid;
               // sunbird registery student
-              let sb_rc_response_text = await this.sbrcUpdate(
+              let sb_rc_response_text = await this.sbrcService.sbrcUpdateEL(
                 digiacc === 'ewallet'
                   ? {
-                    meripehchan_id: digilocker_id,
-                  }
+                      meripehchan_id: digilocker_id,
+                    }
                   : {
-                    meripehchanLoginId: digilocker_id,
-                  },
+                      meripehchanLoginId: digilocker_id,
+                    },
                 digiacc === 'ewallet' ? 'StudentV2' : 'TeacherV1',
                 osid,
               );
@@ -1275,7 +1382,7 @@ export class SSOService {
                 return response.status(400).send({
                   success: false,
                   status: 'sb_rc_update_error',
-                  message: 'Sunbird RC Digilocker Id Update Failed',
+                  message: 'System Update Error ! Please try again.',
                   result: sb_rc_response_text?.error,
                 });
               } else if (sb_rc_response_text?.params?.status === 'SUCCESSFUL') {
@@ -1284,41 +1391,45 @@ export class SSOService {
                 const auto_password = await this.md5(
                   auto_username + 'MjQFlAJOQSlWIQJHOEDhod',
                 );
-                const userToken = await this.getKeycloakToken(
+                const userToken = await this.keycloakService.getKeycloakToken(
                   auto_username,
                   auto_password,
                 );
                 if (userToken?.error) {
                   //sbrc present but no keycloak
                   //create keycloak and then login
-                  const clientToken = await this.getClientToken();
+                  const clientToken =
+                    await this.keycloakService.getClientToken();
                   if (clientToken?.error) {
                     return response.status(401).send({
                       success: false,
                       status: 'keycloak_client_token_error',
-                      message: 'Bad Request for Keycloak Client Token',
+                      message:
+                        'System Authentication Failed ! Please Try Again.',
                       result: null,
                     });
                   } else {
                     //register in keycloak
                     //register student keycloak
-                    let response_text = await this.registerUserKeycloak(
-                      auto_username,
-                      auto_password,
-                      clientToken,
-                    );
+                    let response_text =
+                      await this.keycloakService.registerUserKeycloak(
+                        auto_username,
+                        auto_password,
+                        clientToken,
+                      );
                     if (response_text?.error && false) {
                       return response.status(400).send({
                         success: false,
                         status: 'keycloak_register_duplicate',
-                        message: 'User Already Registered in Keycloak',
+                        message: 'Duplicate User.',
                         result: null,
                       });
                     } else {
-                      const userToken = await this.getKeycloakToken(
-                        auto_username,
-                        auto_password,
-                      );
+                      const userToken =
+                        await this.keycloakService.getKeycloakToken(
+                          auto_username,
+                          auto_password,
+                        );
                       if (userToken?.error) {
                         //console.log(userToken?.error);
                         return response.status(501).send({
@@ -1337,16 +1448,18 @@ export class SSOService {
                               },
                             },
                           };
-                          const sb_rc_search_detail = await this.searchEntity(
-                            'StudentDetailV2',
-                            filter,
-                          );
+                          const sb_rc_search_detail =
+                            await this.sbrcService.sbrcSearchEL(
+                              'StudentDetailV2',
+                              filter,
+                            );
                           //console.log(sb_rc_search_detail);
                           if (sb_rc_search_detail?.error) {
                             return response.status(501).send({
                               success: false,
                               status: 'sb_rc_search_error',
-                              message: 'Sunbird RC User Search Failed',
+                              message:
+                                'System Search Error ! Please try again.',
                               result: sb_rc_search_detail?.error,
                             });
                           } else if (sb_rc_search_detail.length === 0) {
@@ -1354,7 +1467,7 @@ export class SSOService {
                             return response.status(501).send({
                               success: false,
                               status: 'sb_rc_search_no_found',
-                              message: 'Sunbird RC User No Found',
+                              message: 'Data Not Found in System.',
                               result: sb_rc_search_detail?.error,
                             });
                           } else {
@@ -1393,16 +1506,17 @@ export class SSOService {
                         },
                       },
                     };
-                    const sb_rc_search_detail = await this.searchEntity(
-                      'StudentDetailV2',
-                      filter,
-                    );
+                    const sb_rc_search_detail =
+                      await this.sbrcService.sbrcSearchEL(
+                        'StudentDetailV2',
+                        filter,
+                      );
                     //console.log(sb_rc_search_detail);
                     if (sb_rc_search_detail?.error) {
                       return response.status(501).send({
                         success: false,
                         status: 'sb_rc_search_error',
-                        message: 'Sunbird RC User Search Failed',
+                        message: 'System Search Error ! Please try again.',
                         result: sb_rc_search_detail?.error,
                       });
                     } else if (sb_rc_search_detail.length === 0) {
@@ -1410,7 +1524,7 @@ export class SSOService {
                       return response.status(501).send({
                         success: false,
                         status: 'sb_rc_search_no_found',
-                        message: 'Sunbird RC User No Found',
+                        message: 'Data Not Found in System.',
                         result: sb_rc_search_detail?.error,
                       });
                     } else {
@@ -1441,7 +1555,7 @@ export class SSOService {
                 return response.status(400).send({
                   success: false,
                   status: 'sb_rc_update_error',
-                  message: 'Sunbird RC Digilocker Id Update Failed',
+                  message: 'System Update Error ! Please try again.',
                   result: sb_rc_response_text,
                 });
               }
@@ -1450,7 +1564,7 @@ export class SSOService {
         } else {
           return response.status(200).send({
             success: false,
-            status: 'aadhaar_api_success',
+            status: 'invalid_aadhaar',
             message: 'Invalid Aadhaar',
             result: null,
           });
@@ -1474,12 +1588,12 @@ export class SSOService {
     digimpid: string,
   ) {
     if (digiacc && userdata && digimpid) {
-      const clientToken = await this.getClientToken();
+      const clientToken = await this.keycloakService.getClientToken();
       if (clientToken?.error) {
         return response.status(401).send({
           success: false,
           status: 'keycloak_client_token_error',
-          message: 'Bad Request for Keycloak Client Token',
+          message: 'System Authentication Failed ! Please Try Again.',
           result: null,
         });
       } else {
@@ -1493,7 +1607,7 @@ export class SSOService {
           auto_username + 'MjQFlAJOQSlWIQJHOEDhod',
         );
         //register student keycloak
-        let response_text = await this.registerUserKeycloak(
+        let response_text = await this.keycloakService.registerUserKeycloak(
           auto_username,
           auto_password,
           clientToken,
@@ -1503,22 +1617,29 @@ export class SSOService {
           return response.status(400).send({
             success: false,
             status: 'keycloak_register_duplicate',
-            message: 'User Already Registered in Keycloak',
+            message: 'Duplicate User.',
             result: null,
           });
         } else {
           //ewallet registration student
           if (digiacc === 'ewallet') {
             //find if student account present in sb rc or not
-            const sb_rc_search = await this.sbrcStudentSearch(
-              userdata?.student?.aadhar_token,
+            const sb_rc_search = await this.sbrcService.sbrcSearchEL(
+              'StudentV2',
+              {
+                filters: {
+                  aadhar_token: {
+                    eq: userdata?.student?.aadhar_token,
+                  },
+                },
+              },
             );
             //console.log(sb_rc_search);
             if (sb_rc_search?.error) {
               return response.status(501).send({
                 success: false,
                 status: 'sb_rc_search_error',
-                message: 'Sunbird RC Student Search Failed',
+                message: 'System Search Error ! Please try again.',
                 result: sb_rc_search?.error,
               });
             } else if (sb_rc_search.length === 0) {
@@ -1529,7 +1650,7 @@ export class SSOService {
               userdata.student.school_type = 'private';
               userdata.student.aadhaar_status = 'verified';
               userdata.student.aadhaar_enc = '';
-              let sb_rc_response_text = await this.sbrcInvite(
+              let sb_rc_response_text = await this.sbrcService.sbrcInviteEL(
                 userdata.student,
                 'StudentV2',
               );
@@ -1537,7 +1658,7 @@ export class SSOService {
                 return response.status(400).send({
                   success: false,
                   status: 'sb_rc_register_error',
-                  message: 'Sunbird RC Student Registration Failed',
+                  message: 'System Register Error ! Please try again.',
                   result: sb_rc_response_text?.error,
                 });
               } else if (sb_rc_response_text?.params?.status === 'SUCCESSFUL') {
@@ -1546,15 +1667,16 @@ export class SSOService {
                 userdata.studentdetail.student_id =
                   sb_rc_response_text?.result?.StudentV2?.osid;
                 userdata.studentdetail.claim_status = 'pending';
-                let sb_rc_response_text_detail = await this.sbrcInvite(
-                  userdata.studentdetail,
-                  'StudentDetailV2',
-                );
+                let sb_rc_response_text_detail =
+                  await this.sbrcService.sbrcInviteEL(
+                    userdata.studentdetail,
+                    'StudentDetailV2',
+                  );
                 if (sb_rc_response_text_detail?.error) {
                   return response.status(400).send({
                     success: false,
                     status: 'sb_rc_register_error',
-                    message: 'Sunbird RC Student Registration Failed',
+                    message: 'System Register Error ! Please try again.',
                     result: sb_rc_response_text_detail?.error,
                   });
                 } else if (
@@ -1564,7 +1686,7 @@ export class SSOService {
                   return response.status(400).send({
                     success: false,
                     status: 'sb_rc_register_duplicate',
-                    message: 'Student Already Registered in Sunbird RC',
+                    message: 'Duplicate Data Found.',
                     result: sb_rc_response_text_detail,
                   });
                 }
@@ -1572,7 +1694,7 @@ export class SSOService {
                 return response.status(400).send({
                   success: false,
                   status: 'sb_rc_register_duplicate',
-                  message: 'Student Already Registered in Sunbird RC',
+                  message: 'Duplicate Data Found.',
                   result: sb_rc_response_text,
                 });
               }
@@ -1581,7 +1703,7 @@ export class SSOService {
               const osid = sb_rc_search[0]?.osid;
               userdata.student.DID = sb_rc_search[0]?.DID;
               // sunbird registery student
-              let sb_rc_response_text = await this.sbrcUpdate(
+              let sb_rc_response_text = await this.sbrcService.sbrcUpdateEL(
                 {
                   meripehchan_id: userdata?.student?.meripehchan_id,
                   aadhar_token: userdata?.student?.aadhar_token,
@@ -1589,6 +1711,7 @@ export class SSOService {
                   username: userdata?.student?.username,
                   aadhaar_status: 'verified',
                   aadhaar_enc: '',
+                  gender: userdata?.student?.gender,
                 },
                 'StudentV2',
                 osid,
@@ -1597,7 +1720,7 @@ export class SSOService {
                 return response.status(400).send({
                   success: false,
                   status: 'sb_rc_update_error',
-                  message: 'Sunbird RC Student Update Failed',
+                  message: 'System Update Error ! Please try again.',
                   result: sb_rc_response_text?.error,
                 });
               } else if (sb_rc_response_text?.params?.status === 'SUCCESSFUL') {
@@ -1610,7 +1733,7 @@ export class SSOService {
                     },
                   },
                 };
-                const sb_rc_search_detail = await this.searchEntity(
+                const sb_rc_search_detail = await this.sbrcService.sbrcSearchEL(
                   'StudentDetailV2',
                   filter,
                 );
@@ -1619,7 +1742,7 @@ export class SSOService {
                   return response.status(501).send({
                     success: false,
                     status: 'sb_rc_search_error',
-                    message: 'Sunbird RC User Search Failed',
+                    message: 'System Search Error ! Please try again.',
                     result: sb_rc_search_detail?.error,
                   });
                 } else if (sb_rc_search_detail.length === 0) {
@@ -1627,7 +1750,7 @@ export class SSOService {
                   return response.status(501).send({
                     success: false,
                     status: 'sb_rc_search_no_found',
-                    message: 'Sunbird RC User No Found',
+                    message: 'Data Not Found in System.',
                     result: sb_rc_search_detail?.error,
                   });
                 } else {
@@ -1635,7 +1758,7 @@ export class SSOService {
                   //update value found id
                   const osid = sb_rc_search_detail[0]?.osid;
                   // sunbird registery student
-                  let sb_rc_response_text = await this.sbrcUpdate(
+                  let sb_rc_response_text = await this.sbrcService.sbrcUpdateEL(
                     {
                       acdemic_year: userdata?.studentdetail?.acdemic_year,
                       school_name: userdata?.studentdetail?.school_name,
@@ -1643,6 +1766,7 @@ export class SSOService {
                       gaurdian_name: userdata?.studentdetail?.gaurdian_name,
                       mobile: userdata?.studentdetail?.mobile,
                       grade: userdata?.studentdetail?.grade,
+                      enrollon: userdata?.studentdetail?.enrollon,
                     },
                     'StudentDetailV2',
                     osid,
@@ -1651,7 +1775,7 @@ export class SSOService {
                     return response.status(400).send({
                       success: false,
                       status: 'sb_rc_update_error',
-                      message: 'Sunbird RC Student Update Failed',
+                      message: 'System Update Error ! Please try again.',
                       result: sb_rc_response_text?.error,
                     });
                   } else if (
@@ -1661,7 +1785,7 @@ export class SSOService {
                     return response.status(400).send({
                       success: false,
                       status: 'sb_rc_update_error',
-                      message: 'Sunbird RC Student Update Failed',
+                      message: 'System Update Error ! Please try again.',
                       result: sb_rc_response_text,
                     });
                   }
@@ -1670,7 +1794,7 @@ export class SSOService {
                 return response.status(400).send({
                   success: false,
                   status: 'sb_rc_update_error',
-                  message: 'Sunbird RC Student Update Failed',
+                  message: 'System Update Error ! Please try again.',
                   result: sb_rc_response_text,
                 });
               }
@@ -1680,21 +1804,21 @@ export class SSOService {
           else {
             // sunbird registery teacher
             //get teacher did
-            const issuerRes = await this.generateDid(
+            const issuerRes = await this.credService.generateDid(
               userdata?.teacher?.meripehchanLoginId,
             );
             if (issuerRes?.error) {
               return response.status(400).send({
                 success: false,
-                status: 'did_generate_error_teacher',
-                message: 'DID Generate Failed for Teacher. Try Again.',
+                status: 'did_generate_error',
+                message: 'Identity Generation Failed ! Please Try Again.',
                 result: issuerRes?.error,
               });
             } else {
               var did = issuerRes[0].verificationMethod[0].controller;
               userdata.teacher.did = did;
               userdata.teacher.username = auto_username;
-              let sb_rc_response_text = await this.sbrcInvite(
+              let sb_rc_response_text = await this.sbrcService.sbrcInviteEL(
                 userdata.teacher,
                 'TeacherV1',
               );
@@ -1702,26 +1826,26 @@ export class SSOService {
                 return response.status(400).send({
                   success: false,
                   status: 'sb_rc_register_error',
-                  message: 'Sunbird RC Teacher Registration Failed',
+                  message: 'System Register Error ! Please try again.',
                   result: sb_rc_response_text?.error,
                 });
               } else if (sb_rc_response_text?.params?.status === 'SUCCESSFUL') {
                 // sunbird registery school
                 //get school did
-                const issuerRes = await this.generateDid(
+                const issuerRes = await this.credService.generateDid(
                   userdata?.school?.udiseCode,
                 );
                 if (issuerRes?.error) {
                   return response.status(400).send({
                     success: false,
-                    status: 'did_generate_error_school',
-                    message: 'DID Generate Failed for School. Try Again.',
+                    status: 'did_generate_error',
+                    message: 'Identity Generation Failed ! Please Try Again.',
                     result: issuerRes?.error,
                   });
                 } else {
                   var did = issuerRes[0].verificationMethod[0].controller;
                   userdata.school.did = did;
-                  let sb_rc_response_text = await this.sbrcInvite(
+                  let sb_rc_response_text = await this.sbrcService.sbrcInviteEL(
                     userdata.school,
                     'SchoolDetail',
                   );
@@ -1729,7 +1853,7 @@ export class SSOService {
                     return response.status(400).send({
                       success: false,
                       status: 'sb_rc_register_error',
-                      message: 'Sunbird RC SchoolDetail Registration Failed',
+                      message: 'System Register Error ! Please try again.',
                       result: sb_rc_response_text?.error,
                     });
                   } else if (
@@ -1739,7 +1863,7 @@ export class SSOService {
                     return response.status(400).send({
                       success: false,
                       status: 'sb_rc_register_duplicate',
-                      message: 'SchoolDetail Already Registered in Sunbird RC',
+                      message: 'Duplicate Data Found.',
                       result: sb_rc_response_text,
                     });
                   }
@@ -1748,14 +1872,14 @@ export class SSOService {
                 return response.status(400).send({
                   success: false,
                   status: 'sb_rc_register_duplicate',
-                  message: 'Teacher Already Registered in Sunbird RC',
+                  message: 'Duplicate Data Found.',
                   result: sb_rc_response_text,
                 });
               }
             }
           }
           //login and get token
-          const userToken = await this.getKeycloakToken(
+          const userToken = await this.keycloakService.getKeycloakToken(
             auto_username,
             auto_password,
           );
@@ -1813,25 +1937,27 @@ export class SSOService {
         client_id: digi_client_id,
         client_secret: digi_client_secret,
       });
-      var config = {
-        method: 'post',
-        url: 'https://digilocker.meripehchaan.gov.in/public/oauth2/1/revoke',
+
+      const url =
+        'https://digilocker.meripehchaan.gov.in/public/oauth2/1/revoke';
+
+      const config: AxiosRequestConfig = {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
         },
-        data: data,
       };
 
       let response_digi = null;
-      await axios(config)
-        .then(function (response) {
-          //console.log(JSON.stringify(response.data));
-          response_digi = { data: response.data };
-        })
-        .catch(function (error) {
-          //console.log(error);
-          response_digi = { error: error };
-        });
+      try {
+        const observable = this.httpService.post(url, data, config);
+        const promise = observable.toPromise();
+        const response = await promise;
+        //console.log(JSON.stringify(response.data));
+        response_digi = { data: response.data };
+      } catch (e) {
+        //console.log(e);
+        response_digi = { error: null };
+      }
       if (response_digi?.data?.revoked === true) {
         return response.status(200).send({
           success: true,
@@ -1859,54 +1985,59 @@ export class SSOService {
 
   async getStudentDetail(requestbody, response: Response) {
     console.log('456');
-    let studentDetails = await this.studentDetails(requestbody);
+    let studentDetails = await this.sbrcService.sbrcSearch(
+      requestbody,
+      'StudentDetail',
+    );
     console.log('studentDetails', studentDetails);
     if (studentDetails) {
       return response.status(200).send({
         success: true,
-        status: 'Success',
-        message: 'Student details fetched successfully!',
+        status: 'sb_rc_search_success',
+        message: 'System Search Success',
         result: studentDetails,
       });
     } else {
       return response.status(200).send({
         success: false,
-        status: 'Success',
-        message: 'Unable to fetch student details!',
+        status: 'sb_rc_search_error',
+        message: 'System Search Error ! Please try again.',
         result: null,
       });
     }
   }
 
   async getStudentDetailV2(requestbody, response: Response) {
-
     // var studentDetails = await this.studentDetailsV2(requestbody);
-    var studentDetails = await this.sbrcService.sbrcSearch(requestbody, 'StudentDetailV2')
+    var studentDetails = await this.sbrcService.sbrcSearch(
+      requestbody,
+      'StudentDetailV2',
+    );
     console.log('studentDetails', studentDetails.length);
     console.log('studentDetails1', studentDetails[1]);
 
-    let promises = []
+    let promises = [];
     for (const iterator of studentDetails) {
       let searchSchema = {
-        "filters": {
-          "osid": {
-              "eq": iterator.student_id
-          }
-        }
-      }
+        filters: {
+          osid: {
+            eq: iterator.student_id,
+          },
+        },
+      };
       //promises.push(this.studentV2(searchSchema))
-      promises.push(this.sbrcService.sbrcSearch(searchSchema, 'StudentV2'))
+      promises.push(this.sbrcService.sbrcSearch(searchSchema, 'StudentV2'));
     }
-    console.log("promises", promises.length)
+    console.log('promises', promises.length);
 
-    var students = await Promise.all(promises)
+    var students = await Promise.all(promises);
 
     let studentList = [];
 
     for (const item of students) {
-      console.log("item", item)
+      console.log('item', item);
       for (const iterator of item) {
-        studentList.push(iterator)
+        studentList.push(iterator);
       }
     }
 
@@ -1922,15 +2053,15 @@ export class SSOService {
     if (completeStudentDetails.length === studentDetails.length) {
       return response.status(200).send({
         success: true,
-        status: 'Success',
-        message: 'Student details fetched successfully!',
+        status: 'sb_rc_search_success',
+        message: 'System Search Success',
         result: completeStudentDetails,
       });
     } else {
       return response.status(200).send({
         success: false,
-        status: 'Success',
-        message: 'Unable to fetch student details!',
+        status: 'sb_rc_search_error',
+        message: 'System Search Error ! Please try again.',
         result: null,
       });
     }
@@ -1965,13 +2096,16 @@ export class SSOService {
     response.status(200).send(schoolList);
   }
   //getSchoolListUdise
-  async getSchoolListUdise(udise, response: Response) {
+  async getSchoolListUdise(udise, password, response: Response) {
     //console.log('hi');
+    if(password==="1234"){
     let obj = schoolList.find((o) => o.udiseCode === udise);
     if (obj) {
       response.status(200).send({ success: true, status: 'found', data: obj });
     } else {
       response.status(400).send({ success: false, status: 'no_found' });
+    }} else {
+      response.status(200).send({ success: false, status: 'wrong_password' });
     }
   }
 
@@ -1982,19 +2116,19 @@ export class SSOService {
     response: Response,
   ) {
     if (token) {
-      const studentUsername = await this.verifyStudentToken(token);
+      const studentUsername = await this.keycloakService.verifyUserToken(token);
       if (studentUsername?.error) {
         return response.status(401).send({
           success: false,
           status: 'keycloak_token_bad_request',
-          message: 'Unauthorized',
+          message: 'You do not have access for this request.',
           result: null,
         });
       } else if (!studentUsername?.preferred_username) {
         return response.status(400).send({
           success: false,
           status: 'keycloak_token_error',
-          message: 'Keycloak Token Expired',
+          message: 'Your Login Session Expired.',
           result: null,
         });
       } else {
@@ -2025,35 +2159,45 @@ export class SSOService {
               );
               let auto_username = username_name + '@' + username_dob;
               auto_username = auto_username.toLowerCase();
-              const aadhaar_enc_text = await encryptaadhaar(
+              const aadhaar_enc_text = await this.aadharService.encryptaadhaar(
                 student?.aadhar_token,
               );
               //find if student account present in sb rc or not
-              const sb_rc_search = await this.sbrcStudentSearch1(
-                aadhaar_enc_text,
+              const sb_rc_search = await this.sbrcService.sbrcSearchEL(
+                'StudentV2',
+                {
+                  filters: {
+                    aadhar_token: {
+                      eq: aadhaar_enc_text,
+                    },
+                  },
+                },
               );
               //console.log(sb_rc_search);
               if (sb_rc_search?.error) {
                 iserror = true;
                 loglist[i].status = false;
-                loglist[i].error = 'SBRC Student Search Failed';
+                loglist[i].error = 'System Error ! Please try again.';
                 loglist[i].errorlog = sb_rc_search?.error;
                 error_count++;
               } else if (sb_rc_search.length === 0) {
                 //register student in sb rc
                 // sunbird registery student
-                const issuerRes = await this.generateDid(student?.student_id);
+                const issuerRes = await this.credService.generateDid(
+                  student?.student_id,
+                );
                 if (issuerRes?.error) {
                   iserror = true;
                   loglist[i].status = false;
-                  loglist[i].error = 'DID Generate Failed';
+                  loglist[i].error =
+                    'Student Identity Generation Failed ! Please Try Again.';
                   loglist[i].errorlog = issuerRes?.error;
                   error_count++;
                 } else {
                   var didGenerate =
                     issuerRes[0].verificationMethod[0].controller;
                   let reference_id = 'ULP_' + student?.student_id;
-                  let sb_rc_response_text = await this.sbrcInvite(
+                  let sb_rc_response_text = await this.sbrcService.sbrcInviteEL(
                     {
                       student_id: student?.student_id,
                       DID: didGenerate,
@@ -2066,13 +2210,15 @@ export class SSOService {
                       username: auto_username,
                       aadhaar_status: '',
                       aadhaar_enc: aadhaar_enc_text,
+                      gender: student?.gender,
                     },
                     'StudentV2',
                   );
                   if (sb_rc_response_text?.error) {
                     iserror = true;
                     loglist[i].status = false;
-                    loglist[i].error = 'SBRC Student Register Failed';
+                    loglist[i].error =
+                      'Student Register Failed ! Please Try Again.';
                     loglist[i].errorlog = sb_rc_response_text?.error;
                     error_count++;
                   } else if (
@@ -2083,26 +2229,29 @@ export class SSOService {
                     let os_student_id =
                       sb_rc_response_text?.result?.StudentV2?.osid;
                     let claim_status = 'approved';
-                    let sb_rc_response_text_detail = await this.sbrcInvite(
-                      {
-                        student_detail_id: '',
-                        student_id: os_student_id,
-                        mobile: student?.mobile,
-                        gaurdian_name: student?.gaurdian_name,
-                        school_udise: school_udise,
-                        school_name: school_name,
-                        grade: grade,
-                        acdemic_year: acdemic_year,
-                        start_date: '',
-                        end_date: '',
-                        claim_status: claim_status,
-                      },
-                      'StudentDetailV2',
-                    );
+                    let sb_rc_response_text_detail =
+                      await this.sbrcService.sbrcInviteEL(
+                        {
+                          student_detail_id: '',
+                          student_id: os_student_id,
+                          mobile: student?.mobile,
+                          gaurdian_name: student?.gaurdian_name,
+                          school_udise: school_udise,
+                          school_name: school_name,
+                          grade: grade,
+                          acdemic_year: acdemic_year,
+                          start_date: '',
+                          end_date: '',
+                          claim_status: claim_status,
+                          enrollon: student?.enrollon,
+                        },
+                        'StudentDetailV2',
+                      );
                     if (sb_rc_response_text_detail?.error) {
                       iserror = true;
                       loglist[i].status = false;
-                      loglist[i].error = 'SBRC Student Detail Register Failed';
+                      loglist[i].error =
+                        'Student Detail Register Failed ! Please Try Again.';
                       loglist[i].errorlog = sb_rc_response_text_detail?.error;
                       error_count++;
                     } else if (
@@ -2115,20 +2264,20 @@ export class SSOService {
                     }
                   } else {
                     loglist[i].status = false;
-                    loglist[i].error = 'duplicate entry';
+                    loglist[i].error = 'Duplicate Entry Found.';
                     duplicate_count++;
                   }
                 }
               } else {
                 loglist[i].status = false;
-                loglist[i].error = 'duplicate entry';
+                loglist[i].error = 'Duplicate Entry Found.';
                 duplicate_count++;
               }
             } catch (e) {
               console.log(e);
               iserror = true;
               loglist[i].status = false;
-              loglist[i].error = 'Exception Occured';
+              loglist[i].error = 'System Exception ! Please Try Again.';
               loglist[i].errorlog = JSON.stringify(e);
               error_count++;
             }
@@ -2149,7 +2298,7 @@ export class SSOService {
       return response.status(400).send({
         success: false,
         status: 'invalid_request',
-        message: 'Invalid Request. Not received token.',
+        message: 'Invalid Request. Not received All Parameters.',
         result: null,
       });
     }
@@ -2164,23 +2313,23 @@ export class SSOService {
     response: Response,
   ) {
     if (token && grade && acdemic_year) {
-      const studentUsername = await this.verifyStudentToken(token);
+      const studentUsername = await this.keycloakService.verifyUserToken(token);
       if (studentUsername?.error) {
         return response.status(401).send({
           success: false,
           status: 'keycloak_token_bad_request',
-          message: 'Unauthorized',
+          message: 'You do not have access for this request.',
           result: null,
         });
       } else if (!studentUsername?.preferred_username) {
         return response.status(401).send({
           success: false,
           status: 'keycloak_token_error',
-          message: 'Keycloak Token Expired',
+          message: 'Your Login Session Expired.',
           result: null,
         });
       } else {
-        const sb_rc_search = await this.searchEntity('TeacherV1', {
+        const sb_rc_search = await this.sbrcService.sbrcSearchEL('TeacherV1', {
           filters: {
             username: {
               eq: studentUsername?.preferred_username,
@@ -2191,21 +2340,20 @@ export class SSOService {
           return response.status(501).send({
             success: false,
             status: 'sb_rc_search_error',
-            message: 'Sunbird RC Teacher Search Failed',
+            message: 'System Search Error ! Please try again.',
             result: sb_rc_search?.error,
           });
         } else if (sb_rc_search.length === 0) {
           return response.status(404).send({
             success: false,
-            status: 'sb_rc_no_did_found',
-            message: 'Teacher not Found in Sunbird RC',
+            status: 'sb_rc_search_no_found',
+            message: 'Data Not Found in System.',
             result: null,
           });
         } else {
           let schoolUdise = sb_rc_search[0]?.schoolUdise;
-          const sb_rc_search_student_detail = await this.searchEntity(
-            'StudentDetailV2',
-            {
+          const sb_rc_search_student_detail =
+            await this.sbrcService.sbrcSearchEL('StudentDetailV2', {
               filters: {
                 school_udise: {
                   eq: schoolUdise,
@@ -2220,45 +2368,44 @@ export class SSOService {
                   eq: 'approved',
                 },
               },
-            },
-          );
+            });
           if (sb_rc_search_student_detail?.error) {
             return response.status(501).send({
               success: false,
               status: 'sb_rc_search_error',
-              message: 'Sunbird RC Student Search Failed',
+              message: 'System Search Error ! Please try again.',
               result: sb_rc_search_student_detail?.error,
             });
           } else if (sb_rc_search_student_detail.length === 0) {
             return response.status(200).send({
               success: true,
-              status: 'sb_rc_no_found',
-              message: 'Student not Found in Sunbird RC',
+              status: 'sb_rc_search_no_found',
+              message: 'Data Not Found in System.',
               result: [],
             });
           } else {
             let student_list = [];
             for (let i = 0; i < sb_rc_search_student_detail.length; i++) {
-              const sb_rc_search_student = await this.searchEntity(
+              const sb_rc_search_student = await this.sbrcService.sbrcSearchEL(
                 'StudentV2',
                 aadhaar_status === 'all'
                   ? {
-                    filters: {
-                      osid: {
-                        eq: sb_rc_search_student_detail[i].student_id,
+                      filters: {
+                        osid: {
+                          eq: sb_rc_search_student_detail[i].student_id,
+                        },
                       },
-                    },
-                  }
+                    }
                   : {
-                    filters: {
-                      osid: {
-                        eq: sb_rc_search_student_detail[i].student_id,
-                      },
-                      aadhaar_status: {
-                        eq: aadhaar_status,
+                      filters: {
+                        osid: {
+                          eq: sb_rc_search_student_detail[i].student_id,
+                        },
+                        aadhaar_status: {
+                          eq: aadhaar_status,
+                        },
                       },
                     },
-                  },
               );
               if (sb_rc_search_student?.error) {
               } else if (sb_rc_search_student.length !== 0) {
@@ -2270,8 +2417,8 @@ export class SSOService {
             }
             return response.status(200).send({
               success: true,
-              status: 'sb_rc_found',
-              message: 'Student Found in Sunbird RC',
+              status: 'sb_rc_search_found',
+              message: 'Data Found in System.',
               result: student_list,
             });
           }
@@ -2281,7 +2428,7 @@ export class SSOService {
       return response.status(400).send({
         success: false,
         status: 'invalid_request',
-        message: 'Invalid Request. Not received token or request body.',
+        message: 'Invalid Request. Not received All Parameters.',
         result: null,
       });
     }
@@ -2295,25 +2442,25 @@ export class SSOService {
     response: Response,
   ) {
     if (token && studentNewData && osid) {
-      const studentUsername = await this.verifyStudentToken(token);
+      const studentUsername = await this.keycloakService.verifyUserToken(token);
       if (studentUsername?.error) {
         return response.status(401).send({
           success: false,
           status: 'keycloak_token_bad_request',
-          message: 'Unauthorized',
+          message: 'You do not have access for this request.',
           result: null,
         });
       } else if (!studentUsername?.preferred_username) {
         return response.status(401).send({
           success: false,
           status: 'keycloak_token_error',
-          message: 'Keycloak Token Expired',
+          message: 'Your Login Session Expired.',
           result: null,
         });
       } else {
         //update student
         // sunbird registery student
-        let sb_rc_response_text = await this.sbrcUpdate(
+        let sb_rc_response_text = await this.sbrcService.sbrcUpdateEL(
           studentNewData,
           'StudentV2',
           osid,
@@ -2322,7 +2469,7 @@ export class SSOService {
           return response.status(400).send({
             success: false,
             status: 'sb_rc_update_error',
-            message: 'Sunbird RC Student Update Failed',
+            message: 'System Update Error ! Please try again.',
             result: sb_rc_response_text?.error,
           });
         } else if (sb_rc_response_text?.params?.status === 'SUCCESSFUL') {
@@ -2330,7 +2477,7 @@ export class SSOService {
           return response.status(200).send({
             success: true,
             status: 'sb_rc_update_success',
-            message: 'Sunbird RC Student Update Success',
+            message: 'System Update Success',
             result: sb_rc_response_text,
             studentNewData: studentNewData,
           });
@@ -2338,7 +2485,7 @@ export class SSOService {
           return response.status(400).send({
             success: false,
             status: 'sb_rc_update_error',
-            message: 'Sunbird RC Student Update Failed',
+            message: 'System Update Error ! Please try again.',
             result: sb_rc_response_text,
           });
         }
@@ -2347,7 +2494,7 @@ export class SSOService {
       return response.status(400).send({
         success: false,
         status: 'invalid_request',
-        message: 'Invalid Request. Not received token or request body.',
+        message: 'Invalid Request. Not received All Parameters.',
         result: null,
       });
     }
@@ -2360,26 +2507,30 @@ export class SSOService {
     response: Response,
   ) {
     if (token && studentData) {
-      const studentUsername = await this.verifyStudentToken(token);
+      const studentUsername = await this.keycloakService.verifyUserToken(token);
       if (studentUsername?.error) {
         return response.status(401).send({
           success: false,
           status: 'keycloak_token_bad_request',
-          message: 'Unauthorized',
+          message: 'You do not have access for this request.',
           result: null,
         });
       } else if (!studentUsername?.preferred_username) {
         return response.status(401).send({
           success: false,
           status: 'keycloak_token_error',
-          message: 'Keycloak Token Expired',
+          message: 'Your Login Session Expired.',
           result: null,
         });
       } else {
-        const aadhaar_id = await decryptaadhaar(studentData?.aadhaar_enc);
-        const aadhar_data = await aadhaarDemographic(
+        const aadhaar_id = await this.aadharService.decryptaadhaar(
+          studentData?.aadhaar_enc,
+        );
+        const aadhar_data = await this.aadharService.aadhaarDemographic(
           aadhaar_id,
           studentData?.student_name,
+          studentData?.dob,
+          studentData?.gender,
         );
         //console.log(aadhar_data);
         if (!aadhar_data?.success === true) {
@@ -2392,18 +2543,18 @@ export class SSOService {
         } else {
           if (aadhar_data?.result?.ret === 'y') {
             const decodedxml = aadhar_data?.decodedxml;
-            const uuid = await getUUID(decodedxml);
+            const uuid = await this.aadharService.getUUID(decodedxml);
             if (uuid === null) {
               return response.status(400).send({
                 success: false,
-                status: 'aadhaar_api_error',
+                status: 'aadhaar_api_uuid_error',
                 message: 'Aadhar API UUID Not Found',
                 result: uuid,
               });
             } else {
               //update student
               // sunbird registery student
-              let sb_rc_response_text = await this.sbrcUpdate(
+              let sb_rc_response_text = await this.sbrcService.sbrcUpdateEL(
                 {
                   aadhar_token: uuid,
                   aadhaar_status: 'verified',
@@ -2415,7 +2566,7 @@ export class SSOService {
                 return response.status(400).send({
                   success: false,
                   status: 'sb_rc_update_error',
-                  message: 'Sunbird RC Student Update Failed',
+                  message: 'System Update Error ! Please try again.',
                   result: sb_rc_response_text?.error,
                 });
               } else if (sb_rc_response_text?.params?.status === 'SUCCESSFUL') {
@@ -2423,14 +2574,14 @@ export class SSOService {
                 return response.status(200).send({
                   success: true,
                   status: 'sb_rc_aadhar_verify_success',
-                  message: 'Sunbird RC Student Aadhar Verify Success',
+                  message: 'Aadhaar Verification Completed.',
                   result: sb_rc_response_text,
                 });
               } else {
                 return response.status(400).send({
                   success: false,
                   status: 'sb_rc_update_error',
-                  message: 'Sunbird RC Student Update Failed',
+                  message: 'System Update Error ! Please try again.',
                   result: sb_rc_response_text,
                 });
               }
@@ -2438,7 +2589,7 @@ export class SSOService {
           } else {
             return response.status(200).send({
               success: false,
-              status: 'aadhaar_api_success',
+              status: 'invalid_aadhaar',
               message: 'Invalid Aadhaar',
               result: null,
             });
@@ -2449,7 +2600,7 @@ export class SSOService {
       return response.status(400).send({
         success: false,
         status: 'invalid_request',
-        message: 'Invalid Request. Not received token or request body.',
+        message: 'Invalid Request. Not received All Parameters.',
         result: null,
       });
     }
@@ -2462,19 +2613,19 @@ export class SSOService {
     response: Response,
   ) {
     if (token) {
-      const studentUsername = await this.verifyStudentToken(token);
+      const studentUsername = await this.keycloakService.verifyUserToken(token);
       if (studentUsername?.error) {
         return response.status(401).send({
           success: false,
           status: 'keycloak_token_bad_request',
-          message: 'Unauthorized',
+          message: 'You do not have access for this request.',
           result: null,
         });
       } else if (!studentUsername?.preferred_username) {
         return response.status(400).send({
           success: false,
           status: 'keycloak_token_error',
-          message: 'Keycloak Token Expired',
+          message: 'Your Login Session Expired.',
           result: null,
         });
       } else {
@@ -2487,7 +2638,7 @@ export class SSOService {
         let schoolName = requestbody?.issuerDetail?.schoolName;
         let schemaId = requestbody?.issuerDetail?.schemaId;
         //generate schema
-        var schemaRes = await this.generateSchema(schemaId);
+        var schemaRes = await this.credService.generateSchema(schemaId);
         const credentialSubject = requestbody?.credentialSubject;
         let iserror = false;
         let loglist = [];
@@ -2527,17 +2678,18 @@ export class SSOService {
                 expirationDate: expirationDate,
               };
               //console.log('obj', obj);
-              const cred = await this.issueCredentials(obj);
+              const cred = await this.credService.issueCredentialsEL(obj);
               if (cred?.error) {
                 iserror = true;
                 loglist[i].status = false;
-                loglist[i].error = 'Error in Issue Credentials API';
+                loglist[i].error =
+                  'Unable to Issue Credentials ! Please Try Again.';
                 loglist[i].errorlog = cred?.error;
                 error_count++;
               } else {
                 //update status
                 // sunbird registery student
-                let sb_rc_response_text = await this.sbrcUpdate(
+                let sb_rc_response_text = await this.sbrcService.sbrcUpdateEL(
                   {
                     claim_status: 'issued',
                   },
@@ -2547,7 +2699,8 @@ export class SSOService {
                 if (sb_rc_response_text?.error) {
                   iserror = true;
                   loglist[i].status = false;
-                  loglist[i].error = 'SBRC Student Detail Update Failed';
+                  loglist[i].error =
+                    'Unable to Update Student Data ! Please Try Again.';
                   loglist[i].errorlog = sb_rc_response_text?.error;
                   error_count++;
                 } else if (
@@ -2559,7 +2712,8 @@ export class SSOService {
                 } else {
                   iserror = true;
                   loglist[i].status = false;
-                  loglist[i].error = 'SBRC Student Detail Update Failed';
+                  loglist[i].error =
+                    'Unable to Update Student Details ! Please Try Again.';
                   loglist[i].errorlog = sb_rc_response_text;
                   error_count++;
                 }
@@ -2567,7 +2721,7 @@ export class SSOService {
             } catch (e) {
               iserror = true;
               loglist[i].status = false;
-              loglist[i].error = 'Exception Occured';
+              loglist[i].error = 'System Exception ! Please Try Again.';
               loglist[i].errorlog = JSON.stringify(e);
               error_count++;
             }
@@ -2587,7 +2741,7 @@ export class SSOService {
       return response.status(400).send({
         success: false,
         status: 'invalid_request',
-        message: 'Invalid Request. Not received token.',
+        message: 'Invalid Request. Not received All Parameters.',
         result: null,
       });
     }
@@ -2621,710 +2775,5 @@ export class SSOService {
     }
     const decoded = jwt_decode(token);
     return [decoded];
-  }
-
-  //get client token
-  async getClientToken() {
-    let data = this.qs.stringify({
-      grant_type: this.keycloakCred.grant_type,
-      client_id: this.keycloakCred.client_id,
-      client_secret: this.keycloakCred.client_secret,
-    });
-    let config = {
-      method: 'post',
-      url:
-        process.env.KEYCLOAK_URL +
-        'realms/' +
-        process.env.REALM_ID +
-        '/protocol/openid-connect/token',
-      headers: {
-        'content-type': 'application/x-www-form-urlencoded',
-      },
-      data: data,
-    };
-
-    let response_text = null;
-    await axios(config)
-      .then(function (response) {
-        //console.log(JSON.stringify(response.data));
-        response_text = response.data;
-      })
-      .catch(function (error) {
-        //console.log(error);
-        response_text = { error: error };
-      });
-    return response_text;
-  }
-
-  //get keycloak token after login
-  async getKeycloakToken(username: string, password: string) {
-    let data = this.qs.stringify({
-      client_id: this.keycloakCred.client_id,
-      username: username.toString(),
-      password: password,
-      grant_type: 'password',
-      client_secret: this.keycloakCred.client_secret,
-    });
-
-    let config = {
-      method: 'post',
-      url:
-        process.env.KEYCLOAK_URL +
-        'realms/' +
-        process.env.REALM_ID +
-        '/protocol/openid-connect/token',
-      headers: {
-        'content-type': 'application/x-www-form-urlencoded',
-      },
-      data: data,
-    };
-
-    var response_text = null;
-    await axios(config)
-      .then(function (response) {
-        //console.log("data 516", JSON.stringify(response.data));
-        response_text = response.data;
-      })
-      .catch(function (error) {
-        console.log('error 520', error);
-        response_text = { error: error };
-      });
-
-    return response_text;
-  }
-
-  //generate did
-  async generateDid(studentId: string) {
-    let data = JSON.stringify({
-      content: [
-        {
-          alsoKnownAs: [`did.${studentId}`],
-          services: [
-            {
-              id: 'IdentityHub',
-              type: 'IdentityHub',
-              serviceEndpoint: {
-                '@context': 'schema.identity.foundation/hub',
-                '@type': 'UserServiceEndpoint',
-                instance: ['did:test:hub.id'],
-              },
-            },
-          ],
-        },
-      ],
-    });
-
-    let config = {
-      method: 'post',
-      maxBodyLength: Infinity,
-      url: `${process.env.DID_URL}/did/generate`,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      data: data,
-    };
-    let response_text = null;
-    try {
-      const response = await axios(config);
-      //console.log("response did", response.data)
-      response_text = response.data;
-    } catch (error) {
-      //console.log('error did', error);
-      response_text = { error: error };
-    }
-    return response_text;
-  }
-
-  //search entity meripehchan
-  async searchDigiEntity(entity: string, filter: any) {
-    let data = JSON.stringify(filter);
-
-    let url = process.env.REGISTRY_URL + 'api/v1/' + entity + '/search';
-    //console.log(data + ' ' + url);
-    let config = {
-      method: 'post',
-      url: url,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      data: data,
-    };
-    let sb_rc_search = null;
-    await axios(config)
-      .then(function (response) {
-        //console.log(JSON.stringify(response.data));
-        sb_rc_search = response.data;
-      })
-      .catch(function (error) {
-        //console.log(error);
-        sb_rc_search = { error: error };
-      });
-    return sb_rc_search;
-  }
-
-  //search student
-  async searchStudent(studentId: string) {
-    let data = JSON.stringify({
-      filters: {
-        studentSchoolID: {
-          eq: studentId,
-        },
-      },
-    });
-
-    let config = {
-      method: 'post',
-      url: process.env.REGISTRY_URL + 'api/v1/StudentDetail/search',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      data: data,
-    };
-    let sb_rc_search = null;
-    await axios(config)
-      .then(function (response) {
-        //console.log(JSON.stringify(response.data));
-        sb_rc_search = response.data;
-      })
-      .catch(function (error) {
-        //console.log(error);
-        sb_rc_search = { error: error };
-      });
-    return sb_rc_search;
-  }
-
-  //search student
-  async sbrcStudentSearch1(aadhaar_enc_text: string) {
-    let data = JSON.stringify({
-      filters: {
-        aadhaar_enc: {
-          eq: aadhaar_enc_text,
-        },
-      },
-    });
-    //console.log(data);
-    let config = {
-      method: 'post',
-      url: process.env.REGISTRY_URL + 'api/v1/StudentV2/search',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      data: data,
-    };
-    let sb_rc_search = null;
-    await axios(config)
-      .then(function (response) {
-        //console.log(JSON.stringify(response.data));
-        sb_rc_search = response.data;
-      })
-      .catch(function (error) {
-        //console.log(error);
-        sb_rc_search = { error: error };
-      });
-    return sb_rc_search;
-  }
-
-  //search student
-  async sbrcStudentSearch(aadhar_token: string) {
-    let data = JSON.stringify({
-      filters: {
-        aadhar_token: {
-          eq: aadhar_token,
-        },
-      },
-    });
-    //console.log(data);
-    let config = {
-      method: 'post',
-      url: process.env.REGISTRY_URL + 'api/v1/StudentV2/search',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      data: data,
-    };
-    let sb_rc_search = null;
-    await axios(config)
-      .then(function (response) {
-        //console.log(JSON.stringify(response.data));
-        sb_rc_search = response.data;
-      })
-      .catch(function (error) {
-        //console.log(error);
-        sb_rc_search = { error: error };
-      });
-    return sb_rc_search;
-  }
-
-  //search entity username
-  async searchUsernameEntity(entity: string, searchkey: string) {
-    let data = JSON.stringify({
-      filters: {
-        username: {
-          eq: searchkey.toString(),
-        },
-      },
-    });
-
-    let url = process.env.REGISTRY_URL + 'api/v1/' + entity + '/search';
-    //console.log(data + ' ' + url);
-    let config = {
-      method: 'post',
-      url: url,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      data: data,
-    };
-    let sb_rc_search = null;
-    await axios(config)
-      .then(function (response) {
-        //console.log(JSON.stringify(response.data));
-        sb_rc_search = response.data;
-      })
-      .catch(function (error) {
-        //console.log(error);
-        sb_rc_search = { error: error };
-      });
-    return sb_rc_search;
-  }
-
-  //searchEntity
-  async searchEntity(entity: string, filter: any) {
-    let data = JSON.stringify(filter);
-
-    let url = process.env.REGISTRY_URL + 'api/v1/' + entity + '/search';
-    //console.log(data + ' ' + url);
-    let config = {
-      method: 'post',
-      url: url,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      data: data,
-    };
-    let sb_rc_search = null;
-    await axios(config)
-      .then(function (response) {
-        //console.log(JSON.stringify(response.data));
-        sb_rc_search = response.data;
-      })
-      .catch(function (error) {
-        //console.log(error);
-        sb_rc_search = { error: error };
-      });
-    return sb_rc_search;
-  }
-
-  //search entity udise
-  async searchUdiseEntity(entity: string, searchkey: string) {
-    let data = JSON.stringify({
-      filters: {
-        udiseCode: {
-          eq: searchkey.toString(),
-        },
-      },
-    });
-
-    let url = process.env.REGISTRY_URL + 'api/v1/' + entity + '/search';
-    console.log(data + ' ' + url);
-    let config = {
-      method: 'post',
-      url: url,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      data: data,
-    };
-    let sb_rc_search = null;
-    await axios(config)
-      .then(function (response) {
-        //console.log(JSON.stringify(response.data));
-        sb_rc_search = response.data;
-      })
-      .catch(function (error) {
-        //console.log(error);
-        sb_rc_search = { error: error };
-      });
-    return sb_rc_search;
-  }
-
-  //verify student token
-  async verifyStudentToken(token: string) {
-    let config = {
-      method: 'get',
-      url:
-        process.env.KEYCLOAK_URL +
-        'realms/' +
-        process.env.REALM_ID +
-        '/protocol/openid-connect/userinfo',
-      headers: {
-        'content-type': 'application/x-www-form-urlencoded',
-        Authorization: 'Bearer ' + token,
-      },
-    };
-
-    let response_text = null;
-    await axios(config)
-      .then(function (response) {
-        //console.log(JSON.stringify(response.data));
-        response_text = response?.data;
-      })
-      .catch(function (error) {
-        //console.log(error);
-        response_text = { error: error };
-      });
-
-    return response_text;
-  }
-
-  // register student keycloak
-  async registerStudentKeycloak(user, clientToken) {
-    let data = JSON.stringify({
-      enabled: 'true',
-      username: user.studentId,
-      credentials: [
-        {
-          type: 'password',
-          value: '1234',
-          temporary: false,
-        },
-      ],
-    });
-
-    let config = {
-      method: 'post',
-      url:
-        process.env.KEYCLOAK_URL +
-        'admin/realms/' +
-        process.env.REALM_ID +
-        '/users',
-      headers: {
-        'content-type': 'application/json',
-        Authorization: 'Bearer ' + clientToken?.access_token,
-      },
-      data: data,
-    };
-    var response_text = null;
-    await axios(config)
-      .then(function (response) {
-        //console.log(JSON.stringify(response.data));
-        response_text = response.data;
-      })
-      .catch(function (error) {
-        //console.log(error);
-        response_text = { error: error };
-      });
-
-    return response_text;
-  }
-
-  // sbrc registery
-  async sbrcRegistery(did, user) {
-    let data = JSON.stringify({
-      did: did,
-      aadhaarID: user.aadhaarId,
-      studentName: user.studentName,
-      schoolName: user.schoolName,
-      schoolID: user.schoolId,
-      studentSchoolID: user.studentId,
-      phoneNo: user.phoneNo,
-    });
-
-    let config_sb_rc = {
-      method: 'post',
-      url: process.env.REGISTRY_URL + 'api/v1/StudentDetail/invite',
-      headers: {
-        'content-type': 'application/json',
-      },
-      data: data,
-    };
-
-    var sb_rc_response_text = null;
-    await axios(config_sb_rc)
-      .then(function (response) {
-        //console.log(JSON.stringify(response.data));
-        sb_rc_response_text = response.data;
-      })
-      .catch(function (error) {
-        //console.log(error);
-        sb_rc_response_text = { error: error };
-      });
-
-    return sb_rc_response_text;
-  }
-
-  // register user in keycloak
-  async registerUserKeycloak(username, password, clientToken) {
-    let data = JSON.stringify({
-      enabled: 'true',
-      username: username,
-      credentials: [
-        {
-          type: 'password',
-          value: password,
-          temporary: false,
-        },
-      ],
-    });
-
-    let config = {
-      method: 'post',
-      url:
-        process.env.KEYCLOAK_URL +
-        'admin/realms/' +
-        process.env.REALM_ID +
-        '/users',
-      headers: {
-        'content-type': 'application/json',
-        Authorization: 'Bearer ' + clientToken?.access_token,
-      },
-      data: data,
-    };
-    var response_text = null;
-    await axios(config)
-      .then(function (response) {
-        //console.log(JSON.stringify(response.data));
-        response_text = response.data;
-      })
-      .catch(function (error) {
-        //console.log(error);
-        response_text = { error: error };
-      });
-
-    return response_text;
-  }
-
-  // invite entity in registery
-  async sbrcInvite(inviteSchema, entityName) {
-    let data = JSON.stringify(inviteSchema);
-
-    let config_sb_rc = {
-      method: 'post',
-      url: process.env.REGISTRY_URL + 'api/v1/' + entityName + '/invite',
-      headers: {
-        'content-type': 'application/json',
-      },
-      data: data,
-    };
-
-    var sb_rc_response_text = null;
-    await axios(config_sb_rc)
-      .then(function (response) {
-        //console.log(JSON.stringify(response.data));
-        sb_rc_response_text = response.data;
-      })
-      .catch(function (error) {
-        //console.log(error);
-        sb_rc_response_text = { error: error };
-      });
-
-    return sb_rc_response_text;
-  }
-
-  // invite entity in registery
-  async sbrcUpdate(updateSchema, entityName, osid) {
-    let data = JSON.stringify(updateSchema);
-
-    let config_sb_rc = {
-      method: 'put',
-      url: process.env.REGISTRY_URL + 'api/v1/' + entityName + '/' + osid,
-      headers: {
-        'content-type': 'application/json',
-      },
-      data: data,
-    };
-
-    var sb_rc_response_text = null;
-    await axios(config_sb_rc)
-      .then(function (response) {
-        //console.log(JSON.stringify(response.data));
-        sb_rc_response_text = response.data;
-      })
-      .catch(function (error) {
-        //console.log(error);
-        sb_rc_response_text = { error: error };
-      });
-
-    return sb_rc_response_text;
-  }
-
-  // cred search
-  async credSearch(sb_rc_search) {
-    console.log('sb_rc_search', sb_rc_search);
-
-    let data = JSON.stringify({
-      subject: {
-        id: sb_rc_search[0]?.did ? sb_rc_search[0].did : '',
-      },
-    });
-    // let data = JSON.stringify({
-    //   subjectId: sb_rc_search[0]?.did ? sb_rc_search[0].did : '',
-    // });
-
-    let config = {
-      method: 'post',
-      url: process.env.CRED_URL + '/credentials/search',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      data: data,
-    };
-    let cred_search = null;
-    await axios(config)
-      .then(function (response) {
-        //console.log(JSON.stringify(response.data));
-        cred_search = response.data;
-      })
-      .catch(function (error) {
-        //console.log(error);
-        cred_search = { error: error };
-      });
-
-    return cred_search;
-  }
-
-  // student details
-  async studentDetails(requestbody) {
-    console.log('requestbody', requestbody);
-    var data = JSON.stringify(requestbody);
-
-    var config = {
-      method: 'post',
-      maxBodyLength: Infinity,
-      url: `${process.env.REGISTRY_URL}api/v1/StudentDetail/search`,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      data: data,
-    };
-
-    try {
-      let stdentDetailRes = await axios(config);
-      return stdentDetailRes.data;
-    } catch (err) {
-      console.log('err');
-    }
-  }
-
-  //generateSchema
-  async generateSchema(schemaId) {
-    var config = {
-      method: 'get',
-      maxBodyLength: Infinity,
-      url: `${process.env.SCHEMA_URL}/schema/jsonld?id=${schemaId}`,
-      headers: {},
-    };
-
-    try {
-      const response = await axios(config);
-      console.log('response schema', response.data);
-      return response.data;
-    } catch (error) {
-      console.log('error schema', error);
-    }
-  }
-
-  //issueCredentials
-  async issueCredentials(payload) {
-    var data = JSON.stringify({
-      credential: {
-        '@context': [
-          'https://www.w3.org/2018/credentials/v1',
-          'https://www.w3.org/2018/credentials/examples/v1',
-        ],
-        id: 'did:ulp:b4a191af-d86e-453c-9d0e-dd4771067235',
-        type: ['VerifiableCredential', 'UniversityDegreeCredential'],
-        issuer: `${payload.issuerId}`,
-        issuanceDate: payload.issuanceDate,
-        expirationDate: payload.expirationDate,
-        credentialSubject: payload.credentialSubject,
-        options: {
-          created: '2020-04-02T18:48:36Z',
-          credentialStatus: {
-            type: 'RevocationList2020Status',
-          },
-        },
-      },
-      credentialSchemaId: payload.credSchema.id,
-      tags: ['tag1', 'tag2', 'tag3'],
-    });
-    var config = {
-      method: 'post',
-      maxBodyLength: Infinity,
-      url: process.env.CRED_URL + '/credentials/issue',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      data: data,
-    };
-    try {
-      const response = await axios(config);
-      //console.log('cred response');
-      return response.data;
-    } catch (e) {
-      //console.log('cred error', e.message);
-      return { error: e };
-    }
-  }
-  async studentDetailsV2(requestbody) {
-    console.log('requestbody', requestbody);
-    var data = JSON.stringify(requestbody);
-
-    var config = {
-      method: 'post',
-      maxBodyLength: Infinity,
-      url: `${process.env.REGISTRY_URL}api/v1/StudentDetailV2/search`,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      data: data,
-    };
-
-    try {
-      let stdentDetailRes = await axios(config);
-      return stdentDetailRes.data;
-    } catch (err) {
-      console.log('err');
-    }
-  }
-
-  async studentV2(requestbody) {
-    const axios = require('axios');
-    let data = JSON.stringify(requestbody);
-
-    let config = {
-      method: 'post',
-      maxBodyLength: Infinity,
-      url: 'https://ulp.uniteframework.io/registry/api/v1/StudentV2/search',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      data: data,
-    };
-
-    try {
-      let stdentDetailRes = await axios(config);
-      return stdentDetailRes.data;
-    } catch (err) {
-      console.log('err');
-    }
-  }
-
-  async findStudent(osid) {
-    let config = {
-      method: 'get',
-      maxBodyLength: Infinity,
-      url: 'https://ulp.uniteframework.io/registry/api/v1/StudentV2/1-ea0b0d65-1124-4f2b-af34-0a1eb7a3a6ba',
-      headers: {},
-    };
-
-    axios
-      .request(config)
-      .then((response) => {
-        console.log('1899', JSON.stringify(response.data));
-      })
-      .catch((error) => {
-        console.log(error);
-      });
   }
 }

@@ -25,7 +25,7 @@ export class SSOController {
     //console.log('hi');
     const result = {
       success: true,
-      message: 'Student API Working 20 March',
+      message: 'Student API Working 25 April Dev Server',
     };
     response.status(200).send(result);
   }
@@ -124,6 +124,8 @@ export class SSOController {
     @Body('digiacc') digiacc: string,
     @Body('aadhaar_id') aadhaar_id: string,
     @Body('aadhaar_name') aadhaar_name: string,
+    @Body('aadhaar_dob') aadhaar_dob: string,
+    @Body('aadhaar_gender') aadhaar_gender: string,
     @Body('digilocker_id') digilocker_id: string,
   ) {
     return this.ssoService.digilockerAadhaar(
@@ -131,6 +133,8 @@ export class SSOController {
       digiacc,
       aadhaar_id,
       aadhaar_name,
+      aadhaar_dob,
+      aadhaar_gender,
       digilocker_id,
     );
   }
@@ -191,24 +195,26 @@ export class SSOController {
   async getSchoolList(@Res() response: Response) {
     return this.ssoService.getSchoolList(response);
   }
-  //get school list id
-  @Get('/udise/school/list/:udise')
+  //post school list id
+  @Post('/udise/school/list')
   async getSchoolListUdise(
-    @Param('udise') udise: string,
+    @Body('udise') udise: string,
+    @Body('password') password: string,
     @Res() response: Response,
   ) {
-    return this.ssoService.getSchoolListUdise(udise, response);
+    return this.ssoService.getSchoolListUdise(udise,password, response);
   }
   //new credentials list schema id schema template
   //credentialsSearch
-  @Post('/student/credentials/search')
+  @Post('/student/credentials/search/:type')
   async credentialsSearch(
     @Headers('Authorization') auth: string,
+    @Param('type') type: string,
     @Body() requestbody: any,
     @Res() response: Response,
   ) {
     const jwt = auth.replace('Bearer ', '');
-    return this.ssoService.credentialsSearch(jwt, requestbody, response);
+    return this.ssoService.credentialsSearch(jwt,type, requestbody, response);
   }
   //credentialsIssue
   @Post('/student/credentials/issue')

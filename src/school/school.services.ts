@@ -1,11 +1,13 @@
 import { Injectable, StreamableFile } from '@nestjs/common';
+import { HttpService } from '@nestjs/axios';
+import { AxiosRequestConfig } from 'axios';
 
 //custom imports
-import axios from 'axios';
 import { Response, Request } from 'express';
 
 @Injectable()
 export class SchoolService {
+  constructor(private readonly httpService: HttpService) {}
   //axios call
   md5 = require('md5');
   crypto = require('crypto');
@@ -24,6 +26,12 @@ export class SchoolService {
         clientSecret: 'test@123',
         appKey: appKey,
       };
+      //production
+      /*const PLAIN_JSON = {
+        clientId: 'upra',
+        clientSecret: 'Upra@upra',
+        appKey: appKey,
+      };*/
       ////console.log(PLAIN_JSON);
       const PLAIN_TEXT_JSON = JSON.stringify(PLAIN_JSON);
       //console.log(PLAIN_TEXT_JSON);
@@ -43,29 +51,28 @@ export class SchoolService {
       //console.log('hex_encryptedBuffer', hex_encryptedBuffer);
 
       //call gov api
-      let data = {
+      const url = 'https://api.udiseplus.gov.in/school/v1.2/authenticate';
+      let data = JSON.stringify({
         data: hex_encryptedBuffer,
-      };
-
-      let config = {
-        method: 'post',
-        url: 'https://api.udiseplus.gov.in/school/v1.2/authenticate',
+      });
+      const config: AxiosRequestConfig = {
         headers: {
           'Content-Type': 'application/json',
         },
-        data: data,
       };
       //console.log('config', config);
       let response_text = null;
-      await axios(config)
-        .then(function (response) {
-          //console.log(JSON.stringify(response.data));
-          response_text = response.data;
-        })
-        .catch(function (error) {
-          ////console.log(error);
-          response_text = { error: error };
-        });
+
+      try {
+        const observable = this.httpService.post(url, data, config);
+        const promise = observable.toPromise();
+        const response = await promise;
+        //console.log(JSON.stringify(response.data));
+        response_text = response.data;
+      } catch (e) {
+        //console.log(e);
+        response_text = { error: e };
+      }
 
       if (response_text?.error || response_text?.status === false) {
         return response.status(200).send({
@@ -90,29 +97,30 @@ export class SchoolService {
           /*let etBase64 = await Buffer.from(et).toString('base64');
           //console.log('etBase64', etBase64);*/
 
-          const encryptedRequestBody = {
+          let data = JSON.stringify({
             data: et,
-          };
+          });
+          const url =
+            'https://api.udiseplus.gov.in/school/v1.1/school-info/by-udise-code/public';
           let config_token = {
-            method: 'post',
-            url: 'https://api.udiseplus.gov.in/school/v1.1/school-info/by-udise-code/public',
             headers: {
               'Content-Type': 'application/json',
               Authorization: 'Bearer ' + authtoken,
             },
-            data: encryptedRequestBody,
           };
           //console.log('config_token', config_token);
           let response_text = null;
-          await axios(config_token)
-            .then(function (response) {
-              //console.log(JSON.stringify(response.data));
-              response_text = response.data;
-            })
-            .catch(function (error) {
-              ////console.log(error);
-              response_text = { error: error };
-            });
+
+          try {
+            const observable = this.httpService.post(url, data, config_token);
+            const promise = observable.toPromise();
+            const response = await promise;
+            //console.log(JSON.stringify(response.data));
+            response_text = response.data;
+          } catch (e) {
+            //console.log(e);
+            response_text = { error: e };
+          }
 
           if (response_text?.error || response_text?.status === false) {
             return response.status(200).send({
