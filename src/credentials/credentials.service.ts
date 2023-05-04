@@ -400,6 +400,11 @@ export class CredentialsService {
         payload.credentialSubject.id = did;
         delete payload.credentialSubject.osid;
         delete payload.credentialSubject.student_osid;
+        //fix for enroll on 4 may
+        let enrolled_on=payload.credentialSubject.enrollon
+        delete payload.credentialSubject.enrollon;
+        payload.credentialSubject.enrolled_on = enrolled_on;
+
         let obj = {
           issuerId: issuerId,
           credSchema: schemaRes,
@@ -452,7 +457,8 @@ export class CredentialsService {
             success: false,
             status: 'sb_rc_update_error',
             message: 'System Update Error ! Please try again.',
-            result: null,
+            result: updateStudentDetail,
+            result1: updateStudent,
           });
         }
 
