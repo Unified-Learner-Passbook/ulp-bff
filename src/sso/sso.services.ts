@@ -1803,34 +1803,142 @@ export class SSOService {
           //portal registration teacher and school
           else {
             // sunbird registery teacher
-            //get teacher did
-            const issuerRes = await this.credService.generateDid(
-              userdata?.teacher?.meripehchanLoginId,
+            //find if teacher account present in sb rc or not
+            const sb_rc_search = await this.sbrcService.sbrcSearchEL(
+              'TeacherV1',
+              {
+                filters: {
+                  meripehchanLoginId: {
+                    eq: userdata?.teacher?.meripehchanLoginId,
+                  },
+                },
+              },
             );
-            if (issuerRes?.error) {
-              return response.status(400).send({
+            if (sb_rc_search?.error) {
+              return response.status(501).send({
                 success: false,
-                status: 'did_generate_error',
-                message: 'Identity Generation Failed ! Please Try Again.',
-                result: issuerRes?.error,
+                status: 'sb_rc_search_error',
+                message: 'System Search Error ! Please try again.',
+                result: sb_rc_search?.error,
               });
-            } else {
-              var did = issuerRes[0].verificationMethod[0].controller;
-              userdata.teacher.did = did;
-              userdata.teacher.username = auto_username;
-              let sb_rc_response_text = await this.sbrcService.sbrcInviteEL(
-                userdata.teacher,
-                'TeacherV1',
+            } else if (sb_rc_search.length === 0) {
+              //get teacher did
+              const issuerRes = await this.credService.generateDid(
+                userdata?.teacher?.meripehchanLoginId,
               );
-              if (sb_rc_response_text?.error) {
+              if (issuerRes?.error) {
                 return response.status(400).send({
                   success: false,
-                  status: 'sb_rc_register_error',
-                  message: 'System Register Error ! Please try again.',
-                  result: sb_rc_response_text?.error,
+                  status: 'did_generate_error',
+                  message: 'Identity Generation Failed ! Please Try Again.',
+                  result: issuerRes?.error,
                 });
-              } else if (sb_rc_response_text?.params?.status === 'SUCCESSFUL') {
-                // sunbird registery school
+              } else {
+                var did = issuerRes[0].verificationMethod[0].controller;
+                userdata.teacher.did = did;
+                userdata.teacher.username = auto_username;
+                let sb_rc_response_text = await this.sbrcService.sbrcInviteEL(
+                  userdata.teacher,
+                  'TeacherV1',
+                );
+                if (sb_rc_response_text?.error) {
+                  return response.status(400).send({
+                    success: false,
+                    status: 'sb_rc_register_error',
+                    message: 'System Register Error ! Please try again.',
+                    result: sb_rc_response_text?.error,
+                  });
+                } else if (
+                  sb_rc_response_text?.params?.status === 'SUCCESSFUL'
+                ) {
+                  // sunbird registery school
+                  //find if teacher account present in sb rc or not
+                  const sb_rc_search_school =
+                    await this.sbrcService.sbrcSearchEL('SchoolDetail', {
+                      filters: {
+                        udiseCode: {
+                          eq: userdata?.school?.udiseCode,
+                        },
+                      },
+                    });
+                  if (sb_rc_search_school?.error) {
+                    return response.status(501).send({
+                      success: false,
+                      status: 'sb_rc_search_error',
+                      message: 'System Search Error ! Please try again.',
+                      result: sb_rc_search_school?.error,
+                    });
+                  } else if (sb_rc_search_school.length === 0) {
+                    //get school did
+                    const issuerRes = await this.credService.generateDid(
+                      userdata?.school?.udiseCode,
+                    );
+                    if (issuerRes?.error) {
+                      return response.status(400).send({
+                        success: false,
+                        status: 'did_generate_error',
+                        message:
+                          'Identity Generation Failed ! Please Try Again.',
+                        result: issuerRes?.error,
+                      });
+                    } else {
+                      var did = issuerRes[0].verificationMethod[0].controller;
+                      userdata.school.did = did;
+                      let sb_rc_response_text =
+                        await this.sbrcService.sbrcInviteEL(
+                          userdata.school,
+                          'SchoolDetail',
+                        );
+                      if (sb_rc_response_text?.error) {
+                        return response.status(400).send({
+                          success: false,
+                          status: 'sb_rc_register_error',
+                          message: 'System Register Error ! Please try again.',
+                          result: sb_rc_response_text?.error,
+                        });
+                      } else if (
+                        sb_rc_response_text?.params?.status === 'SUCCESSFUL'
+                      ) {
+                      } else {
+                        return response.status(400).send({
+                          success: false,
+                          status: 'sb_rc_register_duplicate',
+                          message: 'Duplicate Data Found.',
+                          result: sb_rc_response_text,
+                        });
+                      }
+                    }
+                  }
+                } else {
+                  return response.status(400).send({
+                    success: false,
+                    status: 'sb_rc_register_duplicate',
+                    message: 'Duplicate Data Found.',
+                    result: sb_rc_response_text,
+                  });
+                }
+              }
+            } else {
+              // sunbird registery school
+              //find if teacher account present in sb rc or not
+              const sb_rc_search_school = await this.sbrcService.sbrcSearchEL(
+                'SchoolDetail',
+                {
+                  filters: {
+                    udiseCode: {
+                      eq: userdata?.school?.udiseCode,
+                    },
+                  },
+                },
+              );
+              if (sb_rc_search_school?.error) {
+                return response.status(501).send({
+                  success: false,
+                  status: 'sb_rc_search_error',
+                  message: 'System Search Error ! Please try again.',
+                  result: sb_rc_search_school?.error,
+                });
+              } else if (sb_rc_search_school.length === 0) {
                 //get school did
                 const issuerRes = await this.credService.generateDid(
                   userdata?.school?.udiseCode,
@@ -1868,13 +1976,6 @@ export class SSOService {
                     });
                   }
                 }
-              } else {
-                return response.status(400).send({
-                  success: false,
-                  status: 'sb_rc_register_duplicate',
-                  message: 'Duplicate Data Found.',
-                  result: sb_rc_response_text,
-                });
               }
             }
           }
@@ -2098,13 +2199,16 @@ export class SSOService {
   //getSchoolListUdise
   async getSchoolListUdise(udise, password, response: Response) {
     //console.log('hi');
-    if(password==="1234"){
-    let obj = schoolList.find((o) => o.udiseCode === udise);
-    if (obj) {
-      response.status(200).send({ success: true, status: 'found', data: obj });
+    if (password === '1234') {
+      let obj = schoolList.find((o) => o.udiseCode === udise);
+      if (obj) {
+        response
+          .status(200)
+          .send({ success: true, status: 'found', data: obj });
+      } else {
+        response.status(400).send({ success: false, status: 'no_found' });
+      }
     } else {
-      response.status(400).send({ success: false, status: 'no_found' });
-    }} else {
       response.status(200).send({ success: false, status: 'wrong_password' });
     }
   }
