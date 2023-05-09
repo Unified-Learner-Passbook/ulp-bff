@@ -37,9 +37,13 @@ export class SchoolController {
     response.status(200).send(result);
   }
   //udiseDetail
-  @Post('/udiseDetail')
-  async udiseDetail(@Body() requestbody: any, @Res() response: Response) {
-    return this.schoolService.udiseDetail(requestbody, response);
+  @Post('/verify')
+  async udiseDetail(
+    @Body('password') password: string,
+    @Body('requestbody') requestbody: any,
+    @Res() response: Response,
+  ) {
+    return this.schoolService.udiseDetail(password, requestbody, response);
   }
   //getStateList
   @Get('/stateList')
