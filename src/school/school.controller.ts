@@ -32,12 +32,37 @@ export class SchoolController {
     const result = {
       success: true,
       message:
-        'School API Working 31 March ' + adharencrypt + ' ' + deadharencrypt,
+        'UDISE School API Working 9 May ' + adharencrypt + ' ' + deadharencrypt,
     };
     response.status(200).send(result);
   }
-  @Post('/authenticate')
-  async aadhaarVerify(@Body() requestbody: any, @Res() response: Response) {
-    return this.schoolService.schoolVerify(requestbody, response);
+  //udiseDetail
+  @Post('/verify')
+  async udiseDetail(
+    @Body('password') password: string,
+    @Body('requestbody') requestbody: any,
+    @Res() response: Response,
+  ) {
+    return this.schoolService.udiseDetail(password, requestbody, response);
+  }
+  //getStateList
+  @Get('/stateList')
+  async getStateList(@Res() response: Response) {
+    return this.schoolService.getStateList(response);
+  }
+  //getDistrictList
+  @Post('/districtList')
+  async getDistrictList(@Body() requestbody: any, @Res() response: Response) {
+    return this.schoolService.getDistrictList(requestbody, response);
+  }
+  //getBlockList
+  @Post('/blockList')
+  async getBlockList(@Body() requestbody: any, @Res() response: Response) {
+    return this.schoolService.getBlockList(requestbody, response);
+  }
+  //getSchoolList
+  @Post('/schoolList')
+  async getSchoolList(@Body() requestbody: any, @Res() response: Response) {
+    return this.schoolService.getSchoolList(requestbody, response);
   }
 }

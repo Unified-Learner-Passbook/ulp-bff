@@ -7,7 +7,7 @@
     "assets": [
       {
         "include": "./src/assets",
-        "outDir": "dist/school/",
+        "outDir": "dist/services/udise/",
         "watchAssets": true
       },
       {
