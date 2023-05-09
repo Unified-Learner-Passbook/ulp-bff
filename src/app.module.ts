@@ -13,6 +13,7 @@ import { HttpModule, HttpModuleOptions } from '@nestjs/axios';
 import { getEnvPath } from './services/helper/helper';
 import { AadharService } from './services/aadhar/aadhar.service';
 import { KeycloakService } from './services/keycloak/keycloak.service';
+import { UdiseService } from 'src/services/udise/udise.service';
 
 const envFilePath: string = getEnvPath(`${__dirname}/envs`);
 //console.log('envFilePath', envFilePath);
@@ -30,6 +31,12 @@ const envFilePath: string = getEnvPath(`${__dirname}/envs`);
     ClientModule,
     PortalModule,
   ],
-  providers: [CredService, SbrcService, AadharService, KeycloakService],
+  providers: [
+    CredService,
+    SbrcService,
+    AadharService,
+    KeycloakService,
+    UdiseService,
+  ],
 })
 export class AppModule {}
