@@ -1662,6 +1662,7 @@ export class SSOService {
                   result: sb_rc_response_text?.error,
                 });
               } else if (sb_rc_response_text?.params?.status === 'SUCCESSFUL') {
+                console.log('sb_rc_response_text', sb_rc_response_text);
                 //find osid of student and add detail in student details
                 // sunbird registery student detail
                 userdata.studentdetail.student_id =
@@ -1712,6 +1713,14 @@ export class SSOService {
                   aadhaar_status: 'verified',
                   aadhaar_enc: '',
                   gender: userdata?.student?.gender,
+                  school_udise: userdata?.student?.school_udise,
+                  school_name: userdata?.student?.school_name,
+                  stateCode: userdata?.student?.stateCode,
+                  stateName: userdata?.student?.stateName,
+                  districtCode: userdata?.student?.districtCode,
+                  districtName: userdata?.student?.districtName,
+                  blockCode: userdata?.student?.blockCode,
+                  blockName: userdata?.student?.blockName,
                 },
                 'StudentV2',
                 osid,
@@ -1747,12 +1756,31 @@ export class SSOService {
                   });
                 } else if (sb_rc_search_detail.length === 0) {
                   // no student found then register
-                  return response.status(501).send({
-                    success: false,
-                    status: 'sb_rc_search_no_found',
-                    message: 'Data Not Found in System.',
-                    result: sb_rc_search_detail?.error,
-                  });
+                  userdata.studentdetail.student_id = osid;
+                  userdata.studentdetail.claim_status = 'pending';
+                  let sb_rc_response_text_detail =
+                    await this.sbrcService.sbrcInviteEL(
+                      userdata.studentdetail,
+                      'StudentDetailV2',
+                    );
+                  if (sb_rc_response_text_detail?.error) {
+                    return response.status(400).send({
+                      success: false,
+                      status: 'sb_rc_register_error',
+                      message: 'System Register Error ! Please try again.',
+                      result: sb_rc_response_text_detail?.error,
+                    });
+                  } else if (
+                    sb_rc_response_text_detail?.params?.status === 'SUCCESSFUL'
+                  ) {
+                  } else {
+                    return response.status(400).send({
+                      success: false,
+                      status: 'sb_rc_register_duplicate',
+                      message: 'Duplicate Data Found.',
+                      result: sb_rc_response_text_detail,
+                    });
+                  }
                 } else {
                   //get student detail os id and update
                   //update value found id
@@ -1761,8 +1789,6 @@ export class SSOService {
                   let sb_rc_response_text = await this.sbrcService.sbrcUpdateEL(
                     {
                       acdemic_year: userdata?.studentdetail?.acdemic_year,
-                      school_name: userdata?.studentdetail?.school_name,
-                      school_udise: userdata?.studentdetail?.school_udise,
                       gaurdian_name: userdata?.studentdetail?.gaurdian_name,
                       mobile: userdata?.studentdetail?.mobile,
                       grade: userdata?.studentdetail?.grade,
