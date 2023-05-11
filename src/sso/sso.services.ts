@@ -2211,10 +2211,16 @@ export class SSOService {
             let student_list = [];
             for (let i = 0; i < sb_rc_search_student.length; i++) {
               const sb_rc_search_student_detail =
-                await this.sbrcService.sbrcSearchEL(
-                  'StudentDetailV2',
-                  requestbody,
-                );
+                await this.sbrcService.sbrcSearchEL('StudentDetailV2', {
+                  filters: {
+                    student_id: {
+                      eq: sb_rc_search_student[i].osid,
+                    },
+                    claim_status: {
+                      eq: requestbody.filters.claim_status.eq,
+                    },
+                  },
+                });
               if (sb_rc_search_student_detail?.error) {
               } else if (sb_rc_search_student_detail.length !== 0) {
                 student_list.push({
