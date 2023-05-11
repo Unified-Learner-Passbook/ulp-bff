@@ -129,11 +129,36 @@ export class CredentialsService {
         if (credentialPlayload.credentialSubjectCommon.total) {
           iterator.total = credentialPlayload.credentialSubjectCommon.total;
         }
+        //list of schema update fields
         if (credentialPlayload.issuerDetail.schoolName) {
           iterator.school_name = credentialPlayload.issuerDetail.schoolName;
         }
         if (credentialPlayload.issuerDetail.udise) {
           iterator.school_id = credentialPlayload.issuerDetail.udise;
+        }
+        if (credentialPlayload.credentialSubjectCommon.stateCode) {
+          iterator.stateCode =
+            credentialPlayload.credentialSubjectCommon.stateCode;
+        }
+        if (credentialPlayload.credentialSubjectCommon.stateName) {
+          iterator.stateName =
+            credentialPlayload.credentialSubjectCommon.stateName;
+        }
+        if (credentialPlayload.credentialSubjectCommon.districtCode) {
+          iterator.districtCode =
+            credentialPlayload.credentialSubjectCommon.districtCode;
+        }
+        if (credentialPlayload.credentialSubjectCommon.districtName) {
+          iterator.districtName =
+            credentialPlayload.credentialSubjectCommon.districtName;
+        }
+        if (credentialPlayload.credentialSubjectCommon.blockCode) {
+          iterator.blockCode =
+            credentialPlayload.credentialSubjectCommon.blockCode;
+        }
+        if (credentialPlayload.credentialSubjectCommon.blockName) {
+          iterator.blockName =
+            credentialPlayload.credentialSubjectCommon.blockName;
         }
 
         //generate did or find did
@@ -256,6 +281,17 @@ export class CredentialsService {
                   '@' +
                   iterator.dob.split('/').join('')
                 ).toLowerCase(),
+                aadhaar_status: 'verified',
+                aadhaar_enc: '',
+                gender: iterator?.gender ? iterator.gender : '',
+                school_udise: iterator.school_id,
+                school_name: iterator.school_name,
+                stateCode: iterator.stateCode,
+                stateName: iterator.stateName,
+                districtCode: iterator.districtCode,
+                districtName: iterator.districtName,
+                blockCode: iterator.blockCode,
+                blockName: iterator.blockName,
               };
               console.log('inviteSchema', inviteSchema);
               //let createStudent = await this.sbrcInvite(inviteSchema, 'StudentV2')

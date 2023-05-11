@@ -2142,9 +2142,106 @@ export class SSOService {
     }
   }
 
-  async getStudentDetailV2(requestbody, response: Response) {
+  async getStudentDetailV2(token: string, requestbody, response: Response) {
+    if (token) {
+      const studentUsername = await this.keycloakService.verifyUserToken(token);
+      if (studentUsername?.error) {
+        return response.status(401).send({
+          success: false,
+          status: 'keycloak_token_bad_request',
+          message: 'You do not have access for this request.',
+          result: null,
+        });
+      } else if (!studentUsername?.preferred_username) {
+        return response.status(401).send({
+          success: false,
+          status: 'keycloak_token_error',
+          message: 'Your Login Session Expired.',
+          result: null,
+        });
+      } else {
+        const sb_rc_search = await this.sbrcService.sbrcSearchEL('TeacherV1', {
+          filters: {
+            username: {
+              eq: studentUsername?.preferred_username,
+            },
+          },
+        });
+        if (sb_rc_search?.error) {
+          return response.status(501).send({
+            success: false,
+            status: 'sb_rc_search_error',
+            message: 'System Search Error ! Please try again.',
+            result: sb_rc_search?.error,
+          });
+        } else if (sb_rc_search.length === 0) {
+          return response.status(404).send({
+            success: false,
+            status: 'sb_rc_search_no_found',
+            message: 'Data Not Found in System.',
+            result: null,
+          });
+        } else {
+          let schoolUdise = sb_rc_search[0]?.schoolUdise;
+          const sb_rc_search_student = await this.sbrcService.sbrcSearchEL(
+            'StudentV2',
+            {
+              filters: {
+                school_udise: {
+                  eq: schoolUdise,
+                },
+              },
+            },
+          );
+          if (sb_rc_search_student?.error) {
+            return response.status(501).send({
+              success: false,
+              status: 'sb_rc_search_error',
+              message: 'System Search Error ! Please try again.',
+              result: sb_rc_search_student?.error,
+            });
+          } else if (sb_rc_search_student.length === 0) {
+            return response.status(200).send({
+              success: true,
+              status: 'sb_rc_search_no_found',
+              message: 'Data Not Found in System.',
+              result: [],
+            });
+          } else {
+            let student_list = [];
+            for (let i = 0; i < sb_rc_search_student.length; i++) {
+              const sb_rc_search_student_detail =
+                await this.sbrcService.sbrcSearchEL(
+                  'StudentDetailV2',
+                  requestbody,
+                );
+              if (sb_rc_search_student?.error) {
+              } else if (sb_rc_search_student.length !== 0) {
+                student_list.push({
+                  student: sb_rc_search_student[0],
+                  studentdetail: sb_rc_search_student_detail[i],
+                });
+              }
+            }
+            return response.status(200).send({
+              success: true,
+              status: 'sb_rc_search_found',
+              message: 'Data Found in System.',
+              result: student_list,
+            });
+          }
+        }
+      }
+    } else {
+      return response.status(400).send({
+        success: false,
+        status: 'invalid_request',
+        message: 'Invalid Request. Not received All Parameters.',
+        result: null,
+      });
+    }
     // var studentDetails = await this.studentDetailsV2(requestbody);
-    var studentDetails = await this.sbrcService.sbrcSearch(
+    /*var studentDetails = await this.sbrcService.sbrcSearch(
       requestbody,
       'StudentDetailV2',
     );
@@ -2199,7 +2296,7 @@ export class SSOService {
         message: 'System Search Error ! Please try again.',
         result: null,
       });
-    }
+    }*/
   }
   //digilockerAuthorize
   async udiseVerify(udiseid: string, response: Response) {
@@ -2276,6 +2373,13 @@ export class SSOService {
         let school_name = requestbody?.schoolDetails?.schoolName;
         let acdemic_year = requestbody?.schoolDetails?.['academic-year'];
         let school_type = requestbody?.schoolDetails?.school_type;
+        //new schema field
+        let stateCode = requestbody?.schoolDetails?.stateCode;
+        let stateName = requestbody?.schoolDetails?.stateName;
+        let districtCode = requestbody?.schoolDetails?.districtCode;
+        let districtName = requestbody?.schoolDetails?.districtName;
+        let blockCode = requestbody?.schoolDetails?.blockCode;
+        let blockName = requestbody?.schoolDetails?.blockName;
         const studentDetails = requestbody?.studentDetails;
         let iserror = false;
         let loglist = [];
@@ -2349,6 +2453,14 @@ export class SSOService {
                       aadhaar_status: '',
                       aadhaar_enc: aadhaar_enc_text,
                       gender: student?.gender,
+                      school_udise: school_udise,
+                      school_name: school_name,
+                      stateCode: stateCode,
+                      stateName: stateName,
+                      districtCode: districtCode,
+                      districtName: districtName,
+                      blockCode: blockCode,
+                      blockName: blockName,
                     },
                     'StudentV2',
                   );
@@ -2374,8 +2486,6 @@ export class SSOService {
                           student_id: os_student_id,
                           mobile: student?.mobile,
                           gaurdian_name: student?.gaurdian_name,
-                          school_udise: school_udise,
-                          school_name: school_name,
                           grade: grade,
                           acdemic_year: acdemic_year,
                           start_date: '',
@@ -2490,31 +2600,35 @@ export class SSOService {
           });
         } else {
           let schoolUdise = sb_rc_search[0]?.schoolUdise;
-          const sb_rc_search_student_detail =
-            await this.sbrcService.sbrcSearchEL('StudentDetailV2', {
-              filters: {
-                school_udise: {
-                  eq: schoolUdise,
+          const sb_rc_search_student = await this.sbrcService.sbrcSearchEL(
+            'StudentV2',
+            aadhaar_status === 'all'
+              ? {
+                  filters: {
+                    school_udise: {
+                      eq: schoolUdise,
+                    },
+                  },
+                }
+              : {
+                  filters: {
+                    school_udise: {
+                      eq: schoolUdise,
+                    },
+                    aadhaar_status: {
+                      eq: aadhaar_status,
+                    },
+                  },
                 },
-                grade: {
-                  eq: grade,
-                },
-                acdemic_year: {
-                  eq: acdemic_year,
-                },
-                claim_status: {
-                  eq: 'approved',
-                },
-              },
-            });
-          if (sb_rc_search_student_detail?.error) {
+          );
+          if (sb_rc_search_student?.error) {
             return response.status(501).send({
               success: false,
               status: 'sb_rc_search_error',
               message: 'System Search Error ! Please try again.',
-              result: sb_rc_search_student_detail?.error,
+              result: sb_rc_search_student?.error,
             });
-          } else if (sb_rc_search_student_detail.length === 0) {
+          } else if (sb_rc_search_student.length === 0) {
             return response.status(200).send({
               success: true,
               status: 'sb_rc_search_no_found',
@@ -2523,33 +2637,29 @@ export class SSOService {
             });
           } else {
             let student_list = [];
-            for (let i = 0; i < sb_rc_search_student_detail.length; i++) {
-              const sb_rc_search_student = await this.sbrcService.sbrcSearchEL(
-                'StudentV2',
-                aadhaar_status === 'all'
-                  ? {
-                      filters: {
-                        osid: {
-                          eq: sb_rc_search_student_detail[i].student_id,
-                        },
-                      },
-                    }
-                  : {
-                      filters: {
-                        osid: {
-                          eq: sb_rc_search_student_detail[i].student_id,
-                        },
-                        aadhaar_status: {
-                          eq: aadhaar_status,
-                        },
-                      },
+            for (let i = 0; i < sb_rc_search_student.length; i++) {
+              const sb_rc_search_student_detail =
+                await this.sbrcService.sbrcSearchEL('StudentDetailV2', {
+                  filters: {
+                    student_id: {
+                      eq: sb_rc_search_student[i].osid,
                     },
-              );
-              if (sb_rc_search_student?.error) {
-              } else if (sb_rc_search_student.length !== 0) {
+                    grade: {
+                      eq: grade,
+                    },
+                    acdemic_year: {
+                      eq: acdemic_year,
+                    },
+                    claim_status: {
+                      eq: 'approved',
+                    },
+                  },
+                });
+              if (sb_rc_search_student_detail?.error) {
+              } else if (sb_rc_search_student_detail.length !== 0) {
                 student_list.push({
-                  student: sb_rc_search_student[0],
-                  studentdetail: sb_rc_search_student_detail[i],
+                  student: sb_rc_search_student[i],
+                  studentdetail: sb_rc_search_student_detail[0],
                 });
               }
             }
