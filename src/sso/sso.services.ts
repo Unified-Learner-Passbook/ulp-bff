@@ -2215,11 +2215,11 @@ export class SSOService {
                   'StudentDetailV2',
                   requestbody,
                 );
-              if (sb_rc_search_student?.error) {
-              } else if (sb_rc_search_student.length !== 0) {
+              if (sb_rc_search_student_detail?.error) {
+              } else if (sb_rc_search_student_detail.length !== 0) {
                 student_list.push({
-                  student: sb_rc_search_student[0],
-                  studentdetail: sb_rc_search_student_detail[i],
+                  student: sb_rc_search_student[i],
+                  studentdetail: sb_rc_search_student_detail[0],
                 });
               }
             }
