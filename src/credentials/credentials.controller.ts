@@ -35,6 +35,7 @@ export class CredentialsController {
     return this.credentialsService.issueBulkCredential(
       payload,
       schemaId,
+      type,
       response,
     );
   }

@@ -20,6 +20,7 @@ export class CredentialsService {
   async issueBulkCredential(
     credentialPlayload: BulkCredentialDto,
     schemaId: string,
+    type: string,
     response: Response,
   ) {
     console.log('credentialPlayload: ', credentialPlayload);
@@ -183,6 +184,7 @@ export class CredentialsService {
                this.telemetryService.telemetry({
                 student_name: iterator.student_name,
                 dob: iterator.dob,
+                type: type,
                 result: 'credentials-issued',
               })
             } else {
@@ -195,6 +197,7 @@ export class CredentialsService {
               this.telemetryService.telemetry({
                 student_name: iterator.student_name,
                 dob: iterator.dob,
+                type: type,
                 result: 'credentials-failed',
               })
             }
@@ -230,6 +233,7 @@ export class CredentialsService {
                     this.telemetryService.telemetry({
                       student_name: iterator.student_name,
                       dob: iterator.dob,
+                      type: type,
                       result: 'credentials-issued',
                     })
                   } else {
@@ -243,6 +247,7 @@ export class CredentialsService {
                     this.telemetryService.telemetry({
                       student_name: iterator.student_name,
                       dob: iterator.dob,
+                      type: type,
                       result: 'credentials-failed',
                     })
                   }
@@ -257,6 +262,7 @@ export class CredentialsService {
                 this.telemetryService.telemetry({
                   student_name: iterator.student_name,
                   dob: iterator.dob,
+                  type: type,
                   result: 'credentials-failed',
                 })
               }
@@ -271,6 +277,7 @@ export class CredentialsService {
               this.telemetryService.telemetry({
                 student_name: iterator.student_name,
                 dob: iterator.dob,
+                type: type,
                 result: 'credentials-failed',
               })
             }
@@ -325,6 +332,7 @@ export class CredentialsService {
                   this.telemetryService.telemetry({
                     student_name: iterator.student_name,
                     dob: iterator.dob,
+                    type: type,
                     result: 'credentials-issued',
                   })
                 } else {
@@ -338,6 +346,7 @@ export class CredentialsService {
                   this.telemetryService.telemetry({
                     student_name: iterator.student_name,
                     dob: iterator.dob,
+                    type: type,
                     result: 'credentials-failed',
                   })
                 }
@@ -352,6 +361,7 @@ export class CredentialsService {
                 this.telemetryService.telemetry({
                   student_name: iterator.student_name,
                   dob: iterator.dob,
+                  type: type,
                   result: 'credentials-failed',
                 })
               }
@@ -366,6 +376,7 @@ export class CredentialsService {
                this.telemetryService.telemetry({
                 student_name: iterator.student_name,
                 dob: iterator.dob,
+                type: type,
                 result: 'credentials-failed',
               })
             }
@@ -380,6 +391,7 @@ export class CredentialsService {
              this.telemetryService.telemetry({
               student_name: iterator.student_name,
               dob: iterator.dob,
+              type: type,
               result: 'credentials-failed',
             })
           }
