@@ -61,76 +61,86 @@ export class PortalService {
           let schoolUdise = sb_rc_search[0]?.schoolUdise;
           //count field start
           let countlog = {};
+          //common student list from udise code
+          const sb_rc_search_student_udise_code =
+            await this.sbrcService.sbrcSearchEL('StudentV2', {
+              filters: {
+                school_udise: {
+                  eq: schoolUdise,
+                },
+              },
+            });
           for (let i = 0; i < countFields.length; i++) {
             let field = countFields[i];
             let fieldcount = 0;
             //students_registered
             if (field === 'students_registered') {
-              const sb_rc_search_student_detail =
-                await this.sbrcService.sbrcSearchEL('StudentDetailV2', {
-                  filters: {
-                    school_udise: {
-                      eq: schoolUdise,
-                    },
-                  },
-                });
-              if (sb_rc_search_student_detail?.error) {
+              if (sb_rc_search_student_udise_code?.error) {
               } else {
-                fieldcount = sb_rc_search_student_detail.length;
+                fieldcount = sb_rc_search_student_udise_code.length;
               }
             }
             //claims_pending
             if (field === 'claims_pending') {
-              const sb_rc_search_student_detail =
-                await this.sbrcService.sbrcSearchEL('StudentDetailV2', {
-                  filters: {
-                    school_udise: {
-                      eq: schoolUdise,
+              fieldcount = 0;
+              for (let i = 0; i < sb_rc_search_student_udise_code.length; i++) {
+                const sb_rc_search_student_detail =
+                  await this.sbrcService.sbrcSearchEL('StudentDetailV2', {
+                    filters: {
+                      student_id: {
+                        eq: sb_rc_search_student_udise_code[i].osid,
+                      },
+                      claim_status: {
+                        eq: 'pending',
+                      },
                     },
-                    claim_status: {
-                      eq: 'pending',
-                    },
-                  },
-                });
-              if (sb_rc_search_student_detail?.error) {
-              } else {
-                fieldcount = sb_rc_search_student_detail.length;
+                  });
+                if (sb_rc_search_student_detail?.error) {
+                } else if (sb_rc_search_student_detail.length !== 0) {
+                  fieldcount++;
+                }
               }
             }
             //claims_approved
             if (field === 'claims_approved') {
-              const sb_rc_search_student_detail =
-                await this.sbrcService.sbrcSearchEL('StudentDetailV2', {
-                  filters: {
-                    school_udise: {
-                      eq: schoolUdise,
+              fieldcount = 0;
+              for (let i = 0; i < sb_rc_search_student_udise_code.length; i++) {
+                const sb_rc_search_student_detail =
+                  await this.sbrcService.sbrcSearchEL('StudentDetailV2', {
+                    filters: {
+                      student_id: {
+                        eq: sb_rc_search_student_udise_code[i].osid,
+                      },
+                      claim_status: {
+                        eq: 'approved',
+                      },
                     },
-                    claim_status: {
-                      eq: 'approved',
-                    },
-                  },
-                });
-              if (sb_rc_search_student_detail?.error) {
-              } else {
-                fieldcount = sb_rc_search_student_detail.length;
+                  });
+                if (sb_rc_search_student_detail?.error) {
+                } else if (sb_rc_search_student_detail.length !== 0) {
+                  fieldcount++;
+                }
               }
             }
             //claims_rejected
             if (field === 'claims_rejected') {
-              const sb_rc_search_student_detail =
-                await this.sbrcService.sbrcSearchEL('StudentDetailV2', {
-                  filters: {
-                    school_udise: {
-                      eq: schoolUdise,
+              fieldcount = 0;
+              for (let i = 0; i < sb_rc_search_student_udise_code.length; i++) {
+                const sb_rc_search_student_detail =
+                  await this.sbrcService.sbrcSearchEL('StudentDetailV2', {
+                    filters: {
+                      student_id: {
+                        eq: sb_rc_search_student_udise_code[i].osid,
+                      },
+                      claim_status: {
+                        eq: 'rejected',
+                      },
                     },
-                    claim_status: {
-                      eq: 'rejected',
-                    },
-                  },
-                });
-              if (sb_rc_search_student_detail?.error) {
-              } else {
-                fieldcount = sb_rc_search_student_detail.length;
+                  });
+                if (sb_rc_search_student_detail?.error) {
+                } else if (sb_rc_search_student_detail.length !== 0) {
+                  fieldcount++;
+                }
               }
             }
             //credentials_issued
