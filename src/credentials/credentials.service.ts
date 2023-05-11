@@ -7,13 +7,15 @@ import { BulkCredentialDto } from './dto/bulkCred-dto';
 import { Response } from 'express';
 import { CredService } from 'src/services/cred/cred.service';
 import { SbrcService } from 'src/services/sbrc/sbrc.service';
+import { TelemetryService } from 'src/services/telemetry/telemetry.service';
 
 @Injectable()
 export class CredentialsService {
   constructor(
     private credService: CredService,
     private sbrcService: SbrcService,
-  ) {}
+    private telemetryService: TelemetryService
+  ) { }
 
   async issueBulkCredential(
     credentialPlayload: BulkCredentialDto,
@@ -176,12 +178,25 @@ export class CredentialsService {
             //console.log("cred 34", cred)
             if (cred) {
               responseArray.push(cred);
+
+              //telemetry service called
+               this.telemetryService.telemetry({
+                student_name: iterator.student_name,
+                dob: iterator.dob,
+                result: 'credentials-issued',
+              })
             } else {
               responseArray.push({
                 student_name: iterator.student_name,
                 dob: iterator.dob,
                 error: 'unable to issue credentials!',
               });
+              //telemetry service called
+              this.telemetryService.telemetry({
+                student_name: iterator.student_name,
+                dob: iterator.dob,
+                result: 'credentials-failed',
+              })
             }
           } else {
             //let didRes = await this.generateDid(aadhar_token)
@@ -211,12 +226,25 @@ export class CredentialsService {
                   //console.log("cred 34", cred)
                   if (cred) {
                     responseArray.push(cred);
+                    //telemetry service called
+                    this.telemetryService.telemetry({
+                      student_name: iterator.student_name,
+                      dob: iterator.dob,
+                      result: 'credentials-issued',
+                    })
                   } else {
                     responseArray.push({
                       student_name: iterator.student_name,
                       dob: iterator.dob,
                       error: 'unable to issue credentials!',
                     });
+
+                    //telemetry service called
+                    this.telemetryService.telemetry({
+                      student_name: iterator.student_name,
+                      dob: iterator.dob,
+                      result: 'credentials-failed',
+                    })
                   }
                 }
               } else {
@@ -225,6 +253,12 @@ export class CredentialsService {
                   dob: iterator.dob,
                   error: 'unable to update did inside RC!',
                 });
+                //telemetry service called
+                this.telemetryService.telemetry({
+                  student_name: iterator.student_name,
+                  dob: iterator.dob,
+                  result: 'credentials-failed',
+                })
               }
             } else {
               responseArray.push({
@@ -232,6 +266,13 @@ export class CredentialsService {
                 dob: iterator.dob,
                 error: 'unable to generate student did!',
               });
+
+              //telemetry service called
+              this.telemetryService.telemetry({
+                student_name: iterator.student_name,
+                dob: iterator.dob,
+                result: 'credentials-failed',
+              })
             }
           }
         } else {
@@ -280,12 +321,25 @@ export class CredentialsService {
                 //console.log("cred 34", cred)
                 if (cred) {
                   responseArray.push(cred);
+                  //telemetry service called
+                  this.telemetryService.telemetry({
+                    student_name: iterator.student_name,
+                    dob: iterator.dob,
+                    result: 'credentials-issued',
+                  })
                 } else {
                   responseArray.push({
                     student_name: iterator.student_name,
                     dob: iterator.dob,
                     error: 'unable to issue credentials!',
                   });
+
+                  //telemetry service called
+                  this.telemetryService.telemetry({
+                    student_name: iterator.student_name,
+                    dob: iterator.dob,
+                    result: 'credentials-failed',
+                  })
                 }
               } else {
                 responseArray.push({
@@ -293,6 +347,13 @@ export class CredentialsService {
                   dob: iterator.dob,
                   error: 'unable to create student in RC!',
                 });
+
+                //telemetry service called
+                this.telemetryService.telemetry({
+                  student_name: iterator.student_name,
+                  dob: iterator.dob,
+                  result: 'credentials-failed',
+                })
               }
             } else {
               responseArray.push({
@@ -300,6 +361,13 @@ export class CredentialsService {
                 dob: iterator.dob,
                 error: 'unable to generate student did!',
               });
+
+               //telemetry service called
+               this.telemetryService.telemetry({
+                student_name: iterator.student_name,
+                dob: iterator.dob,
+                result: 'credentials-failed',
+              })
             }
           } else {
             responseArray.push({
@@ -307,6 +375,13 @@ export class CredentialsService {
               dob: iterator.dob,
               error: 'aadhar_token not found!',
             });
+
+             //telemetry service called
+             this.telemetryService.telemetry({
+              student_name: iterator.student_name,
+              dob: iterator.dob,
+              result: 'credentials-failed',
+            })
           }
         }
       }
