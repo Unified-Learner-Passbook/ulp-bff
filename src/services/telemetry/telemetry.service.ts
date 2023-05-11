@@ -53,8 +53,8 @@ export class TelemetryService {
                 "tags": [],
                 "edata": {
                   "id": telemetryData.result,
-                  "type": "CLICK",
-                  "pageid": "digilocker-callback"
+                  "type": telemetryData.type,
+                  "pageid": "bulk-api"
                 }
               }
             ]
