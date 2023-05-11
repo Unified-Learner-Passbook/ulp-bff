@@ -61,7 +61,7 @@ export class TelemetryService {
           });
     
         //const url = process.env.TELEMETRY_URL + '/v1/telemetry';
-        const url = 'http://localhost:9001/v1/telemetry'
+        const url = process.env.TELEMETRY_URL + '/v1/telemetry'
     
         const config: AxiosRequestConfig = {
           headers: {
