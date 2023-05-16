@@ -211,7 +211,8 @@ export class CredentialsService {
               responseArray.push(cred);
 
               //telemetry service called
-              this.telemetryService.telemetry({
+               this.telemetryService.telemetry({
+                id: iterator.id,
                 student_name: iterator.student_name,
                 dob: iterator.dob,
                 type: type,
@@ -225,6 +226,7 @@ export class CredentialsService {
               });
               //telemetry service called
               this.telemetryService.telemetry({
+                id: iterator.id,
                 student_name: iterator.student_name,
                 dob: iterator.dob,
                 type: type,
@@ -261,6 +263,7 @@ export class CredentialsService {
                     responseArray.push(cred);
                     //telemetry service called
                     this.telemetryService.telemetry({
+                      id: iterator.id,
                       student_name: iterator.student_name,
                       dob: iterator.dob,
                       type: type,
@@ -275,6 +278,7 @@ export class CredentialsService {
 
                     //telemetry service called
                     this.telemetryService.telemetry({
+                      id: iterator.id,
                       student_name: iterator.student_name,
                       dob: iterator.dob,
                       type: type,
@@ -290,6 +294,7 @@ export class CredentialsService {
                 });
                 //telemetry service called
                 this.telemetryService.telemetry({
+                  id: iterator.id,
                   student_name: iterator.student_name,
                   dob: iterator.dob,
                   type: type,
@@ -305,6 +310,7 @@ export class CredentialsService {
 
               //telemetry service called
               this.telemetryService.telemetry({
+                id: iterator.id,
                 student_name: iterator.student_name,
                 dob: iterator.dob,
                 type: type,
@@ -371,6 +377,7 @@ export class CredentialsService {
                   responseArray.push(cred);
                   //telemetry service called
                   this.telemetryService.telemetry({
+                    id: iterator.id,
                     student_name: iterator.student_name,
                     dob: iterator.dob,
                     type: type,
@@ -385,6 +392,7 @@ export class CredentialsService {
 
                   //telemetry service called
                   this.telemetryService.telemetry({
+                    id: iterator.id,
                     student_name: iterator.student_name,
                     dob: iterator.dob,
                     type: type,
@@ -400,6 +408,7 @@ export class CredentialsService {
 
                 //telemetry service called
                 this.telemetryService.telemetry({
+                  id: iterator.id,
                   student_name: iterator.student_name,
                   dob: iterator.dob,
                   type: type,
@@ -413,8 +422,9 @@ export class CredentialsService {
                 error: 'unable to generate student did!',
               });
 
-              //telemetry service called
-              this.telemetryService.telemetry({
+               //telemetry service called
+               this.telemetryService.telemetry({
+                id: iterator.id,
                 student_name: iterator.student_name,
                 dob: iterator.dob,
                 type: type,
@@ -428,8 +438,9 @@ export class CredentialsService {
               error: 'aadhar_token not found!',
             });
 
-            //telemetry service called
-            this.telemetryService.telemetry({
+             //telemetry service called
+             this.telemetryService.telemetry({
+              id: iterator.id,
               student_name: iterator.student_name,
               dob: iterator.dob,
               type: type,
