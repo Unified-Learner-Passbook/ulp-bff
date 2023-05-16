@@ -94,10 +94,12 @@ export class SSOController {
 
   @Post('/studentDetailV2')
   async getStudentDetailV2(
+    @Headers('Authorization') auth: string,
     @Body() requestbody: any,
     @Res() response: Response,
   ) {
-    return this.ssoService.getStudentDetailV2(requestbody, response);
+    const jwt = auth.replace('Bearer ', '');
+    return this.ssoService.getStudentDetailV2(jwt, requestbody, response);
   }
 
   //digilocker authorize
@@ -202,7 +204,7 @@ export class SSOController {
     @Body('password') password: string,
     @Res() response: Response,
   ) {
-    return this.ssoService.getSchoolListUdise(udise,password, response);
+    return this.ssoService.getSchoolListUdise(udise, password, response);
   }
   //new credentials list schema id schema template
   //credentialsSearch
@@ -214,7 +216,7 @@ export class SSOController {
     @Res() response: Response,
   ) {
     const jwt = auth.replace('Bearer ', '');
-    return this.ssoService.credentialsSearch(jwt,type, requestbody, response);
+    return this.ssoService.credentialsSearch(jwt, type, requestbody, response);
   }
   //credentialsIssue
   @Post('/student/credentials/issue')

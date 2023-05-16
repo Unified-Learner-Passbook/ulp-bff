@@ -20,6 +20,12 @@ export class BulkCredentialDto {
     quarterlyAssessment: string;
     total: string;
     schoolName: string;
+    stateCode: string;
+    stateName: string;
+    districtCode: string;
+    districtName: string;
+    blockCode: string;
+    blockName: string;
   };
   credentialSubject: [
     {
@@ -46,6 +52,12 @@ export class BulkCredentialDto {
       school_name: string;
       school_id: string;
       gender: string;
+      stateCode: string;
+      stateName: string;
+      districtCode: string;
+      districtName: string;
+      blockCode: string;
+      blockName: string;
     },
   ];
 }

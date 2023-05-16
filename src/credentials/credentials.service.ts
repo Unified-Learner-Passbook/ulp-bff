@@ -1,5 +1,7 @@
 //import { HttpService } from '@nestjs/axios';
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { HttpService } from '@nestjs/axios';
+import { AxiosRequestConfig } from 'axios';
 import axios from 'axios';
 import { it } from 'node:test';
 import { SingleCredentialDto } from './dto/singlecred-dto';
@@ -8,14 +10,17 @@ import { Response } from 'express';
 import { CredService } from 'src/services/cred/cred.service';
 import { SbrcService } from 'src/services/sbrc/sbrc.service';
 import { TelemetryService } from 'src/services/telemetry/telemetry.service';
+import { KeycloakService } from 'src/services/keycloak/keycloak.service';
 
 @Injectable()
 export class CredentialsService {
   constructor(
+    private readonly httpService: HttpService,
     private credService: CredService,
     private sbrcService: SbrcService,
-    private telemetryService: TelemetryService
-  ) { }
+    private telemetryService: TelemetryService,
+    private keycloakService: KeycloakService,
+  ) {}
 
   async issueBulkCredential(
     credentialPlayload: BulkCredentialDto,
@@ -132,11 +137,36 @@ export class CredentialsService {
         if (credentialPlayload.credentialSubjectCommon.total) {
           iterator.total = credentialPlayload.credentialSubjectCommon.total;
         }
+        //list of schema update fields
         if (credentialPlayload.issuerDetail.schoolName) {
           iterator.school_name = credentialPlayload.issuerDetail.schoolName;
         }
         if (credentialPlayload.issuerDetail.udise) {
           iterator.school_id = credentialPlayload.issuerDetail.udise;
+        }
+        if (credentialPlayload.credentialSubjectCommon.stateCode) {
+          iterator.stateCode =
+            credentialPlayload.credentialSubjectCommon.stateCode;
+        }
+        if (credentialPlayload.credentialSubjectCommon.stateName) {
+          iterator.stateName =
+            credentialPlayload.credentialSubjectCommon.stateName;
+        }
+        if (credentialPlayload.credentialSubjectCommon.districtCode) {
+          iterator.districtCode =
+            credentialPlayload.credentialSubjectCommon.districtCode;
+        }
+        if (credentialPlayload.credentialSubjectCommon.districtName) {
+          iterator.districtName =
+            credentialPlayload.credentialSubjectCommon.districtName;
+        }
+        if (credentialPlayload.credentialSubjectCommon.blockCode) {
+          iterator.blockCode =
+            credentialPlayload.credentialSubjectCommon.blockCode;
+        }
+        if (credentialPlayload.credentialSubjectCommon.blockName) {
+          iterator.blockName =
+            credentialPlayload.credentialSubjectCommon.blockName;
         }
 
         //generate did or find did
@@ -187,7 +217,7 @@ export class CredentialsService {
                 dob: iterator.dob,
                 type: type,
                 result: 'credentials-issued',
-              })
+              });
             } else {
               responseArray.push({
                 student_name: iterator.student_name,
@@ -201,7 +231,7 @@ export class CredentialsService {
                 dob: iterator.dob,
                 type: type,
                 result: 'credentials-failed',
-              })
+              });
             }
           } else {
             //let didRes = await this.generateDid(aadhar_token)
@@ -238,7 +268,7 @@ export class CredentialsService {
                       dob: iterator.dob,
                       type: type,
                       result: 'credentials-issued',
-                    })
+                    });
                   } else {
                     responseArray.push({
                       student_name: iterator.student_name,
@@ -253,7 +283,7 @@ export class CredentialsService {
                       dob: iterator.dob,
                       type: type,
                       result: 'credentials-failed',
-                    })
+                    });
                   }
                 }
               } else {
@@ -269,7 +299,7 @@ export class CredentialsService {
                   dob: iterator.dob,
                   type: type,
                   result: 'credentials-failed',
-                })
+                });
               }
             } else {
               responseArray.push({
@@ -285,7 +315,7 @@ export class CredentialsService {
                 dob: iterator.dob,
                 type: type,
                 result: 'credentials-failed',
-              })
+              });
             }
           }
         } else {
@@ -310,6 +340,17 @@ export class CredentialsService {
                   '@' +
                   iterator.dob.split('/').join('')
                 ).toLowerCase(),
+                aadhaar_status: 'verified',
+                aadhaar_enc: '',
+                gender: iterator?.gender ? iterator.gender : '',
+                school_udise: iterator.school_id,
+                school_name: iterator.school_name,
+                stateCode: iterator.stateCode,
+                stateName: iterator.stateName,
+                districtCode: iterator.districtCode,
+                districtName: iterator.districtName,
+                blockCode: iterator.blockCode,
+                blockName: iterator.blockName,
               };
               console.log('inviteSchema', inviteSchema);
               //let createStudent = await this.sbrcInvite(inviteSchema, 'StudentV2')
@@ -341,7 +382,7 @@ export class CredentialsService {
                     dob: iterator.dob,
                     type: type,
                     result: 'credentials-issued',
-                  })
+                  });
                 } else {
                   responseArray.push({
                     student_name: iterator.student_name,
@@ -356,7 +397,7 @@ export class CredentialsService {
                     dob: iterator.dob,
                     type: type,
                     result: 'credentials-failed',
-                  })
+                  });
                 }
               } else {
                 responseArray.push({
@@ -372,7 +413,7 @@ export class CredentialsService {
                   dob: iterator.dob,
                   type: type,
                   result: 'credentials-failed',
-                })
+                });
               }
             } else {
               responseArray.push({
@@ -388,7 +429,7 @@ export class CredentialsService {
                 dob: iterator.dob,
                 type: type,
                 result: 'credentials-failed',
-              })
+              });
             }
           } else {
             responseArray.push({
@@ -404,7 +445,7 @@ export class CredentialsService {
               dob: iterator.dob,
               type: type,
               result: 'credentials-failed',
-            })
+            });
           }
         }
       }
@@ -619,6 +660,65 @@ export class CredentialsService {
         success: false,
         status: 'sb_rc_update_error',
         message: 'System Update Error ! Please try again.',
+        result: null,
+      });
+    }
+  }
+
+  //getCredId
+  async getCredId(token: string, id: string, response: Response) {
+    if (token && id) {
+      const studentUsername = await this.keycloakService.verifyUserToken(token);
+      if (studentUsername?.error) {
+        return response.status(401).send({
+          success: false,
+          status: 'keycloak_token_bad_request',
+          message: 'You do not have access for this request.',
+          result: null,
+        });
+      } else if (!studentUsername?.preferred_username) {
+        return response.status(401).send({
+          success: false,
+          status: 'keycloak_token_error',
+          message: 'Your Login Session Expired.',
+          result: null,
+        });
+      } else {
+        const url = process.env.CRED_URL + '/credentials/' + id;
+
+        const config: AxiosRequestConfig = {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        };
+
+        let render_response = null;
+        try {
+          const observable = this.httpService.get(url, config);
+          const promise = observable.toPromise();
+          const response = await promise;
+          //console.log(JSON.stringify(response.data));
+          render_response = response.data;
+        } catch (e) {
+          //console.log(e);
+          //render_response = { error: e };
+        }
+        if (render_response == null) {
+          return response.status(400).send({
+            success: false,
+            status: 'get_credentials_api_failed',
+            message: 'Credentials Get Failed ! Please Try Again.',
+            result: null,
+          });
+        } else {
+          return response.status(200).send(render_response);
+        }
+      }
+    } else {
+      return response.status(400).send({
+        success: false,
+        status: 'invalid_request',
+        message: 'Invalid Request. Not received All Parameters.',
         result: null,
       });
     }
