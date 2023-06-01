@@ -480,6 +480,7 @@ export class CredentialsService {
 
   async getSchema(id: string, response: Response) {
     console.log('id: 172', id);
+    console.log("response", response)
     //const schemaRes = await this.generateSchema(id);
     const schemaRes = await this.credService.generateSchema(id);
 
