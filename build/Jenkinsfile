@@ -50,7 +50,7 @@ node() {
                 build job: 'ULP/deploy-staging/ulp-bff/', parameters: [string(name: 'tag', value: 'latest')]
          }
      else if (env.BRANCH_NAME == 'staging'){
-		build job: 'UAT/deploy-staging/uat-bff/', parameters: [string(name: 'tag', value: 'staging')]
+		build job: 'UAT/deploy-uat/uat-bff/', parameters: [string(name: 'tag', value: 'staging')]
 		}
     }
 }
