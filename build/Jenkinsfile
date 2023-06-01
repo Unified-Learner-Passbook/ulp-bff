@@ -23,7 +23,7 @@ node() {
             	sh '''
            	docker build -t $docker_server/$docker_repo:latest .
             	'''
-        } else if (env.BRANCH_NAME == 'staging'){
+        } else if (env.BRANCH_NAME == 'ulp-refrence'){
 		sh '''
 		docker build -t $docker_server/$docker_repo:ulp-refrence .
 		'''
@@ -38,7 +38,7 @@ node() {
             	sh '''
             	docker push $docker_server/$docker_repo:latest
            	 '''
-        } else if (env.BRANCH_NAME == 'staging'){
+        } else if (env.BRANCH_NAME == 'ulp-refrence'){
 		sh ''' 
 		docker push $docker_server/$docker_repo:ulp-refrence
 		'''
@@ -49,7 +49,7 @@ node() {
          if (env.BRANCH_NAME == 'master') { 
                 build job: 'ULP/deploy-staging/ulp-bff/', parameters: [string(name: 'tag', value: 'latest')]
          }
-     else if (env.BRANCH_NAME == 'staging'){
+     else if (env.BRANCH_NAME == 'ulp-refrence'){
 		build job: 'SBRC-deploy/deploy-services/deploy-staging/ulp-bff', parameters: [string(name: 'tag', value: 'ulp-refrence')]
 		}
     }
