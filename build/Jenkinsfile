@@ -16,31 +16,41 @@ node() {
     }
 
     stage('docker-build') {
-        sh '''
-        docker build -t $docker_server/$docker_repo:$commit_id .
-        '''
-        if (env.BRANCH_NAME == 'main' || env.BRANCH_NAME == 'master') {
-            sh '''
-            docker build -t $docker_server/$docker_repo:latest .
-            '''
-        }
+        	sh '''
+        	docker build -t $docker_server/$docker_repo:$commit_id .
+        	'''
+        if (env.BRANCH_NAME == 'master') {
+            	sh '''
+           	docker build -t $docker_server/$docker_repo:latest .
+            	'''
+        } else if (env.BRANCH_NAME == 'staging'){
+		sh '''
+		docker build -t $docker_server/$docker_repo:ulp-refrence .
+		'''
+		}
     }
 
     stage('docker-push') {
-        sh '''
-        docker push $docker_server/$docker_repo:$commit_id
-        '''
-        if (env.BRANCH_NAME == 'main' || env.BRANCH_NAME == 'master') {
-            sh '''
-            docker push $docker_server/$docker_repo:latest
-            '''
-        }
+        	sh '''
+        	docker push $docker_server/$docker_repo:$commit_id
+        	'''
+        if (env.BRANCH_NAME == 'master') {
+            	sh '''
+            	docker push $docker_server/$docker_repo:latest
+           	 '''
+        } else if (env.BRANCH_NAME == 'staging'){
+		sh ''' 
+		docker push $docker_server/$docker_repo:ulp-refrence
+		'''
+		}
     }
     
     stage('Start deploy job with latest tag') {
-         if (env.BRANCH_NAME == 'main' || env.BRANCH_NAME == 'master') { 
+         if (env.BRANCH_NAME == 'master') { 
                 build job: 'ULP/deploy-staging/ulp-bff/', parameters: [string(name: 'tag', value: 'latest')]
          }
+     else if (env.BRANCH_NAME == 'staging'){
+		build job: 'SBRC-deploy/deploy-services/deploy-staging/ulp-bff', parameters: [string(name: 'tag', value: 'ulp-refrence')]
+		}
     }
-    
 }
