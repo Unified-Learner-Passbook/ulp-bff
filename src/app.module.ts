@@ -4,6 +4,7 @@ import { CredentialsModule } from './credentials/credentials.module';
 import { SchoolModule } from './school/school.module';
 import { ClientModule } from './client/client.module';
 import { PortalModule } from './portal/portal.module';
+import { SbrcapiModule } from './sbrcapi/sbrcapi.module';
 
 //call env variable
 import { ConfigModule } from '@nestjs/config';
@@ -31,6 +32,7 @@ const envFilePath: string = getEnvPath(`${__dirname}/envs`);
     SchoolModule,
     ClientModule,
     PortalModule,
+    SbrcapiModule,
   ],
   providers: [
     CredService,
