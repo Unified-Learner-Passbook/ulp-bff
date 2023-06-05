@@ -29,25 +29,6 @@ export class SSOController {
     };
     response.status(200).send(result);
   }
-  @Post('/student/register')
-  async registerStudent(@Body() user: UserDto, @Res() response: Response) {
-    return this.ssoService.registerStudent(user, response);
-  }
-  @Post('/student/login')
-  async loginStudent(
-    @Body('username') username: string,
-    @Body('password') password: string,
-    @Res() response: Response,
-  ) {
-    return this.ssoService.loginStudent(username, password, response);
-  }
-  @Get('/student/getdid/:studentid')
-  async getDIDStudent(
-    @Param('studentid') studentid: string,
-    @Res() response: Response,
-  ) {
-    return this.ssoService.getDIDStudent(studentid, response);
-  }
   @Get('/student/credentials')
   async credentialsStudent(
     @Headers('Authorization') auth: string,
@@ -87,38 +68,6 @@ export class SSOController {
     return this.ssoService.renderTemplateSchema(id, response);
   }
 
-  @Post('/studentDetail')
-  async getStudentDetail(@Body() requestbody: any, @Res() response: Response) {
-    return this.ssoService.getStudentDetail(requestbody, response);
-  }
-
-  @Post('/studentDetailV2')
-  async getStudentDetailV2(
-    @Headers('Authorization') auth: string,
-    @Body() requestbody: any,
-    @Res() response: Response,
-  ) {
-    const jwt = auth.replace('Bearer ', '');
-    return this.ssoService.getStudentDetailV2(jwt, requestbody, response);
-  }
-
-  //digilocker authorize
-  @Get('/digilocker/authorize/:digiacc')
-  async digilockerAuthorize(
-    @Param('digiacc') digiacc: string,
-    @Res() response: Response,
-  ) {
-    return this.ssoService.digilockerAuthorize(digiacc, response);
-  }
-  //digilocker token
-  @Post('/digilocker/token')
-  async digilockerToken(
-    @Res() response: Response,
-    @Body('digiacc') digiacc: string,
-    @Body('auth_code') auth_code: string,
-  ) {
-    return this.ssoService.digilockerToken(response, digiacc, auth_code);
-  }
   //digilocker aadhaar
   @Post('/digilocker/aadhaar')
   async digilockerAadhaar(
@@ -154,57 +103,6 @@ export class SSOController {
       userdata,
       digimpid,
     );
-  }
-  //digilocker logout
-  @Post('/digilocker/logout')
-  async digilockerLogout(
-    @Res() response: Response,
-    @Body('digiacc') digiacc: string,
-    @Body('access_token') access_token: string,
-  ) {
-    return this.ssoService.digilockerLogout(response, digiacc, access_token);
-  }
-  //token data response
-  @Get('/user/:digiacc')
-  async userData(
-    @Headers('Authorization') auth: string,
-    @Param('digiacc') digiacc: string,
-    @Res() response: Response,
-  ) {
-    const jwt = auth.replace('Bearer ', '');
-    return this.ssoService.userData(jwt, digiacc, response);
-  }
-  //token school data response
-  @Get('/school/:udise')
-  async schoolData(
-    @Headers('Authorization') auth: string,
-    @Param('udise') udise: string,
-    @Res() response: Response,
-  ) {
-    const jwt = auth.replace('Bearer ', '');
-    return this.ssoService.schoolData(jwt, udise, response);
-  }
-  //udise verify
-  @Get('/udise/verify/:udiseid')
-  async udiseVerify(
-    @Param('udiseid') udiseid: string,
-    @Res() response: Response,
-  ) {
-    return this.ssoService.udiseVerify(udiseid, response);
-  }
-  //get school list
-  @Get('/udise/school/list')
-  async getSchoolList(@Res() response: Response) {
-    return this.ssoService.getSchoolList(response);
-  }
-  //post school list id
-  @Post('/udise/school/list')
-  async getSchoolListUdise(
-    @Body('udise') udise: string,
-    @Body('password') password: string,
-    @Res() response: Response,
-  ) {
-    return this.ssoService.getSchoolListUdise(udise, password, response);
   }
   //new credentials list schema id schema template
   //credentialsSearch
@@ -250,35 +148,6 @@ export class SSOController {
   ) {
     const jwt = auth.replace('Bearer ', '');
     return this.ssoService.studentBulkRegister(jwt, requestbody, response);
-  }
-  //upload student bulk register
-  @Post('/student/list')
-  async studentList(
-    @Headers('Authorization') auth: string,
-    @Body('grade') grade: string,
-    @Body('acdemic_year') acdemic_year: string,
-    @Body('aadhaar_status') aadhaar_status: string,
-    @Res() response: Response,
-  ) {
-    const jwt = auth.replace('Bearer ', '');
-    return this.ssoService.studentList(
-      jwt,
-      grade,
-      acdemic_year,
-      aadhaar_status,
-      response,
-    );
-  }
-  //studentUpdate
-  @Post('/student/update')
-  async studentUpdate(
-    @Headers('Authorization') auth: string,
-    @Body('studentNewData') studentNewData: any,
-    @Body('osid') osid: string,
-    @Res() response: Response,
-  ) {
-    const jwt = auth.replace('Bearer ', '');
-    return this.ssoService.studentUpdate(jwt, studentNewData, osid, response);
   }
   //studentAadhaarVerify
   @Post('/student/aadhaar/verify')
