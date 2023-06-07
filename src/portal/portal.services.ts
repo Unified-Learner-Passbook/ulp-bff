@@ -8,6 +8,8 @@ import { Response, Request } from 'express';
 //sbrc api
 import { KeycloakService } from '../services/keycloak/keycloak.service';
 import { SbrcService } from '../services/sbrc/sbrc.service';
+import { CredService } from 'src/services/cred/cred.service';
+import { AadharService } from '../services/aadhar/aadhar.service';
 import { count } from 'rxjs';
 
 @Injectable()
@@ -16,6 +18,8 @@ export class PortalService {
     private readonly httpService: HttpService,
     private keycloakService: KeycloakService,
     private sbrcService: SbrcService,
+    private credService: CredService,
+    private aadharService: AadharService,
   ) {}
   //searchCount
   async searchCount(token: string, countFields: any, response: Response) {
@@ -210,6 +214,94 @@ export class PortalService {
             status: 'count_success',
             message: 'Count Success',
             result: countlog,
+          });
+        }
+      }
+    } else {
+      return response.status(400).send({
+        success: false,
+        status: 'invalid_request',
+        message: 'Invalid Request. Not received All Parameters.',
+        result: null,
+      });
+    }
+  }
+  //getDID
+  async getDID(uniquetext: string, response: Response) {
+    if (uniquetext) {
+      const generateddid = await this.credService.generateDid(uniquetext);
+      if (generateddid?.error) {
+        return response.status(400).send({
+          success: false,
+          status: 'did_generate_error',
+          message: 'Identity Generation Failed ! Please Try Again.',
+          result: generateddid?.error,
+        });
+      } else {
+        var did = generateddid[0].verificationMethod[0].controller;
+        return response.status(200).send({
+          success: true,
+          status: 'did_success',
+          message: 'DID Success',
+          result: did,
+        });
+      }
+    } else {
+      return response.status(400).send({
+        success: false,
+        status: 'invalid_request',
+        message: 'Invalid Request. Not received All Parameters.',
+        result: null,
+      });
+    }
+  }
+  //getAadhaar
+  async getAadhaar(
+    aadhaar_id: string,
+    aadhaar_name: string,
+    aadhaar_dob: string,
+    aadhaar_gender: string,
+    response: Response,
+  ) {
+    if (aadhaar_id && aadhaar_name && aadhaar_dob && aadhaar_gender) {
+      const aadhar_data = await this.aadharService.aadhaarDemographic(
+        aadhaar_id,
+        aadhaar_name,
+        aadhaar_dob,
+        aadhaar_gender,
+      );
+      if (!aadhar_data?.success === true) {
+        return response.status(400).send({
+          success: false,
+          status: 'aadhaar_api_error',
+          message: 'Aadhar API Not Working',
+          result: aadhar_data?.result,
+        });
+      } else {
+        if (aadhar_data?.result?.ret === 'y') {
+          const decodedxml = aadhar_data?.decodedxml;
+          const uuid = await this.aadharService.getUUID(decodedxml);
+          if (uuid === null) {
+            return response.status(400).send({
+              success: false,
+              status: 'aadhaar_api_uuid_error',
+              message: 'Aadhar API UUID Not Found',
+              result: null,
+            });
+          } else {
+            return response.status(200).send({
+              success: true,
+              status: 'aadhaar_verify_success',
+              message: 'Aadhaar Verify Success',
+              result: { uuid: uuid },
+            });
+          }
+        } else {
+          return response.status(200).send({
+            success: false,
+            status: 'invalid_aadhaar',
+            message: 'Invalid Aadhaar',
+            result: null,
           });
         }
       }

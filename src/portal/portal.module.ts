@@ -3,8 +3,16 @@ import { PortalController } from './portal.controller';
 import { PortalService } from './portal.services';
 import { KeycloakService } from '../services/keycloak/keycloak.service';
 import { SbrcService } from '../services/sbrc/sbrc.service';
+import { CredService } from 'src/services/cred/cred.service';
+import { AadharService } from 'src/services/aadhar/aadhar.service';
 @Module({
   controllers: [PortalController],
-  providers: [PortalService, KeycloakService,SbrcService],
+  providers: [
+    PortalService,
+    KeycloakService,
+    SbrcService,
+    CredService,
+    AadharService,
+  ],
 })
 export class PortalModule {}
