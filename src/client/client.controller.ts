@@ -22,9 +22,11 @@ export class ClientController {
 
   @Get('/test')
   getUser(@Res() response: Response) {
+    const CRED_URL = process.env.CRED_URL;
+    const TESTVAR = process.env.TESTVAR;
     const result = {
       success: true,
-      message: 'Client API Working 2 May ' + process.env.TESTVAR,
+      message: 'Client API Working 6 June ' + CRED_URL + ' / ' + TESTVAR,
     };
     response.status(200).send(result);
   }

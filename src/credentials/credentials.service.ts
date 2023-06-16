@@ -20,7 +20,7 @@ export class CredentialsService {
     private sbrcService: SbrcService,
     private telemetryService: TelemetryService,
     private keycloakService: KeycloakService,
-  ) {}
+  ) { }
 
   async issueBulkCredential(
     credentialPlayload: BulkCredentialDto,
@@ -211,7 +211,7 @@ export class CredentialsService {
               responseArray.push(cred);
 
               //telemetry service called
-               this.telemetryService.telemetry({
+              this.telemetryService.telemetry({
                 id: iterator.id,
                 student_name: iterator.student_name,
                 dob: iterator.dob,
@@ -422,8 +422,8 @@ export class CredentialsService {
                 error: 'unable to generate student did!',
               });
 
-               //telemetry service called
-               this.telemetryService.telemetry({
+              //telemetry service called
+              this.telemetryService.telemetry({
                 id: iterator.id,
                 student_name: iterator.student_name,
                 dob: iterator.dob,
@@ -438,8 +438,8 @@ export class CredentialsService {
               error: 'aadhar_token not found!',
             });
 
-             //telemetry service called
-             this.telemetryService.telemetry({
+            //telemetry service called
+            this.telemetryService.telemetry({
               id: iterator.id,
               student_name: iterator.student_name,
               dob: iterator.dob,
@@ -722,6 +722,76 @@ export class CredentialsService {
         result: null,
       });
     }
+  }
+
+  //Verify credentials
+  public async verifyCertificate(payload, response) {
+    let id = 'did:ulp:c65940d4-c58d-450b-b37a-b2c7cf57b139' // valid id
+    //let id = 'did:ulp:c65940d4-c58d-450b-b37a-b2c7cf57b134' // invalid id
+    let config = {
+      method: 'get',
+      maxBodyLength: Infinity,
+      url: `http://64.227.185.154:3002/credentials/${id}/verify`, //valid
+      headers: {}
+
+    };
+    try {
+      const res = await axios.request(config)
+      console.log("res", res.data)
+      if (res) {
+        return response.status(200).json(
+          {
+            "verified": true,
+            "results": [
+              {
+                "proof": {
+                  "@context": "https://w3id.org/security/v2",
+                  "type": "RsaSignature2018",
+                  "created": "2023-06-08T12:15:13Z",
+                  "verificationMethod": "did:india",
+                  "proofPurpose": "assertionMethod",
+                  "jws": "eyJhbGciOiJQUzI1NiIsImI2NCI6ZmFsc2UsImNyaXQiOlsiYjY0Il19..cgFAY8DuOVhZfNpcpDrQBRrkHjEPBh_i5kiRMoGCvgNFA_O7pF40ZBO_rk6lwiXBwBWWTUJEtLMaeGM8OKD5lCjL9RJ5dQFAI60qtEmbCL7sCqGYF6vXu_ryhhNiSZK4e07xW9rXXXzAH0ytpTYKxzG2T6qwbwUaozXxXw-GTvwZLmYtC8TlROWJxnPHCeETh_GLkTqOe_C4sqJgfsqsiGqNODKJpMjPBERR1z-GBe5X9sWUBrufuJiMPwjCocnwZfWAeyz78Xn-2fQf8I4iw3k9ytL9f_tpnnzR1WtIeLfbjga6XxGacNcfMHsBB9ETYMd0Bdum0hIDGVMPd2ygRw"
+                },
+                "verified": true,
+                "purposeResult": {
+                  "valid": true,
+                  "controller": {
+                    "@context": "https://w3id.org/security/v2",
+                    "id": "did:india",
+                    "publicKey": [
+                      {
+                        "@context": "https://w3id.org/security/v2",
+                        "id": "did:india",
+                        "type": "RsaVerificationKey2018",
+                        "controller": "https://sunbird.org/",
+                        "publicKeyPem": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAnXQalrgztecTpc+INjRQ8s73FSE1kU5QSlwBdICCVJBUKiuQUt7s+Z5epgCvLVAOCbP1mm5lV7bfgV/iYWDio7lzX4MlJwDedWLiufr3Ajq+79CQiqPaIbZTo0i13zijKtX7wgxQ78wT/HkJRLkFpmGeK3za21tEfttytkhmJYlwaDTEc+Kx3RJqVhVh/dfwJGeuV4Xc/e2NH++ht0ENGuTk44KpQ+pwQVqtW7lmbDZQJoOJ7HYmmoKGJ0qt2hrj15uwcD1WEYfY5N7N0ArTzPgctExtZFDmituLGzuAZfv2AZZ9/7Y+igshzfB0reIFdUKw3cdVTzfv5FNrIqN5pwIDAQAB\n-----END PUBLIC KEY-----\n"
+                      }
+                    ],
+                    "assertionMethod": [
+                      "did:india"
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        )
+      } else {
+        console.log("else", res.data)
+        return response.status(200).json({
+          "verified": false,
+          "results": []
+        });
+      }
+    } catch (err) {
+      //console.log("error", err)
+      return response.status(200).json({
+        "verified": false,
+        "results": []
+      });
+    }
+
+
   }
 
   // //helper function

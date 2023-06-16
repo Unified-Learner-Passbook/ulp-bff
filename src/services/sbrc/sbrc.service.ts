@@ -157,4 +157,27 @@ export class SbrcService {
     }
     return sb_rc_search;
   }
+
+  // delete entity in registery
+  async sbrcDeleteEL(entityName, osid) {
+    const url = process.env.REGISTRY_URL + 'api/v1/' + entityName + '/' + osid;
+    const config: AxiosRequestConfig = {
+      headers: {
+        'content-type': 'application/json',
+      },
+    };
+    var sb_rc_response_text = null;
+    try {
+      const observable = this.httpService.delete(url, config);
+      const promise = observable.toPromise();
+      const response = await promise;
+      //console.log(JSON.stringify(response.data));
+      sb_rc_response_text = response.data;
+    } catch (e) {
+      //console.log(e);
+      sb_rc_response_text = { error: e };
+    }
+    return sb_rc_response_text;
+  }
+
 }
