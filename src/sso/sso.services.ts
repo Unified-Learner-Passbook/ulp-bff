@@ -13,16 +13,18 @@ import { AadharService } from '../services/aadhar/aadhar.service';
 import { SbrcService } from 'src/services/sbrc/sbrc.service';
 import { CredService } from 'src/services/cred/cred.service';
 import { KeycloakService } from 'src/services/keycloak/keycloak.service';
+const crypto = require('crypto');
 
 @Injectable()
 export class SSOService {
+  public codeVerifier : string;
   constructor(
     private readonly httpService: HttpService,
     private aadharService: AadharService,
     private sbrcService: SbrcService,
     private credService: CredService,
     private keycloakService: KeycloakService,
-  ) {}
+  ) { }
   //axios call
   md5 = require('md5');
   moment = require('moment');
@@ -940,6 +942,32 @@ export class SSOService {
 
   //digilockerAuthorize
   async digilockerAuthorize(digiacc: string, response: Response) {
+    //code challange
+
+    //const codeVerifier = generateRandomString(32);
+    const codeVerifier = "a123456abca";
+    console.log("codeVerifier", codeVerifier)
+
+    function generateRandomString(length) {
+      const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+      let result = '';
+      for (let i = 0; i < length; i++) {
+        result += characters.charAt(Math.floor(Math.random() * characters.length));
+      }
+      return result;
+    }
+
+    async function sha256(str) {
+      const hash = crypto.createHash('sha256');
+      hash.update(str);
+      return hash.digest('hex');
+    }
+
+    const codeChallenge = await sha256(codeVerifier)
+
+    console.log("codeChallenge", codeChallenge)
+
+
     //console.log(request);
     let digi_client_id = '';
     let digi_url_call_back_uri = '';
@@ -951,7 +979,7 @@ export class SSOService {
       digi_url_call_back_uri = process.env.URP_CALL_BACK_URL;
     }
     response.status(200).send({
-      digiauthurl: `https://digilocker.meripehchaan.gov.in/public/oauth2/1/authorize?client_id=${digi_client_id}&response_type=code&redirect_uri=${digi_url_call_back_uri}&state=${digiacc}`,
+      digiauthurl: `https://digilocker.meripehchaan.gov.in/public/oauth2/1/authorize?client_id=${digi_client_id}&response_type=code&redirect_uri=${digi_url_call_back_uri}&state=${digiacc}&code_challenge=${codeChallenge}&code_challenge_method=S256`,
     });
   }
 
@@ -981,6 +1009,7 @@ export class SSOService {
         client_id: digi_client_id,
         client_secret: digi_client_secret,
         redirect_uri: digi_url_call_back_uri,
+        code_verifier: "a123456abca"
       });
 
       const url =
@@ -1000,7 +1029,7 @@ export class SSOService {
         //console.log(JSON.stringify(response.data));
         response_digi = { data: response.data };
       } catch (e) {
-        //console.log(e);
+        console.log("error 1029", e);
         response_digi = { error: null };
       }
       if (response_digi?.error) {
@@ -1041,19 +1070,19 @@ export class SSOService {
               digiacc === 'ewallet' ? 'StudentV2' : 'TeacherV1',
               digiacc === 'ewallet'
                 ? {
-                    filters: {
-                      meripehchan_id: {
-                        eq: response_data?.meripehchanid.toString(),
-                      },
-                    },
-                  }
-                : {
-                    filters: {
-                      meripehchanLoginId: {
-                        eq: response_data?.meripehchanid.toString(),
-                      },
+                  filters: {
+                    meripehchan_id: {
+                      eq: response_data?.meripehchanid.toString(),
                     },
                   },
+                }
+                : {
+                  filters: {
+                    meripehchanLoginId: {
+                      eq: response_data?.meripehchanid.toString(),
+                    },
+                  },
+                },
             );
             if (sb_rc_search?.error) {
               return response.status(501).send({
@@ -1091,9 +1120,9 @@ export class SSOService {
               let auto_username =
                 digiacc === 'ewallet'
                   ? //response_data?.username
-                    sb_rc_search[0]?.username
+                  sb_rc_search[0]?.username
                   : //response_data?.meripehchanid + '_teacher'
-                    sb_rc_search[0]?.username;
+                  sb_rc_search[0]?.username;
               auto_username = auto_username.toLowerCase();
               const auto_password = await this.md5(
                 auto_username + 'MjQFlAJOQSlWIQJHOEDhod',
@@ -1334,19 +1363,19 @@ export class SSOService {
               digiacc === 'ewallet' ? 'StudentV2' : 'TeacherV1',
               digiacc === 'ewallet'
                 ? {
-                    filters: {
-                      aadhar_token: {
-                        eq: uuid.toString(),
-                      },
-                    },
-                  }
-                : {
-                    filters: {
-                      aadharId: {
-                        eq: uuid.toString(),
-                      },
+                  filters: {
+                    aadhar_token: {
+                      eq: uuid.toString(),
                     },
                   },
+                }
+                : {
+                  filters: {
+                    aadharId: {
+                      eq: uuid.toString(),
+                    },
+                  },
+                },
             );
             if (sb_rc_search?.error) {
               return response.status(501).send({
@@ -1370,11 +1399,11 @@ export class SSOService {
               let sb_rc_response_text = await this.sbrcService.sbrcUpdateEL(
                 digiacc === 'ewallet'
                   ? {
-                      meripehchan_id: digilocker_id,
-                    }
+                    meripehchan_id: digilocker_id,
+                  }
                   : {
-                      meripehchanLoginId: digilocker_id,
-                    },
+                    meripehchanLoginId: digilocker_id,
+                  },
                 digiacc === 'ewallet' ? 'StudentV2' : 'TeacherV1',
                 osid,
               );
@@ -2610,22 +2639,22 @@ export class SSOService {
             'StudentV2',
             aadhaar_status === 'all'
               ? {
-                  filters: {
-                    school_udise: {
-                      eq: schoolUdise,
-                    },
-                  },
-                }
-              : {
-                  filters: {
-                    school_udise: {
-                      eq: schoolUdise,
-                    },
-                    aadhaar_status: {
-                      eq: aadhaar_status,
-                    },
+                filters: {
+                  school_udise: {
+                    eq: schoolUdise,
                   },
                 },
+              }
+              : {
+                filters: {
+                  school_udise: {
+                    eq: schoolUdise,
+                  },
+                  aadhaar_status: {
+                    eq: aadhaar_status,
+                  },
+                },
+              },
           );
           if (sb_rc_search_student?.error) {
             return response.status(501).send({
