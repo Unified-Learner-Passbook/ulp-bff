@@ -945,27 +945,28 @@ export class SSOService {
     //code challange
 
     //const codeVerifier = generateRandomString(32);
-    const codeVerifier = "a123456abca";
-    console.log("codeVerifier", codeVerifier)
+    // const codeVerifier = "a123456abca";
+    // console.log("codeVerifier", codeVerifier)
 
-    function generateRandomString(length) {
-      const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-      let result = '';
-      for (let i = 0; i < length; i++) {
-        result += characters.charAt(Math.floor(Math.random() * characters.length));
-      }
-      return result;
-    }
+    // function generateRandomString(length) {
+    //   const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    //   let result = '';
+    //   for (let i = 0; i < length; i++) {
+    //     result += characters.charAt(Math.floor(Math.random() * characters.length));
+    //   }
+    //   return result;
+    // }
 
-    async function sha256(str) {
-      const hash = crypto.createHash('sha256');
-      hash.update(str);
-      return hash.digest('hex');
-    }
+    // async function sha256(str) {
+    //   const hash = crypto.createHash('sha256');
+    //   hash.update(str);
+    //   return hash.digest('hex');
+    // }
 
-    const codeChallenge = await sha256(codeVerifier)
+    // const codeChallenge = await sha256(codeVerifier)
 
-    console.log("codeChallenge", codeChallenge)
+    // console.log("codeChallenge", codeChallenge)
+    //&code_challenge=${codeChallenge}&code_challenge_method=S256
 
 
     //console.log(request);
@@ -979,7 +980,7 @@ export class SSOService {
       digi_url_call_back_uri = process.env.URP_CALL_BACK_URL;
     }
     response.status(200).send({
-      digiauthurl: `https://digilocker.meripehchaan.gov.in/public/oauth2/1/authorize?client_id=${digi_client_id}&response_type=code&redirect_uri=${digi_url_call_back_uri}&state=${digiacc}&code_challenge=${codeChallenge}&code_challenge_method=S256`,
+      digiauthurl: `https://digilocker.meripehchaan.gov.in/public/oauth2/1/authorize?client_id=${digi_client_id}&response_type=code&redirect_uri=${digi_url_call_back_uri}&state=${digiacc}`,
     });
   }
 
@@ -1009,7 +1010,7 @@ export class SSOService {
         client_id: digi_client_id,
         client_secret: digi_client_secret,
         redirect_uri: digi_url_call_back_uri,
-        code_verifier: "a123456abca"
+        //code_verifier: "a123456abca"
       });
 
       const url =
