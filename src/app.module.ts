@@ -10,17 +10,14 @@ import { ConfigModule } from '@nestjs/config';
 import { CredService } from './services/cred/cred.service';
 import { SbrcService } from './services/sbrc/sbrc.service';
 import { HttpModule, HttpModuleOptions } from '@nestjs/axios';
-import { getEnvPath } from './services/helper/helper';
 import { AadharService } from './services/aadhar/aadhar.service';
 import { KeycloakService } from './services/keycloak/keycloak.service';
 import { UdiseService } from 'src/services/udise/udise.service';
 import { TelemetryService } from './services/telemetry/telemetry.service';
 
-const envFilePath: string = getEnvPath(`${__dirname}/envs`);
-//console.log('envFilePath', envFilePath);
 @Module({
   imports: [
-    ConfigModule.forRoot({ envFilePath, isGlobal: true }),
+    ConfigModule.forRoot({ isGlobal: true }),
     //HttpModule,
     {
       ...HttpModule.register({}),
