@@ -9,11 +9,6 @@
         "include": "./src/assets",
         "outDir": "dist/services/udise/",
         "watchAssets": true
-      },
-      {
-        "include": "./envs",
-        "outDir": "dist/",
-        "watchAssets": true
       }
     ],
     "watchAssets": true
