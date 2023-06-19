@@ -731,7 +731,7 @@ export class CredentialsService {
     let config = {
       method: 'get',
       maxBodyLength: Infinity,
-      url: `http://64.227.185.154:3002/credentials/${id}/verify`, //valid
+      url: `${process.env.CRED_URL}/credentials/${id}/verify`,
       headers: {}
 
     };
