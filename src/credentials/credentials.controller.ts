@@ -82,4 +82,11 @@ export class CredentialsController {
     const jwt = auth.replace('Bearer ', '');
     return this.credentialsService.getCredId(jwt, id, response);
   }
+
+  @Post('/verify')
+    verify(@Body() payload, @Res() response: Response) {
+        console.log("payload 50", payload)
+        this.credentialsService.verifyCertificate(payload, response)
+        
+    }
 }
