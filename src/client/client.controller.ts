@@ -122,6 +122,21 @@ export class ClientController {
     );
   }
 
+  @Post('/bulk/getdata/:type')
+  async bulkGetData(
+    @Body('clientId') clientId: string,
+    @Body('clientSecret') clientSecret: string,
+    @Param('type') type: string,
+    @Res() response: Response,
+  ) {
+    return this.clientService.bulkGetData(
+      clientId,
+      clientSecret,
+      type,
+      response,
+    );
+  }
+
   @Post('/bulk/uploadv2/:type')
   async bulkRegisterV2(
     @Body('clientId') clientId: string,

@@ -9,6 +9,7 @@ import { BulkCredentialDto } from './dto/bulkCred-dto';
 import { SbrcService } from '../services/sbrc/sbrc.service';
 import { CredService } from 'src/services/cred/cred.service';
 import { AadharService } from '../services/aadhar/aadhar.service';
+import { UsersService } from 'src/services/users/users.service';
 
 const cred_url = process.env.CRED_URL || 'http://64.227.185.154:3002';
 const did_url = process.env.DID_URL || 'http://64.227.185.154:3000';
@@ -21,6 +22,7 @@ export class ClientService {
     private sbrcService: SbrcService,
     private credService: CredService,
     private aadharService: AadharService,
+    private usersService: UsersService,
   ) {}
   //axios call
   md5 = require('md5');
@@ -1195,6 +1197,64 @@ export class ClientService {
     }
   }
 
+  //bulkGetData
+  async bulkGetData(
+    clientId: string,
+    clientSecret: string,
+    type: string,
+    response: Response,
+  ) {
+    if (clientId && clientSecret) {
+      //search in sb rc//find if student private detaile
+      const filter = {
+        filters: {
+          clientId: {
+            eq: clientId,
+          },
+          clientSecret: {
+            eq: clientSecret,
+          },
+        },
+      };
+      const sb_rc_search_detail = await this.sbrcService.sbrcSearchEL(
+        'Client',
+        filter,
+      );
+      //console.log(sb_rc_search_detail);
+      if (sb_rc_search_detail?.error) {
+        return response.status(501).send({
+          success: false,
+          status: 'sb_rc_search_error',
+          message: 'System Search Error ! Please try again.',
+          result: sb_rc_search_detail?.error,
+        });
+      } else if (sb_rc_search_detail.length === 0) {
+        // no client found then register
+        return response.status(501).send({
+          success: false,
+          status: 'sb_rc_invalid_credentials',
+          message: 'Invalid Client ID and Client Secret',
+          result: sb_rc_search_detail,
+        });
+      } else {
+        var credentialSubject = await this.credentialSubjectData(type);
+        return response.status(200).send({
+          success: true,
+          status: 'data_return',
+          message: 'Data Return',
+          result: credentialSubject,
+        });
+      }
+    } else {
+      return response.status(400).send({
+        success: false,
+        status: 'invalid_request',
+        message: 'Invalid Request. Not received All Parameters.',
+        result: null,
+      });
+    }
+  }
+
   //helper function
   //generate clientId
   async getClientId(clientName) {
@@ -1217,5 +1277,78 @@ export class ClientService {
       result += chars[Math.floor(Math.random() * chars.length)];
     result += Math.floor(Date.now() / 1000).toString();
     return await this.md5(clientName + result);
+  }
+
+  async credentialSubjectData(type) {
+    console.log('type', type);
+    var users;
+    var credSubject = [];
+    if (type === 'proofOfAssessment') {
+      users = await this.usersService.findAllAssesment();
+
+      console.log('users', users);
+
+      for (let iterator of users) {
+        console.log('iterator 1124', iterator);
+        iterator = JSON.parse(JSON.stringify(iterator));
+        console.log('iterator 1126', iterator);
+        let assesmentObj = {
+          student_id: iterator.Id,
+          student_name: iterator.name,
+          dob: iterator.age,
+          reference_id: iterator.ref_id,
+          aadhar_token: iterator.aadhaar_id,
+          marks: iterator.marks,
+        };
+        credSubject.push(assesmentObj);
+      }
+    }
+    if (type === 'proofOfEnrollment') {
+      users = await this.usersService.findAllEnrollment();
+
+      console.log('users', users);
+
+      for (let iterator of users) {
+        console.log('iterator 1124', iterator);
+        iterator = JSON.parse(JSON.stringify(iterator));
+        console.log('iterator 1126', iterator);
+        let enrollmentObj = {
+          student_id: iterator?.Id,
+          student_name: iterator?.name,
+          dob: iterator?.age,
+          reference_id: iterator?.ref_id,
+          aadhar_token: iterator.aadhaar_id,
+          guardian_name: iterator?.fname,
+          enrolled_on: iterator?.enrolled_on,
+        };
+        credSubject.push(enrollmentObj);
+      }
+    }
+    if (type === 'proofOfBenifits') {
+      users = await this.usersService.findAllBenefit();
+
+      console.log('users', users);
+
+      for (let iterator of users) {
+        console.log('iterator 1124', iterator);
+        iterator = JSON.parse(JSON.stringify(iterator));
+        console.log('iterator 1126', iterator);
+        let benefitObj = {
+          student_id: iterator?.Id,
+          student_name: iterator?.name,
+          dob: '29/12/1990',
+          reference_id: iterator?.ref_id,
+          aadhar_token: 'qwrycvqwtqw3674',
+          guardian_name: 'Sita prabhu',
+          enrolled_on: '2023-06-06',
+          transactionId: iterator?.transaction_id,
+          transactionAmount: iterator?.transaction_amount,
+          deliveryDate: '16-07-2022',
+        };
+        credSubject.push(benefitObj);
+      }
+    }
+    console.log('credSubject', credSubject);
+    return credSubject;
   }
 }
