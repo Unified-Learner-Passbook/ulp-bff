@@ -8,6 +8,7 @@ import { Response, Request } from 'express';
 import { BulkCredentialDto } from './dto/bulkCred-dto';
 import { SbrcService } from '../services/sbrc/sbrc.service';
 import { CredService } from 'src/services/cred/cred.service';
+import { AadharService } from '../services/aadhar/aadhar.service';
 
 const cred_url = process.env.CRED_URL || 'http://64.227.185.154:3002';
 const did_url = process.env.DID_URL || 'http://64.227.185.154:3000';
@@ -19,6 +20,7 @@ export class ClientService {
     private readonly httpService: HttpService,
     private sbrcService: SbrcService,
     private credService: CredService,
+    private aadharService: AadharService,
   ) {}
   //axios call
   md5 = require('md5');
@@ -577,6 +579,592 @@ export class ClientService {
               result: null,
             });
           }*/
+
+          return response.status(200).send({
+            success: true,
+            status: 'student_bulk_upload_api_success',
+            iserror: iserror,
+            message: 'Student Bulk Upload API Success.',
+            error_count: error_count,
+            success_count: success_count,
+            result: loglist,
+          });
+        } else {
+          return response.status(200).send({
+            success: false,
+            status: 'did_cred_generate_error',
+            message:
+              'User Identity and Credentials Generation Failed. Try Again.',
+            result: null,
+          });
+        }
+      }
+    } else {
+      return response.status(400).send({
+        success: false,
+        status: 'invalid_request',
+        message: 'Invalid Request. Not received All Parameters.',
+        result: null,
+      });
+    }
+  }
+
+  // 21 june q2 new apis
+  //getDID
+  async getDID(
+    clientId: string,
+    clientSecret: string,
+    uniquetext: string,
+    response: Response,
+  ) {
+    if (clientId && clientSecret) {
+      //search in sb rc//find if student private detaile
+      const filter = {
+        filters: {
+          clientId: {
+            eq: clientId,
+          },
+          clientSecret: {
+            eq: clientSecret,
+          },
+        },
+      };
+      const sb_rc_search_detail = await this.sbrcService.sbrcSearchEL(
+        'Client',
+        filter,
+      );
+      //console.log(sb_rc_search_detail);
+      if (sb_rc_search_detail?.error) {
+        return response.status(501).send({
+          success: false,
+          status: 'sb_rc_search_error',
+          message: 'System Search Error ! Please try again.',
+          result: sb_rc_search_detail?.error,
+        });
+      } else if (sb_rc_search_detail.length === 0) {
+        // no client found then register
+        return response.status(501).send({
+          success: false,
+          status: 'sb_rc_invalid_credentials',
+          message: 'Invalid Client ID and Client Secret',
+          result: sb_rc_search_detail,
+        });
+      } else {
+        if (uniquetext) {
+          const generateddid = await this.credService.generateDid(uniquetext);
+          if (generateddid?.error) {
+            return response.status(400).send({
+              success: false,
+              status: 'did_generate_error',
+              message: 'Identity Generation Failed ! Please Try Again.',
+              result: generateddid?.error,
+            });
+          } else {
+            var did = generateddid[0].verificationMethod[0].controller;
+            return response.status(200).send({
+              success: true,
+              status: 'did_success',
+              message: 'DID Success',
+              result: did,
+            });
+          }
+        }
+      }
+    } else {
+      return response.status(400).send({
+        success: false,
+        status: 'invalid_request',
+        message: 'Invalid Request. Not received All Parameters.',
+        result: null,
+      });
+    }
+  }
+
+  //getIssuerRegister
+  async getIssuerRegister(
+    clientId: string,
+    clientSecret: string,
+    name: string,
+    did: string,
+    response: Response,
+  ) {
+    if (clientId && clientSecret) {
+      //search in sb rc//find if student private detaile
+      const filter = {
+        filters: {
+          clientId: {
+            eq: clientId,
+          },
+          clientSecret: {
+            eq: clientSecret,
+          },
+        },
+      };
+      const sb_rc_search_detail = await this.sbrcService.sbrcSearchEL(
+        'Client',
+        filter,
+      );
+      //console.log(sb_rc_search_detail);
+      if (sb_rc_search_detail?.error) {
+        return response.status(501).send({
+          success: false,
+          status: 'sb_rc_search_error',
+          message: 'System Search Error ! Please try again.',
+          result: sb_rc_search_detail?.error,
+        });
+      } else if (sb_rc_search_detail.length === 0) {
+        // no client found then register
+        return response.status(501).send({
+          success: false,
+          status: 'sb_rc_invalid_credentials',
+          message: 'Invalid Client ID and Client Secret',
+          result: sb_rc_search_detail,
+        });
+      } else {
+        //register invite
+        let data = JSON.stringify({
+          name: name,
+          did: did,
+        });
+        const url = process.env.REGISTRY_URL + 'api/v1/Issuer/invite';
+        const config: AxiosRequestConfig = {
+          headers: {
+            'content-type': 'application/json',
+          },
+        };
+        var sb_rc_response_text = null;
+        try {
+          const observable = this.httpService.post(url, data, config);
+          const promise = observable.toPromise();
+          const response = await promise;
+          //console.log(JSON.stringify(response.data));
+          sb_rc_response_text = response.data;
+        } catch (e) {
+          //console.log(e);
+          sb_rc_response_text = { error: e };
+        }
+        if (sb_rc_response_text?.error) {
+          return response.status(400).send({
+            success: false,
+            status: 'sb_rc_register_error',
+            message: 'System Register Error ! Please try again.',
+            result: sb_rc_response_text?.error,
+          });
+        } else if (sb_rc_response_text?.params?.status === 'SUCCESSFUL') {
+          return response.status(200).send({
+            success: true,
+            status: 'issuer_register',
+            message: 'Issuer Registered',
+            result: sb_rc_response_text,
+          });
+        } else {
+          return response.status(400).send({
+            success: false,
+            status: 'sb_rc_register_duplicate',
+            message: 'Duplicate Data Found.',
+            result: sb_rc_response_text,
+          });
+        }
+      }
+    } else {
+      return response.status(400).send({
+        success: false,
+        status: 'invalid_request',
+        message: 'Invalid Request. Not received All Parameters.',
+        result: null,
+      });
+    }
+  }
+
+  //getAadhaarToken
+  async getAadhaarToken(
+    response: Response,
+    aadhaar_id: string,
+    aadhaar_name: string,
+    aadhaar_dob: string,
+    aadhaar_gender: string,
+  ) {
+    if (aadhaar_id && aadhaar_name && aadhaar_dob && aadhaar_gender) {
+      const aadhar_data = await this.aadharService.aadhaarDemographic(
+        aadhaar_id,
+        aadhaar_name,
+        aadhaar_dob,
+        aadhaar_gender,
+      );
+
+      //console.log(aadhar_data);
+      if (!aadhar_data?.success === true) {
+        return response.status(400).send({
+          success: false,
+          status: 'aadhaar_api_error',
+          message: 'Aadhar API Not Working',
+          result: aadhar_data?.result,
+        });
+      } else {
+        if (aadhar_data?.result?.ret === 'y') {
+          const decodedxml = aadhar_data?.decodedxml;
+          const uuid = await this.aadharService.getUUID(decodedxml);
+          if (uuid === null) {
+            return response.status(400).send({
+              success: false,
+              status: 'aadhaar_api_uuid_error',
+              message: 'Aadhar API UUID Not Found',
+              result: uuid,
+            });
+          } else {
+            return response.status(200).send({
+              success: true,
+              status: 'aadhaar_api_success',
+              message: 'Aadhar API Working',
+              result: uuid,
+            });
+          }
+        } else {
+          return response.status(200).send({
+            success: false,
+            status: 'invalid_aadhaar',
+            message: 'Invalid Aadhaar',
+            result: null,
+          });
+        }
+      }
+    } else {
+      return response.status(400).send({
+        success: false,
+        status: 'invalid_request',
+        message: 'Invalid Request. Not received All Parameters.',
+        result: null,
+      });
+    }
+  }
+
+  //bulkRegisterV2
+  async bulkRegisterV2(
+    clientId: string,
+    clientSecret: string,
+    credentialPlayload: BulkCredentialDto,
+    schemaId: string,
+    response: Response,
+  ) {
+    if (clientId && clientSecret) {
+      //search in sb rc//find if student private detaile
+      const filter = {
+        filters: {
+          clientId: {
+            eq: clientId,
+          },
+          clientSecret: {
+            eq: clientSecret,
+          },
+        },
+      };
+      const sb_rc_search_detail = await this.sbrcService.sbrcSearchEL(
+        'Client',
+        filter,
+      );
+      //console.log(sb_rc_search_detail);
+      if (sb_rc_search_detail?.error) {
+        return response.status(501).send({
+          success: false,
+          status: 'sb_rc_search_error',
+          message: 'System Search Error ! Please try again.',
+          result: sb_rc_search_detail?.error,
+        });
+      } else if (sb_rc_search_detail.length === 0) {
+        // no client found then register
+        return response.status(501).send({
+          success: false,
+          status: 'sb_rc_invalid_credentials',
+          message: 'Invalid Client ID and Client Secret',
+          result: sb_rc_search_detail,
+        });
+      } else {
+        //register bulk student
+
+        console.log('credentialPlayload: ', credentialPlayload);
+        console.log('schemaId: ', schemaId);
+
+        var issuerId = credentialPlayload.issuerDetail.did;
+
+        //generate schema
+        var schemaRes = await this.credService.generateSchema(schemaId);
+        console.log('schemaRes', schemaRes);
+
+        if (schemaRes) {
+          //error log report
+          let iserror = false;
+          let loglist = [];
+          let error_count = 0;
+          let success_count = 0;
+          let i_count = 0;
+
+          var responseArray = [];
+
+          // bulk import
+          for (const iterator of credentialPlayload.credentialSubject) {
+            loglist[i_count] = {};
+            loglist[i_count].studentDetails = iterator;
+
+            try {
+              if (credentialPlayload.credentialSubjectCommon.grade) {
+                iterator.grade =
+                  credentialPlayload.credentialSubjectCommon.grade;
+              }
+              if (credentialPlayload.credentialSubjectCommon.academic_year) {
+                iterator.academic_year =
+                  credentialPlayload.credentialSubjectCommon.academic_year;
+              }
+              if (credentialPlayload.credentialSubjectCommon.benefitProvider) {
+                iterator.benefitProvider =
+                  credentialPlayload.credentialSubjectCommon.benefitProvider;
+              }
+              if (credentialPlayload.credentialSubjectCommon.schemeName) {
+                iterator.schemeName =
+                  credentialPlayload.credentialSubjectCommon.schemeName;
+              }
+              if (credentialPlayload.credentialSubjectCommon.schemeId) {
+                iterator.schemeId =
+                  credentialPlayload.credentialSubjectCommon.schemeId;
+              }
+              if (credentialPlayload.credentialSubjectCommon.assessment) {
+                iterator.assessment =
+                  credentialPlayload.credentialSubjectCommon.assessment;
+              }
+              if (
+                credentialPlayload.credentialSubjectCommon.quarterlyAssessment
+              ) {
+                iterator.quarterlyAssessment =
+                  credentialPlayload.credentialSubjectCommon.quarterlyAssessment;
+              }
+              if (credentialPlayload.credentialSubjectCommon.total) {
+                iterator.total =
+                  credentialPlayload.credentialSubjectCommon.total;
+              }
+              //list of schema update fields
+              if (credentialPlayload.issuerDetail.schoolName) {
+                iterator.school_name =
+                  credentialPlayload.issuerDetail.schoolName;
+              }
+              if (credentialPlayload.issuerDetail.udise) {
+                iterator.school_id = credentialPlayload.issuerDetail.udise;
+              }
+              if (credentialPlayload.credentialSubjectCommon.stateCode) {
+                iterator.stateCode =
+                  credentialPlayload.credentialSubjectCommon.stateCode;
+              }
+              if (credentialPlayload.credentialSubjectCommon.stateName) {
+                iterator.stateName =
+                  credentialPlayload.credentialSubjectCommon.stateName;
+              }
+              if (credentialPlayload.credentialSubjectCommon.districtCode) {
+                iterator.districtCode =
+                  credentialPlayload.credentialSubjectCommon.districtCode;
+              }
+              if (credentialPlayload.credentialSubjectCommon.districtName) {
+                iterator.districtName =
+                  credentialPlayload.credentialSubjectCommon.districtName;
+              }
+              if (credentialPlayload.credentialSubjectCommon.blockCode) {
+                iterator.blockCode =
+                  credentialPlayload.credentialSubjectCommon.blockCode;
+              }
+              if (credentialPlayload.credentialSubjectCommon.blockName) {
+                iterator.blockName =
+                  credentialPlayload.credentialSubjectCommon.blockName;
+              }
+
+              //generate did or find did
+              var aadhar_token = iterator.aadhar_token;
+
+              // find student
+              let searchSchema = {
+                filters: {
+                  aadhar_token: {
+                    eq: aadhar_token,
+                  },
+                },
+              };
+              const studentDetails = await this.sbrcService.sbrcSearch(
+                searchSchema,
+                'Learner',
+              );
+              console.log('Learner Details', studentDetails);
+              if (studentDetails.length > 0) {
+                if (studentDetails[0]?.did) {
+                  iterator.id = studentDetails[0].did;
+                  let obj = {
+                    issuerId: issuerId,
+                    credSchema: schemaRes,
+                    credentialSubject: iterator,
+                    issuanceDate: credentialPlayload.vcData.issuanceDate,
+                    expirationDate: credentialPlayload.vcData.expirationDate,
+                  };
+                  console.log('obj', obj);
+
+                  const cred = await this.credService.issueCredentials(obj);
+                  //console.log("cred 34", cred)
+                  if (cred) {
+                    responseArray.push(cred);
+                    loglist[i_count].status = true;
+                    loglist[i_count].error = {};
+                    success_count++;
+                  } else {
+                    responseArray.push({
+                      error: 'unable to issue credentials!',
+                    });
+                    iserror = true;
+                    loglist[i_count].status = false;
+                    loglist[i_count].error =
+                      'Unable to Issue Credentials ! Please Try Again.';
+                    //loglist[i_count].errorlog = {};
+                    error_count++;
+                  }
+                } else {
+                  let didRes = await this.credService.generateDid(aadhar_token);
+
+                  if (didRes) {
+                    iterator.id = didRes[0].verificationMethod[0].controller;
+                    let updateRes = await this.sbrcService.sbrcUpdate(
+                      { did: iterator.id },
+                      'Learner',
+                      studentDetails[0].osid,
+                    );
+                    if (updateRes) {
+                      let obj = {
+                        issuerId: issuerId,
+                        credSchema: schemaRes,
+                        credentialSubject: iterator,
+                        issuanceDate: credentialPlayload.vcData.issuanceDate,
+                        expirationDate:
+                          credentialPlayload.vcData.expirationDate,
+                      };
+                      console.log('obj', obj);
+
+                      if (iterator.id) {
+                        const cred = await this.credService.issueCredentials(
+                          obj,
+                        );
+                        //console.log("cred 34", cred)
+                        if (cred) {
+                          responseArray.push(cred);
+                          loglist[i_count].status = true;
+                          loglist[i_count].error = {};
+                          success_count++;
+                        } else {
+                          responseArray.push({
+                            error: 'unable to issue credentials!',
+                          });
+                          iserror = true;
+                          loglist[i_count].status = false;
+                          loglist[i_count].error =
+                            'Unable to Issue Credentials ! Please Try Again.';
+                          //loglist[i_count].errorlog = {};
+                          error_count++;
+                        }
+                      }
+                    } else {
+                      responseArray.push({
+                        error: 'unable to update did inside RC!',
+                      });
+                      iserror = true;
+                      loglist[i_count].status = false;
+                      loglist[i_count].error =
+                        'Unable to Update Student Identity ! Please Try Again.';
+                      //loglist[i_count].errorlog = {};
+                      error_count++;
+                    }
+                  } else {
+                    responseArray.push({
+                      error: 'unable to generate student did!',
+                    });
+                    iserror = true;
+                    loglist[i_count].status = false;
+                    loglist[i_count].error =
+                      'Unable to Generate Student DID ! Please Try Again.';
+                    //loglist[i_count].errorlog = {};
+                    error_count++;
+                  }
+                }
+              } else {
+                let didRes = await this.credService.generateDid(aadhar_token);
+
+                if (didRes) {
+                  iterator.id = didRes[0].verificationMethod[0].controller;
+                  let inviteSchema = {
+                    name: iterator.student_name,
+                    dob: iterator.dob,
+                    did: iterator.id,
+                    username: '',
+                    aadhar_token: iterator.aadhar_token,
+                  };
+                  console.log('inviteSchema', inviteSchema);
+                  let createStudent = await this.sbrcService.sbrcInvite(
+                    inviteSchema,
+                    'Learner',
+                  );
+                  console.log('createStudent', createStudent);
+
+                  if (createStudent) {
+                    let obj = {
+                      issuerId: issuerId,
+                      credSchema: schemaRes,
+                      credentialSubject: iterator,
+                      issuanceDate: credentialPlayload.vcData.issuanceDate,
+                      expirationDate: credentialPlayload.vcData.expirationDate,
+                    };
+                    console.log('obj', obj);
+
+                    const cred = await this.credService.issueCredentials(obj);
+                    //console.log("cred 34", cred)
+                    if (cred) {
+                      responseArray.push(cred);
+                      loglist[i_count].status = true;
+                      loglist[i_count].error = {};
+                      success_count++;
+                    } else {
+                      responseArray.push({
+                        error: 'unable to issue credentials!',
+                      });
+                      iserror = true;
+                      loglist[i_count].status = false;
+                      loglist[i_count].error =
+                        'Unable to Issue Credentials ! Please Try Again.';
+                      //loglist[i_count].errorlog = {};
+                      error_count++;
+                    }
+                  } else {
+                    responseArray.push({
+                      error: 'unable to create student in RC!',
+                    });
+                    iserror = true;
+                    loglist[i_count].status = false;
+                    loglist[i_count].error =
+                      'Unable to Create Student Account ! Please Try Again.';
+                    //loglist[i_count].errorlog = {};
+                    error_count++;
+                  }
+                } else {
+                  responseArray.push({
+                    error: 'unable to generate student did!',
+                  });
+                  iserror = true;
+                  loglist[i_count].status = false;
+                  loglist[i_count].error =
+                    'Unable to Generate Student DID ! Please Try Again.';
+                  //loglist[i_count].errorlog = {};
+                  error_count++;
+                }
+              }
+            } catch (e) {
+              console.log(e);
+              iserror = true;
+              loglist[i_count].status = false;
+              loglist[i_count].error = 'System Exception ! Please Try Again.';
+              loglist[i_count].errorlog = JSON.stringify(e);
+              error_count++;
+            }
+            i_count++;
+          }
 
           return response.status(200).send({
             success: true,

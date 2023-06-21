@@ -2,6 +2,7 @@ export class BulkCredentialDto {
   clientId: string;
   clientSecret: string;
   issuerDetail: {
+    did: string;
     udise: string;
     schoolName: string;
     schoolDid: string;
