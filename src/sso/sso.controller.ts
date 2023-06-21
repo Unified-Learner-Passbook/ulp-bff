@@ -233,6 +233,11 @@ export class SSOController {
   async credentialsSchema(@Param('id') id: string, @Res() response: Response) {
     return this.ssoService.credentialsSchema(id, response);
   }
+  //credentialsVerify
+  @Get('/student/credentials/verify/:id')
+  async credentialsVerify(@Param('id') id: string, @Res() response: Response) {
+    return this.ssoService.credentialsVerify(id, response);
+  }
   //credentialsSchemaJSON
   @Get('/student/credentials/schema/json/:id')
   async credentialsSchemaJSON(
@@ -299,5 +304,35 @@ export class SSOController {
   ) {
     const jwt = auth.replace('Bearer ', '');
     return this.ssoService.studentBulkCredentials(jwt, requestbody, response);
+  }
+
+  //21 june demo q2 new apis
+  @Post('/learner/register')
+  async registerLearner(
+    @Body('name') name: string,
+    @Body('dob') dob: string,
+    @Body('gender') gender: string,
+    @Body('aadhar_id') aadhar_id: string,
+    @Body('username') username: string,
+    @Body('password') password: string,
+    @Res() response: Response,
+  ) {
+    return this.ssoService.registerLearner(
+      name,
+      dob,
+      gender,
+      aadhar_id,
+      username,
+      password,
+      response,
+    );
+  }
+  @Get('/learner/getdid')
+  async getDIDLearner(
+    @Headers('Authorization') auth: string,
+    @Res() response: Response,
+  ) {
+    const jwt = auth.replace('Bearer ', '');
+    return this.ssoService.getDIDLearner(jwt, response);
   }
 }
