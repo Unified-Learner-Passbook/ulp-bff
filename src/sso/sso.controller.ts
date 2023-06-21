@@ -335,4 +335,12 @@ export class SSOController {
     const jwt = auth.replace('Bearer ', '');
     return this.ssoService.getDIDLearner(jwt, response);
   }
+  @Get('/learner/getdetail')
+  async getDetailLearner(
+    @Headers('Authorization') auth: string,
+    @Res() response: Response,
+  ) {
+    const jwt = auth.replace('Bearer ', '');
+    return this.ssoService.getDetailLearner(jwt, response);
+  }
 }
