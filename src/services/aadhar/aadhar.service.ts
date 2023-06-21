@@ -19,7 +19,10 @@ export class AadharService {
     aadhaar_gender: string,
   ) {
     if (aadhaar_id && aadhaar_name && aadhaar_dob && aadhaar_gender) {
-      let uuid = await md5(aadhaar_id + '_token');
+      //encrypt it
+      //let uuid = await md5(aadhaar_id + '_token');
+      //pass as it is
+      let uuid = aadhaar_id;
 
       let response_text = null;
       response_text = {
