@@ -3,8 +3,9 @@ import { ClientController } from './client.controller';
 import { ClientService } from './client.services';
 import { SbrcService } from '../services/sbrc/sbrc.service';
 import { CredService } from 'src/services/cred/cred.service';
+import { AadharService } from 'src/services/aadhar/aadhar.service';
 @Module({
   controllers: [ClientController],
-  providers: [ClientService,SbrcService,CredService],
+  providers: [ClientService, SbrcService, CredService, AadharService],
 })
 export class ClientModule {}

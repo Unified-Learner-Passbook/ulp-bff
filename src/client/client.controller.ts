@@ -26,7 +26,7 @@ export class ClientController {
     const TESTVAR = process.env.TESTVAR;
     const result = {
       success: true,
-      message: 'Client API Working 6 June ' + CRED_URL + ' / ' + TESTVAR,
+      message: 'Client API Working 21 June ' + CRED_URL + ' / ' + TESTVAR,
     };
     response.status(200).send(result);
   }
@@ -69,4 +69,86 @@ export class ClientController {
       response,
     );
   }
+
+  //q2 new apis flow added on 21 june 23
+
+  @Post('/getdid')
+  async getDID(
+    @Body('clientId') clientId: string,
+    @Body('clientSecret') clientSecret: string,
+    @Body('uniquetext') uniquetext: string,
+    @Res() response: Response,
+  ) {
+    return this.clientService.getDID(
+      clientId,
+      clientSecret,
+      uniquetext,
+      response,
+    );
+  }
+
+  @Post('/issuerregister')
+  async getIssuerRegister(
+    @Body('clientId') clientId: string,
+    @Body('clientSecret') clientSecret: string,
+    @Body('name') name: string,
+    @Body('did') did: string,
+    @Res() response: Response,
+  ) {
+    return this.clientService.getIssuerRegister(
+      clientId,
+      clientSecret,
+      name,
+      did,
+      response,
+    );
+  }
+
+  //client aadhaar
+  @Post('/aadhaar')
+  async getAadhaarToken(
+    @Res() response: Response,
+    @Body('aadhaar_id') aadhaar_id: string,
+    @Body('aadhaar_name') aadhaar_name: string,
+    @Body('aadhaar_dob') aadhaar_dob: string,
+    @Body('aadhaar_gender') aadhaar_gender: string,
+  ) {
+    return this.clientService.getAadhaarToken(
+      response,
+      aadhaar_id,
+      aadhaar_name,
+      aadhaar_dob,
+      aadhaar_gender,
+    );
+  }
+
+  @Post('/bulk/uploadv2/:type')
+  async bulkRegisterV2(
+    @Body('clientId') clientId: string,
+    @Body('clientSecret') clientSecret: string,
+    @Param('type') type: string,
+    @Body() payload: BulkCredentialDto,
+    @Res() response: Response,
+  ) {
+    if (type === 'proofOfAssessment') {
+      //var schemaId = "did:ulpschema:098765";
+      var schemaId = 'clf0qfvna0000tj154706406y';
+    }
+    if (type === 'proofOfEnrollment') {
+      //var schemaId = "did:ulpschema:098765";
+      var schemaId = 'clf0rjgov0002tj15ml0fdest';
+    }
+    if (type === 'proofOfBenifits') {
+      //var schemaId = "did:ulpschema:098765";
+      var schemaId = 'clf0wvyjs0008tj154rc071i1';
+    }
+    return this.clientService.bulkRegisterV2(
+      clientId,
+      clientSecret,
+      payload,
+      schemaId,
+      response,
+    );
+  }
+
 }

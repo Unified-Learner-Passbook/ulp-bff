@@ -17,14 +17,14 @@ const crypto = require('crypto');
 
 @Injectable()
 export class SSOService {
-  public codeVerifier : string;
+  public codeVerifier: string;
   constructor(
     private readonly httpService: HttpService,
     private aadharService: AadharService,
     private sbrcService: SbrcService,
     private credService: CredService,
     private keycloakService: KeycloakService,
-  ) { }
+  ) {}
   //axios call
   md5 = require('md5');
   moment = require('moment');
@@ -719,6 +719,51 @@ export class SSOService {
     }
   }
 
+  //credentialsVerify
+  async credentialsVerify(id: string, response: Response) {
+    if (id) {
+      const url = process.env.CRED_URL + '/credentials/' + id + '/verify';
+
+      var config = {
+        headers: {},
+      };
+      let response_text = null;
+
+      try {
+        const observable = this.httpService.get(url, config);
+        const promise = observable.toPromise();
+        const response = await promise;
+        //console.log(JSON.stringify(response.data));
+        response_text = response.data;
+      } catch (error) {
+        //console.log(e);
+        response_text = { error: error };
+      }
+      if (response_text?.error) {
+        return response.status(400).send({
+          success: false,
+          status: 'cred_schema_api_failed',
+          message: 'Credentials Schema Failed ! Please Try Again.',
+          result: response_text,
+        });
+      } else {
+        return response.status(200).send({
+          success: true,
+          status: 'cred_schema_api_success',
+          message: 'Cred Schema API Success',
+          result: response_text,
+        });
+      }
+    } else {
+      return response.status(400).send({
+        success: false,
+        status: 'invalid_request',
+        message: 'Invalid Request. Not received All Parameters.',
+        result: null,
+      });
+    }
+  }
+
   //credentialsSchemaJSON
   async credentialsSchemaJSON(id: string, response: Response) {
     if (id) {
@@ -968,7 +1013,6 @@ export class SSOService {
     // console.log("codeChallenge", codeChallenge)
     //&code_challenge=${codeChallenge}&code_challenge_method=S256
 
-
     //console.log(request);
     let digi_client_id = '';
     let digi_url_call_back_uri = '';
@@ -1030,7 +1074,7 @@ export class SSOService {
         //console.log(JSON.stringify(response.data));
         response_digi = { data: response.data };
       } catch (e) {
-        console.log("error 1029", e);
+        console.log('error 1029', e);
         response_digi = { error: null };
       }
       if (response_digi?.error) {
@@ -1071,19 +1115,19 @@ export class SSOService {
               digiacc === 'ewallet' ? 'StudentV2' : 'TeacherV1',
               digiacc === 'ewallet'
                 ? {
-                  filters: {
-                    meripehchan_id: {
-                      eq: response_data?.meripehchanid.toString(),
+                    filters: {
+                      meripehchan_id: {
+                        eq: response_data?.meripehchanid.toString(),
+                      },
                     },
-                  },
-                }
+                  }
                 : {
-                  filters: {
-                    meripehchanLoginId: {
-                      eq: response_data?.meripehchanid.toString(),
+                    filters: {
+                      meripehchanLoginId: {
+                        eq: response_data?.meripehchanid.toString(),
+                      },
                     },
                   },
-                },
             );
             if (sb_rc_search?.error) {
               return response.status(501).send({
@@ -1121,9 +1165,9 @@ export class SSOService {
               let auto_username =
                 digiacc === 'ewallet'
                   ? //response_data?.username
-                  sb_rc_search[0]?.username
+                    sb_rc_search[0]?.username
                   : //response_data?.meripehchanid + '_teacher'
-                  sb_rc_search[0]?.username;
+                    sb_rc_search[0]?.username;
               auto_username = auto_username.toLowerCase();
               const auto_password = await this.md5(
                 auto_username + 'MjQFlAJOQSlWIQJHOEDhod',
@@ -1364,19 +1408,19 @@ export class SSOService {
               digiacc === 'ewallet' ? 'StudentV2' : 'TeacherV1',
               digiacc === 'ewallet'
                 ? {
-                  filters: {
-                    aadhar_token: {
-                      eq: uuid.toString(),
+                    filters: {
+                      aadhar_token: {
+                        eq: uuid.toString(),
+                      },
                     },
-                  },
-                }
+                  }
                 : {
-                  filters: {
-                    aadharId: {
-                      eq: uuid.toString(),
+                    filters: {
+                      aadharId: {
+                        eq: uuid.toString(),
+                      },
                     },
                   },
-                },
             );
             if (sb_rc_search?.error) {
               return response.status(501).send({
@@ -1400,11 +1444,11 @@ export class SSOService {
               let sb_rc_response_text = await this.sbrcService.sbrcUpdateEL(
                 digiacc === 'ewallet'
                   ? {
-                    meripehchan_id: digilocker_id,
-                  }
+                      meripehchan_id: digilocker_id,
+                    }
                   : {
-                    meripehchanLoginId: digilocker_id,
-                  },
+                      meripehchanLoginId: digilocker_id,
+                    },
                 digiacc === 'ewallet' ? 'StudentV2' : 'TeacherV1',
                 osid,
               );
@@ -2640,22 +2684,22 @@ export class SSOService {
             'StudentV2',
             aadhaar_status === 'all'
               ? {
-                filters: {
-                  school_udise: {
-                    eq: schoolUdise,
+                  filters: {
+                    school_udise: {
+                      eq: schoolUdise,
+                    },
                   },
-                },
-              }
+                }
               : {
-                filters: {
-                  school_udise: {
-                    eq: schoolUdise,
-                  },
-                  aadhaar_status: {
-                    eq: aadhaar_status,
+                  filters: {
+                    school_udise: {
+                      eq: schoolUdise,
+                    },
+                    aadhaar_status: {
+                      eq: aadhaar_status,
+                    },
                   },
                 },
-              },
           );
           if (sb_rc_search_student?.error) {
             return response.status(501).send({
@@ -3026,6 +3070,273 @@ export class SSOService {
         success: false,
         status: 'invalid_request',
         message: 'Invalid Request. Not received All Parameters.',
+        result: null,
+      });
+    }
+  }
+
+  //21 june demo  q2 new api
+
+  //getAadhaarToken
+  async registerLearner(
+    name: string,
+    dob: string,
+    gender: string,
+    aadhar_id: string,
+    username: string,
+    password: string,
+    response: Response,
+  ) {
+    if (name && dob && gender && aadhar_id && username && password) {
+      const aadhar_data = await this.aadharService.aadhaarDemographic(
+        aadhar_id,
+        name,
+        dob,
+        gender,
+      );
+
+      //console.log(aadhar_data);
+      if (!aadhar_data?.success === true) {
+        return response.status(400).send({
+          success: false,
+          status: 'aadhaar_api_error',
+          message: 'Aadhar API Not Working',
+          result: aadhar_data?.result,
+        });
+      } else {
+        if (aadhar_data?.result?.ret === 'y') {
+          const decodedxml = aadhar_data?.decodedxml;
+          const uuid = await this.aadharService.getUUID(decodedxml);
+          if (uuid === null) {
+            return response.status(400).send({
+              success: false,
+              status: 'aadhaar_api_uuid_error',
+              message: 'Aadhar API UUID Not Found',
+              result: uuid,
+            });
+          } else {
+            //generate did or find did
+            var aadhar_token = uuid;
+
+            // find student
+            let searchSchema = {
+              filters: {
+                aadhar_token: {
+                  eq: aadhar_token,
+                },
+              },
+            };
+            const studentDetails = await this.sbrcService.sbrcSearch(
+              searchSchema,
+              'Learner',
+            );
+            console.log('Learner Details', studentDetails);
+            if (studentDetails.length == 0) {
+              //register and create account in keycloak
+              let inviteSchema = {
+                name: name,
+                dob: dob,
+                did: '',
+                username: username,
+                aadhar_token: aadhar_token,
+              };
+              console.log('inviteSchema', inviteSchema);
+              let createStudent = await this.sbrcService.sbrcInvite(
+                inviteSchema,
+                'Learner',
+              );
+              console.log('createStudent', createStudent);
+
+              if (createStudent) {
+                //create keycloak and then login
+                const clientToken = await this.keycloakService.getClientToken();
+                if (clientToken?.error) {
+                  return response.status(401).send({
+                    success: false,
+                    status: 'keycloak_client_token_error',
+                    message: 'System Authentication Failed ! Please Try Again.',
+                    result: null,
+                  });
+                } else {
+                  ///register in keycloak
+                  let response_text =
+                    await this.keycloakService.registerUserKeycloak(
+                      username,
+                      password,
+                      clientToken,
+                    );
+                  if (response_text?.error) {
+                    return response.status(400).send({
+                      success: false,
+                      status: 'keycloak_register_duplicate',
+                      message: 'User Account Already Present in Keycloak.',
+                      result: null,
+                    });
+                  } else {
+                    return response.status(200).send({
+                      success: true,
+                      status: 'sbrc_register_success',
+                      message:
+                        'User Account Registered. Login using username and password.',
+                      result: null,
+                    });
+                  }
+                }
+              } else {
+                return response.status(400).send({
+                  success: false,
+                  status: 'sbrc_invite_error',
+                  message: 'Unable to Register Learner. Try Again.',
+                  result: null,
+                });
+              }
+            } else if (studentDetails.length > 0) {
+              if (studentDetails[0].username != '') {
+                return response.status(400).send({
+                  success: false,
+                  status: 'sbrc_register_duplicate',
+                  message:
+                    'User Account Already Registered. Login using username and password.',
+                  result: null,
+                });
+              } else {
+                //update username and register in keycloak
+                //update username
+                let updateRes = await this.sbrcService.sbrcUpdate(
+                  { username: username },
+                  'Learner',
+                  studentDetails[0].osid,
+                );
+                if (updateRes) {
+                  //register in keycloak
+                  //create keycloak and then login
+                  const clientToken =
+                    await this.keycloakService.getClientToken();
+                  if (clientToken?.error) {
+                    return response.status(401).send({
+                      success: false,
+                      status: 'keycloak_client_token_error',
+                      message:
+                        'System Authentication Failed ! Please Try Again.',
+                      result: null,
+                    });
+                  } else {
+                    ///register in keycloak
+                    let response_text =
+                      await this.keycloakService.registerUserKeycloak(
+                        username,
+                        password,
+                        clientToken,
+                      );
+                    if (response_text?.error) {
+                      return response.status(400).send({
+                        success: false,
+                        status: 'keycloak_register_duplicate',
+                        message: 'User Account Already Present in Keycloak.',
+                        result: null,
+                      });
+                    } else {
+                      return response.status(200).send({
+                        success: true,
+                        status: 'sbrc_register_success',
+                        message:
+                          'User Account Registered. Login using username and password.',
+                        result: null,
+                      });
+                    }
+                  }
+                } else {
+                  return response.status(200).send({
+                    success: false,
+                    status: 'sbrc_update_error',
+                    message:
+                      'Unable to Update Learner Username ! Please Try Again.',
+                    result: null,
+                  });
+                }
+              }
+            } else {
+              return response.status(200).send({
+                success: false,
+                status: 'sbrc_search_error',
+                message: 'Unable to search Learner. Try Again.',
+                result: null,
+              });
+            }
+          }
+        } else {
+          return response.status(200).send({
+            success: false,
+            status: 'invalid_aadhaar',
+            message: 'Invalid Aadhaar',
+            result: null,
+          });
+        }
+      }
+    } else {
+      return response.status(400).send({
+        success: false,
+        status: 'invalid_request',
+        message: 'Invalid Request. Not received All Parameters.',
+        result: null,
+      });
+    }
+  }
+
+  //credentialsStudent
+  async getDIDLearner(token: string, response: Response) {
+    if (token) {
+      const studentUsername = await this.keycloakService.verifyUserToken(token);
+      if (studentUsername?.error) {
+        return response.status(401).send({
+          success: false,
+          status: 'keycloak_token_bad_request',
+          message: 'You do not have access for this request.',
+          result: null,
+        });
+      } else if (!studentUsername?.preferred_username) {
+        return response.status(401).send({
+          success: false,
+          status: 'keycloak_token_error',
+          message: 'Your Login Session Expired.',
+          result: null,
+        });
+      } else {
+        const sb_rc_search = await this.sbrcService.sbrcSearchEL('Learner', {
+          filters: {
+            username: {
+              eq: studentUsername?.preferred_username,
+            },
+          },
+        });
+        if (sb_rc_search?.error) {
+          return response.status(501).send({
+            success: false,
+            status: 'sb_rc_search_error',
+            message: 'System Search Error ! Please try again.',
+            result: sb_rc_search?.error.message,
+          });
+        } else if (sb_rc_search.length !== 1) {
+          return response.status(404).send({
+            success: false,
+            status: 'sb_rc_search_no_found',
+            message: 'Data Not Found in System.',
+            result: null,
+          });
+        } else {
+          return response.status(200).send({
+            success: true,
+            status: 'sb_rc_search_found',
+            message: 'Data Found in System.',
+            result: sb_rc_search[0].did,
+          });
+        }
+      }
+    } else {
+      return response.status(400).send({
+        success: false,
+        status: 'invalid_request',
+        message: 'Invalid Request. Not received token.',
         result: null,
       });
     }
