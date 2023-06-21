@@ -16,6 +16,8 @@ import { AadharService } from './services/aadhar/aadhar.service';
 import { KeycloakService } from './services/keycloak/keycloak.service';
 import { UdiseService } from 'src/services/udise/udise.service';
 import { TelemetryService } from './services/telemetry/telemetry.service';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { UsersModule } from './services/users/users.module';
 
 const envFilePath: string = getEnvPath(`${__dirname}/envs`);
 //console.log('envFilePath', envFilePath);
@@ -33,6 +35,18 @@ const envFilePath: string = getEnvPath(`${__dirname}/envs`);
     ClientModule,
     PortalModule,
     SbrcapiModule,
+    TypeOrmModule.forRoot({
+      type: 'postgres',
+      host: '64.227.185.154',
+      port: 5432,
+      username: 'postgres',
+      password: '4E3k%nC*AG',
+      database: 'middleware_db',
+      entities: [__dirname + '/**/*.entity{.ts,.js}'],
+      synchronize: true,
+      logging: true,
+    }),
+    UsersModule,
   ],
   providers: [
     CredService,
