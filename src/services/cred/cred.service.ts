@@ -9,6 +9,7 @@ export class CredService {
   //generate schema
   async generateSchema(schemaId) {
     const url = `${process.env.SCHEMA_URL}/schema/jsonld?id=${schemaId}`;
+    console.log(url);
 
     try {
       const observable = this.httpService.get(url);
@@ -20,6 +21,7 @@ export class CredService {
       return response.data;
     } catch (e) {
       console.log('schema error', e.message);
+      console.log(e);
     }
   }
 
