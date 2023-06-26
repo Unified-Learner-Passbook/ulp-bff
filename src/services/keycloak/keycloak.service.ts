@@ -49,7 +49,7 @@ export class KeycloakService {
       client_id: this.keycloakCred.client_id,
       client_secret: this.keycloakCred.client_secret,
     });
-
+    console.log('data', data);
     const url =
       process.env.KEYCLOAK_URL +
       'realms/' +
@@ -68,10 +68,10 @@ export class KeycloakService {
       const observable = this.httpService.post(url, data, config);
       const promise = observable.toPromise();
       const response = await promise;
-      //console.log(JSON.stringify(response.data));
+      console.log(JSON.stringify(response.data));
       response_text = response.data;
     } catch (e) {
-      //console.log(e);
+      console.log(e);
       response_text = { error: e };
     }
     return response_text;
