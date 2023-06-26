@@ -7,6 +7,8 @@ const SCHEMA_URL = process.env.SCHEMA_URL;
 const KEYCLOAK_URL = process.env.KEYCLOAK_URL;
 const REGISTRY_URL = process.env.REGISTRY_URL;
 const TESTVAR = process.env.TESTVAR;
+const KEYCLOAK_CLIENT_ID = process.env.KEYCLOAK_CLIENT_ID;
+const KEYCLOAK_CLIENT_SECRET = process.env.KEYCLOAK_CLIENT_SECRET;
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -17,6 +19,8 @@ async function bootstrap() {
   console.log('SCHEMA_URL', SCHEMA_URL);
   console.log('KEYCLOAK_URL', KEYCLOAK_URL);
   console.log('REGISTRY_URL', REGISTRY_URL);
+  console.log('KEYCLOAK_CLIENT_ID', KEYCLOAK_CLIENT_ID);
+  console.log('KEYCLOAK_CLIENT_SECRET', KEYCLOAK_CLIENT_SECRET);
   console.log(`🚀 Application is running on: http://localhost:${port}/`);
 }
 bootstrap();
