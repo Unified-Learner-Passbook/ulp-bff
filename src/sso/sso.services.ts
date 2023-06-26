@@ -3150,6 +3150,7 @@ export class SSOService {
               if (createStudent) {
                 //create keycloak and then login
                 const clientToken = await this.keycloakService.getClientToken();
+                console.log('clientToken', clientToken);
                 if (clientToken?.error) {
                   return response.status(401).send({
                     success: false,
@@ -3165,6 +3166,7 @@ export class SSOService {
                       password,
                       clientToken,
                     );
+                  console.log('registerUserKeycloak', response_text);
                   if (response_text?.error) {
                     return response.status(400).send({
                       success: false,
