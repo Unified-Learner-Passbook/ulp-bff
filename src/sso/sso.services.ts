@@ -3132,25 +3132,95 @@ export class SSOService {
             );
             console.log('Learner Details', studentDetails);
             if (studentDetails.length == 0) {
-              //register and create account in keycloak
-              let inviteSchema = {
-                name: name,
-                dob: dob,
-                did: '',
-                username: username,
-                aadhar_token: aadhar_token,
-              };
-              console.log('inviteSchema', inviteSchema);
-              let createStudent = await this.sbrcService.sbrcInvite(
-                inviteSchema,
-                'Learner',
-              );
-              console.log('createStudent', createStudent);
-
-              if (createStudent) {
+              //register in keycloak and then in sunbird rc
+              //create keycloak and then login
+              const clientToken = await this.keycloakService.getClientToken();
+              console.log('clientToken', clientToken);
+              if (clientToken?.error) {
+                return response.status(401).send({
+                  success: false,
+                  status: 'keycloak_client_token_error',
+                  message: 'System Authentication Failed ! Please Try Again.',
+                  result: null,
+                });
+              } else {
+                ///register in keycloak
+                let response_text =
+                  await this.keycloakService.registerUserKeycloak(
+                    username,
+                    password,
+                    clientToken,
+                  );
+                console.log('registerUserKeycloak', response_text);
+                if (response_text?.error) {
+                  return response.status(400).send({
+                    success: false,
+                    status: 'keycloak_register_duplicate',
+                    message: 'User Account Already Present in Keycloak.',
+                    result: null,
+                  });
+                } else {
+                  //register and create account in sunbird rc
+                  let inviteSchema = {
+                    name: name,
+                    dob: dob,
+                    did: '',
+                    username: username,
+                    aadhar_token: aadhar_token,
+                  };
+                  console.log('inviteSchema', inviteSchema);
+                  let createStudent = await this.sbrcService.sbrcInvite(
+                    inviteSchema,
+                    'Learner',
+                  );
+                  console.log('createStudent', createStudent);
+                  if (createStudent) {
+                    return response.status(200).send({
+                      success: true,
+                      status: 'sbrc_register_success',
+                      message:
+                        'User Account Registered. Login using username and password.',
+                      result: null,
+                    });
+                  } else {
+                    //need to add rollback function for keycloak user delete
+                    let response_text_keycloak =
+                      await this.keycloakService.deleteUserKeycloak(
+                        username,
+                        clientToken,
+                      );
+                    if (response_text_keycloak?.error) {
+                      return response.status(400).send({
+                        success: false,
+                        status: 'sbrc_invite_error_delete_keycloak',
+                        message: 'Unable to Register Learner. Try Again.',
+                        result: null,
+                      });
+                    } else {
+                      return response.status(400).send({
+                        success: false,
+                        status: 'sbrc_invite_error',
+                        message: 'Unable to Register Learner. Try Again.',
+                        result: null,
+                      });
+                    }
+                  }
+                }
+              }
+            } else if (studentDetails.length > 0) {
+              if (studentDetails[0].username != '') {
+                return response.status(400).send({
+                  success: false,
+                  status: 'sbrc_register_duplicate',
+                  message:
+                    'User Account Already Registered. Login using username and password.',
+                  result: null,
+                });
+              } else {
+                //register in keycloak and then update username
+                //register in keycloak
                 //create keycloak and then login
                 const clientToken = await this.keycloakService.getClientToken();
-                console.log('clientToken', clientToken);
                 if (clientToken?.error) {
                   return response.status(401).send({
                     success: false,
@@ -3166,7 +3236,6 @@ export class SSOService {
                       password,
                       clientToken,
                     );
-                  console.log('registerUserKeycloak', response_text);
                   if (response_text?.error) {
                     return response.status(400).send({
                       success: false,
@@ -3175,69 +3244,14 @@ export class SSOService {
                       result: null,
                     });
                   } else {
-                    return response.status(200).send({
-                      success: true,
-                      status: 'sbrc_register_success',
-                      message:
-                        'User Account Registered. Login using username and password.',
-                      result: null,
-                    });
-                  }
-                }
-              } else {
-                return response.status(400).send({
-                  success: false,
-                  status: 'sbrc_invite_error',
-                  message: 'Unable to Register Learner. Try Again.',
-                  result: null,
-                });
-              }
-            } else if (studentDetails.length > 0) {
-              if (studentDetails[0].username != '') {
-                return response.status(400).send({
-                  success: false,
-                  status: 'sbrc_register_duplicate',
-                  message:
-                    'User Account Already Registered. Login using username and password.',
-                  result: null,
-                });
-              } else {
-                //update username and register in keycloak
-                //update username
-                let updateRes = await this.sbrcService.sbrcUpdate(
-                  { username: username },
-                  'Learner',
-                  studentDetails[0].osid,
-                );
-                if (updateRes) {
-                  //register in keycloak
-                  //create keycloak and then login
-                  const clientToken =
-                    await this.keycloakService.getClientToken();
-                  if (clientToken?.error) {
-                    return response.status(401).send({
-                      success: false,
-                      status: 'keycloak_client_token_error',
-                      message:
-                        'System Authentication Failed ! Please Try Again.',
-                      result: null,
-                    });
-                  } else {
-                    ///register in keycloak
-                    let response_text =
-                      await this.keycloakService.registerUserKeycloak(
-                        username,
-                        password,
-                        clientToken,
-                      );
-                    if (response_text?.error) {
-                      return response.status(400).send({
-                        success: false,
-                        status: 'keycloak_register_duplicate',
-                        message: 'User Account Already Present in Keycloak.',
-                        result: null,
-                      });
-                    } else {
+                    //update username and register in keycloak
+                    //update username
+                    let updateRes = await this.sbrcService.sbrcUpdate(
+                      { username: username },
+                      'Learner',
+                      studentDetails[0].osid,
+                    );
+                    if (updateRes) {
                       return response.status(200).send({
                         success: true,
                         status: 'sbrc_register_success',
@@ -3245,16 +3259,31 @@ export class SSOService {
                           'User Account Registered. Login using username and password.',
                         result: null,
                       });
+                    } else {
+                      //need to add rollback function for keycloak user delete
+                      let response_text_keycloak =
+                        await this.keycloakService.deleteUserKeycloak(
+                          username,
+                          clientToken,
+                        );
+                      if (response_text_keycloak?.error) {
+                        return response.status(400).send({
+                          success: false,
+                          status: 'sbrc_invite_error_delete_keycloak',
+                          message: 'Unable to Register Learner. Try Again.',
+                          result: null,
+                        });
+                      } else {
+                        return response.status(200).send({
+                          success: false,
+                          status: 'sbrc_update_error',
+                          message:
+                            'Unable to Update Learner Username ! Please Try Again.',
+                          result: null,
+                        });
+                      }
                     }
                   }
-                } else {
-                  return response.status(200).send({
-                    success: false,
-                    status: 'sbrc_update_error',
-                    message:
-                      'Unable to Update Learner Username ! Please Try Again.',
-                    result: null,
-                  });
                 }
               }
             } else {
