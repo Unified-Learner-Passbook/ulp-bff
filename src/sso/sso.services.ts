@@ -3156,7 +3156,7 @@ export class SSOService {
                   return response.status(400).send({
                     success: false,
                     status: 'keycloak_register_duplicate',
-                    message: 'User Account Already Present in Keycloak.',
+                    message: 'You entered username Account Already Present in Keycloak.',
                     result: null,
                   });
                 } else {
@@ -3213,7 +3213,7 @@ export class SSOService {
                   success: false,
                   status: 'sbrc_register_duplicate',
                   message:
-                    'User Account Already Registered. Login using username and password.',
+                    `You entered account details already linked to an existing Keycloak account, which has a username ${studentDetails[0].username}. You cannot set a new username for this Aadhar token. Login using the linked username and password.`,
                   result: null,
                 });
               } else {
@@ -3240,7 +3240,7 @@ export class SSOService {
                     return response.status(400).send({
                       success: false,
                       status: 'keycloak_register_duplicate',
-                      message: 'User Account Already Present in Keycloak.',
+                      message: 'You entered username Account Already Present in Keycloak.',
                       result: null,
                     });
                   } else {
