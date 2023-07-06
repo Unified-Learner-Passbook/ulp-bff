@@ -908,37 +908,37 @@ export class ClientService {
             loglist[i_count].studentDetails = iterator;
 
             try {
-              if (credentialPlayload.credentialSubjectCommon.grade) {
+              if (credentialPlayload?.credentialSubjectCommon?.grade) {
                 iterator.grade =
                   credentialPlayload.credentialSubjectCommon.grade;
               }
-              if (credentialPlayload.credentialSubjectCommon.academic_year) {
+              if (credentialPlayload?.credentialSubjectCommon?.academic_year) {
                 iterator.academic_year =
                   credentialPlayload.credentialSubjectCommon.academic_year;
               }
-              if (credentialPlayload.credentialSubjectCommon.benefitProvider) {
+              if (credentialPlayload?.credentialSubjectCommon?.benefitProvider) {
                 iterator.benefitProvider =
                   credentialPlayload.credentialSubjectCommon.benefitProvider;
               }
-              if (credentialPlayload.credentialSubjectCommon.schemeName) {
+              if (credentialPlayload?.credentialSubjectCommon?.schemeName) {
                 iterator.schemeName =
                   credentialPlayload.credentialSubjectCommon.schemeName;
               }
-              if (credentialPlayload.credentialSubjectCommon.schemeId) {
+              if (credentialPlayload?.credentialSubjectCommon?.schemeId) {
                 iterator.schemeId =
                   credentialPlayload.credentialSubjectCommon.schemeId;
               }
-              if (credentialPlayload.credentialSubjectCommon.assessment) {
+              if (credentialPlayload?.credentialSubjectCommon?.assessment) {
                 iterator.assessment =
                   credentialPlayload.credentialSubjectCommon.assessment;
               }
               if (
-                credentialPlayload.credentialSubjectCommon.quarterlyAssessment
+                credentialPlayload?.credentialSubjectCommon?.quarterlyAssessment
               ) {
                 iterator.quarterlyAssessment =
                   credentialPlayload.credentialSubjectCommon.quarterlyAssessment;
               }
-              if (credentialPlayload.credentialSubjectCommon.total) {
+              if (credentialPlayload?.credentialSubjectCommon?.total) {
                 iterator.total =
                   credentialPlayload.credentialSubjectCommon.total;
               }
@@ -950,27 +950,27 @@ export class ClientService {
               if (credentialPlayload.issuerDetail.udise) {
                 iterator.school_id = credentialPlayload.issuerDetail.udise;
               }
-              if (credentialPlayload.credentialSubjectCommon.stateCode) {
+              if (credentialPlayload?.credentialSubjectCommon?.stateCode) {
                 iterator.stateCode =
                   credentialPlayload.credentialSubjectCommon.stateCode;
               }
-              if (credentialPlayload.credentialSubjectCommon.stateName) {
+              if (credentialPlayload?.credentialSubjectCommon?.stateName) {
                 iterator.stateName =
                   credentialPlayload.credentialSubjectCommon.stateName;
               }
-              if (credentialPlayload.credentialSubjectCommon.districtCode) {
+              if (credentialPlayload?.credentialSubjectCommon?.districtCode) {
                 iterator.districtCode =
                   credentialPlayload.credentialSubjectCommon.districtCode;
               }
-              if (credentialPlayload.credentialSubjectCommon.districtName) {
+              if (credentialPlayload?.credentialSubjectCommon?.districtName) {
                 iterator.districtName =
                   credentialPlayload.credentialSubjectCommon.districtName;
               }
-              if (credentialPlayload.credentialSubjectCommon.blockCode) {
+              if (credentialPlayload?.credentialSubjectCommon?.blockCode) {
                 iterator.blockCode =
                   credentialPlayload.credentialSubjectCommon.blockCode;
               }
-              if (credentialPlayload.credentialSubjectCommon.blockName) {
+              if (credentialPlayload?.credentialSubjectCommon?.blockName) {
                 iterator.blockName =
                   credentialPlayload.credentialSubjectCommon.blockName;
               }
