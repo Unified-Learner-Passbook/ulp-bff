@@ -1293,12 +1293,25 @@ export class ClientService {
         iterator = JSON.parse(JSON.stringify(iterator));
         console.log('iterator 1126', iterator);
         let assesmentObj = {
-          student_id: iterator.Id,
-          student_name: iterator.name,
-          dob: iterator.age,
-          reference_id: iterator.ref_id,
-          aadhar_token: iterator.aadhaar_id,
-          marks: iterator.marks,
+          student_id: iterator?.Id,
+          student_name: iterator?.name,
+          dob: iterator?.age,
+          reference_id: iterator?.ref_id,
+          aadhar_token: iterator?.aadhaar_id,
+          marks: iterator?.marks,
+          //common
+          grade: 'class-1',
+          academic_year: '2022-2023',
+          assessment: iterator?.assesment_id,
+          schoolName: 'CENTRAL PUBLIC ACEDEMY',
+          total: '40',
+          quarterlyAssessment: '3',
+          stateCode: '09',
+          stateName: 'Uttar Pradesh',
+          districtCode: '0913',
+          districtName: 'HATHRAS',
+          blockCode: '091306',
+          blockName: 'SADABAD',
         };
         credSubject.push(assesmentObj);
       }
@@ -1318,8 +1331,17 @@ export class ClientService {
           dob: iterator?.age,
           reference_id: iterator?.ref_id,
           aadhar_token: iterator?.aadhaar_id,
-          guardian_name: iterator?.fname,
+          guardian_name: iterator?.gname,
           enrolled_on: iterator?.enrolled_on,
+          //common
+          grade: 'class-7',
+          academic_year: '2023-2024',
+          stateCode: '09',
+          stateName: 'Uttar Pradesh',
+          districtCode: '0913',
+          districtName: iterator?.district_id,
+          blockCode: '091306',
+          blockName: iterator?.block_id,
         };
         credSubject.push(enrollmentObj);
       }
@@ -1340,10 +1362,22 @@ export class ClientService {
           reference_id: iterator?.ref_id,
           aadhar_token: iterator?.aadhaar_id,
           guardian_name: 'Test Guardian ' + iterator?.name,
-          enrolled_on: '2023-06-06',
+          enrolled_on: '2022-06-06',
           transactionId: iterator?.transaction_id,
           transactionAmount: iterator?.transaction_amount,
-          deliveryDate: '16-07-2022',
+          deliveryDate: '01-07-2023',
+          //common
+          grade: 'class-1',
+          academic_year: '2022-2023',
+          benefitProvider: 'Basic Shiksha department',
+          schemeName: iterator?.scheme_name,
+          schemeId: iterator?.scheme_id,
+          stateCode: '09',
+          stateName: 'Uttar Pradesh',
+          districtCode: '0913',
+          districtName: 'HATHRAS',
+          blockCode: '091306',
+          blockName: 'SADABAD',
         };
         credSubject.push(benefitObj);
       }
