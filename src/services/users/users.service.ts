@@ -29,6 +29,8 @@ export class UsersService {
   }
 
   findAllBenefit(): Promise<Benefit[]> {
-    return this.benefitRepository.find();
+    return this.benefitRepository.query(
+      `SELECT * FROM public.benefit ORDER BY "Id" ASC`,
+    );
   }
 }

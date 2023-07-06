@@ -15,6 +15,8 @@ export class SbrcapiService {
     private sbrcService: SbrcService,
   ) {}
 
+  qs = require('qs');
+
   //getClientToken
   async getClientToken(password: string, response: Response) {
     if (password === 'test@4321') {
@@ -141,5 +143,210 @@ export class SbrcapiService {
         result: null,
       });
     }
+  }
+
+  //sbrcAccountDelete
+  async sbrcAccountDelete(
+    token: string,
+    aadhaar_list: any,
+    response: Response,
+  ) {
+    if (aadhaar_list) {
+      const username = await this.keycloakService.verifyUserToken(token);
+      if (username?.error) {
+        return response.status(401).send({
+          success: false,
+          status: 'keycloak_token_bad_request',
+          message: 'You do not have access for this request.',
+          result: null,
+        });
+      } else if (!username?.preferred_username) {
+        return response.status(401).send({
+          success: false,
+          status: 'keycloak_token_error',
+          message: 'Your Login Session Expired.',
+          result: null,
+        });
+      } else {
+        //console.log('username', username);
+        await this.ulpQ2DeleteAccount(token, aadhaar_list, response);
+      }
+    } else {
+      return response.status(400).send({
+        success: false,
+        status: 'invalid_request',
+        message: 'Invalid Request. Not received All Parameters.',
+        result: null,
+      });
+    }
+  }
+  //delete account
+  async ulpQ2DeleteAccount(
+    token: string,
+    aadhaar_list: any,
+    response: Response,
+  ): Promise<any> {
+    let response_array = [];
+    for (let i = 0; i < aadhaar_list.length; i++) {
+      response_array[i] = {};
+      response_array[i].aadhar_token = aadhaar_list[i];
+      try {
+        let aadhar_token = aadhaar_list[i];
+        console.log('################');
+        console.log('aadhar_token', aadhar_token);
+        //search student
+        let search_response = await new Promise<any>(async (done) => {
+          const data = JSON.stringify({
+            filters: {
+              aadhar_token: {
+                eq: aadhar_token,
+              },
+            },
+          });
+          const url = process.env.REGISTRY_URL + 'api/v1/Learner/search';
+          const config: AxiosRequestConfig = {
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          };
+          let response_data = null;
+          try {
+            const observable = this.httpService.post(url, data, config);
+            const promise = observable.toPromise();
+            const response = await promise;
+            response_data = response.data;
+          } catch (e) {
+            response_data = { error: e };
+          }
+          done(response_data);
+        });
+        response_array[i].sbrc_search = search_response;
+        if (search_response[0]?.osid) {
+          //get search osid and keycloak username
+          let os_id = search_response[0].osid;
+          let keycloak_user = search_response[0].username;
+          console.log('os_id', os_id);
+          console.log('keycloak_user', keycloak_user);
+          if (keycloak_user != '') {
+            console.log('deleting keycloak user ' + keycloak_user);
+            try {
+              //delete keycloak user
+              //get client token
+              let client_token = token;
+              //console.log('client_token', client_token);
+              //get user id
+              let search_keycloak_user = await new Promise<any>(
+                async (done) => {
+                  const url =
+                    process.env.KEYCLOAK_URL +
+                    'admin/realms/sunbird-rc/users?username=' +
+                    keycloak_user;
+                  const config: AxiosRequestConfig = {
+                    headers: {
+                      'Content-Type': 'application/json',
+                      Authorization: 'Bearer ' + client_token,
+                    },
+                  };
+                  let response_data = null;
+                  try {
+                    const observable = this.httpService.get(url, config);
+                    const promise = observable.toPromise();
+                    const response = await promise;
+                    response_data = response.data;
+                  } catch (e) {
+                    response_data = { error: e };
+                  }
+                  done(response_data);
+                },
+              );
+              response_array[i].search_keycloak_user = search_keycloak_user;
+              /*console.log(
+            'search_keycloak_user',
+            JSON.stringify(search_keycloak_user),
+          );*/
+              if (search_keycloak_user[0].id) {
+                let user_id = search_keycloak_user[0].id;
+                console.log('user_id', user_id);
+                //delete user
+                let search_keycloak_user_delete = await new Promise<any>(
+                  async (done) => {
+                    const url =
+                      process.env.KEYCLOAK_URL +
+                      'admin/realms/sunbird-rc/users/' +
+                      user_id;
+                    const config: AxiosRequestConfig = {
+                      headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: 'Bearer ' + client_token,
+                      },
+                    };
+                    let response_data = null;
+                    try {
+                      const observable = this.httpService.delete(url, config);
+                      const promise = observable.toPromise();
+                      const response = await promise;
+                      response_data = response.data;
+                    } catch (e) {
+                      response_data = { error: e };
+                    }
+                    done(response_data);
+                  },
+                );
+                response_array[i].search_keycloak_user_delete =
+                  search_keycloak_user_delete;
+                /*console.log(
+            'search_keycloak_user_delete',
+            JSON.stringify(search_keycloak_user_delete),
+          );*/
+              }
+            } catch (e) {
+              response_array[i].keycloakerror = e;
+              console.log(
+                'errorn in keycloak delete user. user not found in keycloak',
+              );
+            }
+          }
+          try {
+            //delete user from sunbird rc
+            let search_sbrc_user_delete = await new Promise<any>(
+              async (done) => {
+                const url =
+                  process.env.REGISTRY_URL + 'api/v1/Learner/' + os_id;
+                const config: AxiosRequestConfig = {
+                  headers: {},
+                };
+                let response_data = null;
+                try {
+                  const observable = this.httpService.delete(url, config);
+                  const promise = observable.toPromise();
+                  const response = await promise;
+                  response_data = response.data;
+                } catch (e) {
+                  response_data = { error: e };
+                }
+                done(response_data);
+              },
+            );
+            response_array[i].search_sbrc_user_delete = search_sbrc_user_delete;
+            console.log(
+              'search_sbrc_user_delete',
+              JSON.stringify(search_sbrc_user_delete),
+            );
+          } catch (e) {
+            response_array[i].sbrcerror = e;
+            console.log('errorn in sbrc delete user ', e);
+          }
+        }
+      } catch (e) {
+        response_array[i].scripterror = e;
+        console.log('errorn in script ', e);
+      }
+    }
+    return response.status(200).send({
+      success: true,
+      status: 'sbrc_account_delete_success',
+      message: 'SBRC Account Delete Success',
+      result: response_array,
+    });
   }
 }

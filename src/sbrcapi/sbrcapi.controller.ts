@@ -57,4 +57,14 @@ export class SbrcController {
     const jwt = auth.replace('Bearer ', '');
     return this.sbrcapiService.sbrcDelete(jwt, schema, osid, response);
   }
+  //accountdelete
+  @Post('/accountdelete')
+  async sbrcAccountDelete(
+    @Headers('Authorization') auth: string,
+    @Body('aadhaar_list') aadhaar_list: any,
+    @Res() response: Response,
+  ) {
+    const jwt = auth.replace('Bearer ', '');
+    return this.sbrcapiService.sbrcAccountDelete(jwt, aadhaar_list, response);
+  }
 }
