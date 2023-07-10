@@ -60,4 +60,4 @@ stage('Start deploy job with latest tag') {
 }
 
     
-}
+
