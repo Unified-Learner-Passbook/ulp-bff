@@ -375,7 +375,7 @@ export class SSOService {
                 }
                 let modified = null;
                 if (found) {
-                  const imgTags = root.querySelectorAll('img');
+                  
                   modified = root.toString();
                   const outputPath = path.join(__dirname, modified);
 
