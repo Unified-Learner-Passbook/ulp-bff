@@ -343,4 +343,5 @@ export class SSOController {
     const jwt = auth.replace('Bearer ', '');
     return this.ssoService.getDetailLearner(jwt, response);
   }
+  
 }

@@ -13,7 +13,18 @@ import { AadharService } from '../services/aadhar/aadhar.service';
 import { SbrcService } from 'src/services/sbrc/sbrc.service';
 import { CredService } from 'src/services/cred/cred.service';
 import { KeycloakService } from 'src/services/keycloak/keycloak.service';
+const qr = require('qrcode');
+const { parse, HTMLElement } = require('node-html-parser');
+const path = require('path');
+import sharp from 'sharp';
+import { join } from 'path';
+
+const jsdom = require('jsdom');
+const handlebars = require('handlebars');
+const fs = require('fs');
 const crypto = require('crypto');
+const jQuery = require('jquery');
+const cheerio = require('cheerio');
 
 @Injectable()
 export class SSOService {
@@ -325,6 +336,8 @@ export class SSOService {
         };
 
         let render_response = null;
+        let certificateId = requestbody?.credential?.id;
+
         try {
           const observable = this.httpService.post(url, data, config);
           const promise = observable.toPromise();
@@ -340,14 +353,55 @@ export class SSOService {
         } else {
           //return render_response;
           try {
-            return new StreamableFile(
-              await wkhtmltopdf(render_response, {
-                pageSize: 'A4',
-                disableExternalLinks: true,
-                disableInternalLinks: true,
-                disableJavascript: true,
-              }),
-            );
+            //generateQRCode
+            const url = process.env.VERIFICATION_URL + certificateId;
+
+            let stringData = JSON.stringify(url);
+            await qr.toDataURL(stringData, async function (err, code) {
+              if (code) {
+                let newRenderResponse = render_response;
+                const newhtml = code;
+
+                const root = parse(render_response);
+                const imgTag = root.querySelectorAll('img');
+                let found = false;
+                for (const img of imgTag) {
+                  const src = img.getAttribute('src');
+                  if (src && src.includes('data:image/png;')) {
+                    img.setAttribute('src', newhtml);
+                    found = true;
+                    break;
+                  }
+                }
+                let modified = null;
+                if (found) {
+                  
+                  modified = root.toString();
+                  const outputPath = path.join(__dirname, modified);
+
+                  fs.writeFile(outputPath, modified, (err) => {
+                    if (err) {
+                      return;
+                    }
+                  });
+                } else {
+                  console.log('no image');
+                }
+                newRenderResponse = modified;
+                console.log(newRenderResponse);
+
+                return new StreamableFile(
+                  await wkhtmltopdf(newRenderResponse, {
+                    pageSize: 'A4',
+                    disableExternalLinks: true,
+                    disableInternalLinks: true,
+                    disableJavascript: true,
+                  }),
+                );
+              }
+            });
+
+            console.log('----------------outside');
           } catch (e) {
             //console.log(e);
             return 'HTML to PDF Convert Fail';
@@ -3156,7 +3210,8 @@ export class SSOService {
                   return response.status(400).send({
                     success: false,
                     status: 'keycloak_register_duplicate',
-                    message: 'You entered username Account Already Present in Keycloak.',
+                    message:
+                      'You entered username Account Already Present in Keycloak.',
                     result: null,
                   });
                 } else {
@@ -3212,8 +3267,7 @@ export class SSOService {
                 return response.status(400).send({
                   success: false,
                   status: 'sbrc_register_duplicate',
-                  message:
-                    `You entered account details already linked to an existing Keycloak account, which has a username ${studentDetails[0].username}. You cannot set a new username for this Aadhar token. Login using the linked username and password.`,
+                  message: `You entered account details already linked to an existing Keycloak account, which has a username ${studentDetails[0].username}. You cannot set a new username for this Aadhar token. Login using the linked username and password.`,
                   result: null,
                 });
               } else {
@@ -3240,7 +3294,8 @@ export class SSOService {
                     return response.status(400).send({
                       success: false,
                       status: 'keycloak_register_duplicate',
-                      message: 'You entered username Account Already Present in Keycloak.',
+                      message:
+                        'You entered username Account Already Present in Keycloak.',
                       result: null,
                     });
                   } else {
@@ -3460,5 +3515,24 @@ export class SSOService {
     }
     const decoded = jwt_decode(token);
     return [decoded];
+  }
+
+  async generateQRCode(certificateId) {
+    const url = process.env.VERIFICATION_URL + certificateId;
+    //converted into string
+    // let qrcodestring = "";
+
+    let stringData = JSON.stringify(url);
+    let qrcodestring = await qr.toDataURL(stringData, function (err, code) {
+      if (code) {
+        //return console.log('error');
+
+        //console.log(code);
+        qrcodestring = code;
+        return qrcodestring;
+      }
+    });
+    //console.log(qrcodestring);
+    console.log('----------------outside');
   }
 }
