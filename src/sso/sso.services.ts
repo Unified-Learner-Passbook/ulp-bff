@@ -368,7 +368,7 @@ export class SSOService {
                 for (const img of imgTag) {
                   const src = img.getAttribute('src');
                   if (src && src.includes('data:image/png;')) {
-                    img.setAttribute(src, newhtml);
+                    img.setAttribute('src', newhtml);
                     found = true;
                     break;
                   }
@@ -376,14 +376,6 @@ export class SSOService {
                 let modified = null;
                 if (found) {
                   const imgTags = root.querySelectorAll('img');
-
-                  imgTags.forEach((imgTag) => {
-                    const src = imgTag.getAttribute('src');
-
-                    if (src && src.includes('data:image/png')) {
-                      imgTag.setAttribute('src', newhtml); // Replace 'new_image_url' with the desired URL
-                    }
-                  });
                   modified = root.toString();
                   const outputPath = path.join(__dirname, modified);
 
@@ -3524,7 +3516,6 @@ export class SSOService {
     const decoded = jwt_decode(token);
     return [decoded];
   }
- 
 
   async generateQRCode(certificateId) {
     const url = process.env.VERIFICATION_URL + certificateId;
