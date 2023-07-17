@@ -19,9 +19,9 @@ node() {
         sh '''
         docker build -t $docker_server/$docker_repo:$commit_id .
         '''
-        if (env.BRANCH_NAME == 'main' || env.BRANCH_NAME == 'master') {
+        if (env.BRANCH_NAME == 'main' ) {
             sh '''
-            docker build -t $docker_server/$docker_repo:latest .
+            docker build -t $docker_server/$docker_repo:main .
             '''
         }
     }
@@ -30,31 +30,17 @@ node() {
         sh '''
         docker push $docker_server/$docker_repo:$commit_id
         '''
-        if (env.BRANCH_NAME == 'main' || env.BRANCH_NAME == 'master') {
+        if (env.BRANCH_NAME == 'main') {
             sh '''
-            docker push $docker_server/$docker_repo:latest
+            docker push $docker_server/$docker_repo:main
             '''
         }
     }
     
- //   stage('Start deploy job with latest tag') {
-   //      if (env.BRANCH_NAME == 'main' || env.BRANCH_NAME == 'master') { 
-     //           build job: 'ULP/deploy-staging/ulp-bff/', parameters: [string(name: 'tag', value: 'latest')]
-       //  }
-stage('Start deploy job with latest tag') {
-    if (env.BRANCH_NAME == 'main' || env.BRANCH_NAME == 'master') {
-        parallel(
-            "prod-deploy": {
-                build job: 'ULP/deploy-staging/ulp-bff/', parameters: [string(name: 'tag', value: 'latest')]
-            },
-            "dev-deploy": {
-                build job: 'SBRC-deploy/deploy-services/deploy-staging/ulp-bff/', parameters: [string(name: 'tag', value: 'latest')]
-            },
-            "uat-deploy": {
-                build job: 'UAT/deploy-uat/ulp-bff/', parameters: [string(name: 'tag', value: 'latest')]
-            }
-        )
-    }
+  stage('Start deploy job with latest tag') {
+         if (env.BRANCH_NAME == 'main') { 
+                build job: 'ULP/deploy-staging/ulp-bff/', parameters: [string(name: 'tag', value: 'main')]
+        }
 }
 
 }
