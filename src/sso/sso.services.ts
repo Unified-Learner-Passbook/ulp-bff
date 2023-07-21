@@ -375,7 +375,6 @@ export class SSOService {
                 }
                 let modified = null;
                 if (found) {
-                  
                   modified = root.toString();
                   const outputPath = path.join(__dirname, modified);
 
@@ -3136,19 +3135,231 @@ export class SSOService {
     name: string,
     dob: string,
     gender: string,
-    aadhar_id: string,
+    recoveryphone: string,
     username: string,
     password: string,
     response: Response,
   ) {
-    if (name && dob && gender && aadhar_id && username && password) {
-      const aadhar_data = await this.aadharService.aadhaarDemographic(
-        aadhar_id,
-        name,
-        dob,
-        gender,
+    if (name && dob && gender && recoveryphone && username && password) {
+      // find student
+      let searchSchema = {
+        filters: {
+          name: {
+            eq: name,
+          },
+          dob: {
+            eq: dob,
+          },
+          gender: {
+            eq: gender,
+          },
+        },
+      };
+      const studentDetails = await this.sbrcService.sbrcSearch(
+        searchSchema,
+        'Learner',
       );
+      console.log('Learner Details', studentDetails);
+      if (studentDetails.length == 0) {
+        //register in keycloak and then in sunbird rc
+        //create keycloak and then login
+        const clientToken = await this.keycloakService.getClientToken();
+        console.log('clientToken', clientToken);
+        if (clientToken?.error) {
+          return response.status(401).send({
+            success: false,
+            status: 'keycloak_client_token_error',
+            message: 'System Authentication Failed ! Please Try Again.',
+            result: null,
+          });
+        } else {
+          ///register in keycloak
+          let response_text = await this.keycloakService.registerUserKeycloak(
+            username,
+            password,
+            clientToken,
+          );
+          console.log('registerUserKeycloak', response_text);
+          if (response_text?.error) {
+            return response.status(400).send({
+              success: false,
+              status: 'keycloak_register_duplicate',
+              message:
+                'You entered username Account Already Present in Keycloak.',
+              result: null,
+            });
+          } else {
+            //register and create account in sunbird rc
+            let inviteSchema = {
+              name: name,
+              dob: dob,
+              gender: gender,
+              did: '',
+              username: username,
+              aadhar_token: '',
+              kyc_aadhaar_token: '',
+              recoveryphone: recoveryphone,
+            };
+            console.log('inviteSchema', inviteSchema);
+            let createStudent = await this.sbrcService.sbrcInvite(
+              inviteSchema,
+              'Learner',
+            );
+            console.log('createStudent', createStudent);
+            if (createStudent) {
+              return response.status(200).send({
+                success: true,
+                status: 'sbrc_register_success',
+                message: 'User Account Registered. Complete Aadhar KYC.',
+                needkyc: true,
+                result: null,
+              });
+            } else {
+              //need to add rollback function for keycloak user delete
+              let response_text_keycloak =
+                await this.keycloakService.deleteUserKeycloak(
+                  username,
+                  clientToken,
+                );
+              if (response_text_keycloak?.error) {
+                return response.status(400).send({
+                  success: false,
+                  status: 'sbrc_invite_error_delete_keycloak',
+                  message: 'Unable to Register Learner. Try Again.',
+                  result: null,
+                });
+              } else {
+                return response.status(400).send({
+                  success: false,
+                  status: 'sbrc_invite_error',
+                  message: 'Unable to Register Learner. Try Again.',
+                  result: null,
+                });
+              }
+            }
+          }
+        }
+      } else if (studentDetails.length > 0) {
+        if (studentDetails[0].username != '') {
+          return response.status(400).send({
+            success: false,
+            status: 'sbrc_register_duplicate',
+            message: `You entered account details already linked to an existing Keycloak account, which has a username ${studentDetails[0].username}. You cannot set a new username for this account detail. Login using the linked username and password.`,
+            result: null,
+          });
+        } else {
+          //register in keycloak and then update username
+          //register in keycloak
+          //create keycloak and then login
+          const clientToken = await this.keycloakService.getClientToken();
+          if (clientToken?.error) {
+            return response.status(401).send({
+              success: false,
+              status: 'keycloak_client_token_error',
+              message: 'System Authentication Failed ! Please Try Again.',
+              result: null,
+            });
+          } else {
+            ///register in keycloak
+            let response_text = await this.keycloakService.registerUserKeycloak(
+              username,
+              password,
+              clientToken,
+            );
+            if (response_text?.error) {
+              return response.status(400).send({
+                success: false,
+                status: 'keycloak_register_duplicate',
+                message:
+                  'You entered username Account Already Present in Keycloak.',
+                result: null,
+              });
+            } else {
+              //update username and register in keycloak
+              //update username
+              let updateRes = await this.sbrcService.sbrcUpdate(
+                { username: username },
+                'Learner',
+                studentDetails[0].osid,
+              );
+              if (updateRes) {
+                if (studentDetails[0].kyc_aadhaar_token == '') {
+                  return response.status(200).send({
+                    success: true,
+                    status: 'sbrc_register_success',
+                    message: 'User Account Registered. Complete Aadhar KYC.',
+                    needkyc: true,
+                    result: null,
+                  });
+                } else {
+                  return response.status(200).send({
+                    success: true,
+                    status: 'sbrc_register_success',
+                    message:
+                      'User Account Registered. Login using username and password.',
+                    result: null,
+                  });
+                }
+              } else {
+                //need to add rollback function for keycloak user delete
+                let response_text_keycloak =
+                  await this.keycloakService.deleteUserKeycloak(
+                    username,
+                    clientToken,
+                  );
+                if (response_text_keycloak?.error) {
+                  return response.status(400).send({
+                    success: false,
+                    status: 'sbrc_invite_error_delete_keycloak',
+                    message: 'Unable to Register Learner. Try Again.',
+                    result: null,
+                  });
+                } else {
+                  return response.status(200).send({
+                    success: false,
+                    status: 'sbrc_update_error',
+                    message:
+                      'Unable to Update Learner Username ! Please Try Again.',
+                    result: null,
+                  });
+                }
+              }
+            }
+          }
+        }
+      } else {
+        return response.status(200).send({
+          success: false,
+          status: 'sbrc_search_error',
+          message: 'Unable to search Learner. Try Again.',
+          result: null,
+        });
+      }
+    } else {
+      return response.status(400).send({
+        success: false,
+        status: 'invalid_request',
+        message: 'Invalid Request. Not received All Parameters.',
+        result: null,
+      });
+    }
+  }
 
+  //getAadhaarTokenUpdate
+  async getAadhaarTokenUpdate(
+    response: Response,
+    aadhaar_id: string,
+    aadhaar_name: string,
+    aadhaar_dob: string,
+    aadhaar_gender: string,
+  ) {
+    if (aadhaar_id && aadhaar_name && aadhaar_dob && aadhaar_gender) {
+      const aadhar_data = await this.aadharService.aadhaarDemographic(
+        aadhaar_id,
+        aadhaar_name,
+        aadhaar_dob,
+        aadhaar_gender,
+      );
       //console.log(aadhar_data);
       if (!aadhar_data?.success === true) {
         return response.status(400).send({
@@ -3169,14 +3380,18 @@ export class SSOService {
               result: uuid,
             });
           } else {
-            //generate did or find did
-            var aadhar_token = uuid;
-
+            //update uuid in user data
             // find student
             let searchSchema = {
               filters: {
-                aadhar_token: {
-                  eq: aadhar_token,
+                name: {
+                  eq: aadhaar_name,
+                },
+                dob: {
+                  eq: aadhaar_dob,
+                },
+                gender: {
+                  eq: aadhaar_gender,
                 },
               },
             };
@@ -3187,159 +3402,35 @@ export class SSOService {
             console.log('Learner Details', studentDetails);
             if (studentDetails.length == 0) {
               //register in keycloak and then in sunbird rc
-              //create keycloak and then login
-              const clientToken = await this.keycloakService.getClientToken();
-              console.log('clientToken', clientToken);
-              if (clientToken?.error) {
-                return response.status(401).send({
-                  success: false,
-                  status: 'keycloak_client_token_error',
-                  message: 'System Authentication Failed ! Please Try Again.',
-                  result: null,
-                });
-              } else {
-                ///register in keycloak
-                let response_text =
-                  await this.keycloakService.registerUserKeycloak(
-                    username,
-                    password,
-                    clientToken,
-                  );
-                console.log('registerUserKeycloak', response_text);
-                if (response_text?.error) {
-                  return response.status(400).send({
-                    success: false,
-                    status: 'keycloak_register_duplicate',
-                    message:
-                      'You entered username Account Already Present in Keycloak.',
-                    result: null,
-                  });
-                } else {
-                  //register and create account in sunbird rc
-                  let inviteSchema = {
-                    name: name,
-                    dob: dob,
-                    did: '',
-                    username: username,
-                    aadhar_token: aadhar_token,
-                  };
-                  console.log('inviteSchema', inviteSchema);
-                  let createStudent = await this.sbrcService.sbrcInvite(
-                    inviteSchema,
-                    'Learner',
-                  );
-                  console.log('createStudent', createStudent);
-                  if (createStudent) {
-                    return response.status(200).send({
-                      success: true,
-                      status: 'sbrc_register_success',
-                      message:
-                        'User Account Registered. Login using username and password.',
-                      result: null,
-                    });
-                  } else {
-                    //need to add rollback function for keycloak user delete
-                    let response_text_keycloak =
-                      await this.keycloakService.deleteUserKeycloak(
-                        username,
-                        clientToken,
-                      );
-                    if (response_text_keycloak?.error) {
-                      return response.status(400).send({
-                        success: false,
-                        status: 'sbrc_invite_error_delete_keycloak',
-                        message: 'Unable to Register Learner. Try Again.',
-                        result: null,
-                      });
-                    } else {
-                      return response.status(400).send({
-                        success: false,
-                        status: 'sbrc_invite_error',
-                        message: 'Unable to Register Learner. Try Again.',
-                        result: null,
-                      });
-                    }
-                  }
-                }
-              }
+              return response.status(400).send({
+                success: false,
+                status: 'sbrc_learner_no_found_error',
+                message: 'Learner Account Not Found. Register and Try Again.',
+                result: null,
+              });
             } else if (studentDetails.length > 0) {
-              if (studentDetails[0].username != '') {
-                return response.status(400).send({
-                  success: false,
-                  status: 'sbrc_register_duplicate',
-                  message: `You entered account details already linked to an existing Keycloak account, which has a username ${studentDetails[0].username}. You cannot set a new username for this Aadhar token. Login using the linked username and password.`,
+              //update kyc aadhar token
+              //update username
+              let updateRes = await this.sbrcService.sbrcUpdate(
+                { kyc_aadhaar_token: uuid },
+                'Learner',
+                studentDetails[0].osid,
+              );
+              if (updateRes) {
+                return response.status(200).send({
+                  success: true,
+                  status: 'aadhaar_api_success',
+                  message: 'Aadhar API Working',
                   result: null,
                 });
               } else {
-                //register in keycloak and then update username
-                //register in keycloak
-                //create keycloak and then login
-                const clientToken = await this.keycloakService.getClientToken();
-                if (clientToken?.error) {
-                  return response.status(401).send({
-                    success: false,
-                    status: 'keycloak_client_token_error',
-                    message: 'System Authentication Failed ! Please Try Again.',
-                    result: null,
-                  });
-                } else {
-                  ///register in keycloak
-                  let response_text =
-                    await this.keycloakService.registerUserKeycloak(
-                      username,
-                      password,
-                      clientToken,
-                    );
-                  if (response_text?.error) {
-                    return response.status(400).send({
-                      success: false,
-                      status: 'keycloak_register_duplicate',
-                      message:
-                        'You entered username Account Already Present in Keycloak.',
-                      result: null,
-                    });
-                  } else {
-                    //update username and register in keycloak
-                    //update username
-                    let updateRes = await this.sbrcService.sbrcUpdate(
-                      { username: username },
-                      'Learner',
-                      studentDetails[0].osid,
-                    );
-                    if (updateRes) {
-                      return response.status(200).send({
-                        success: true,
-                        status: 'sbrc_register_success',
-                        message:
-                          'User Account Registered. Login using username and password.',
-                        result: null,
-                      });
-                    } else {
-                      //need to add rollback function for keycloak user delete
-                      let response_text_keycloak =
-                        await this.keycloakService.deleteUserKeycloak(
-                          username,
-                          clientToken,
-                        );
-                      if (response_text_keycloak?.error) {
-                        return response.status(400).send({
-                          success: false,
-                          status: 'sbrc_invite_error_delete_keycloak',
-                          message: 'Unable to Register Learner. Try Again.',
-                          result: null,
-                        });
-                      } else {
-                        return response.status(200).send({
-                          success: false,
-                          status: 'sbrc_update_error',
-                          message:
-                            'Unable to Update Learner Username ! Please Try Again.',
-                          result: null,
-                        });
-                      }
-                    }
-                  }
-                }
+                return response.status(200).send({
+                  success: false,
+                  status: 'sbrc_update_error',
+                  message:
+                    'Unable to Update Learner Aadhaar KYC Token ! Please Try Again.',
+                  result: null,
+                });
               }
             } else {
               return response.status(200).send({
@@ -3402,7 +3493,7 @@ export class SSOService {
             message: 'System Search Error ! Please try again.',
             result: sb_rc_search?.error.message,
           });
-        } else if (sb_rc_search.length !== 1) {
+        } else if (sb_rc_search.length === 0) {
           return response.status(404).send({
             success: false,
             status: 'sb_rc_search_no_found',
@@ -3461,7 +3552,7 @@ export class SSOService {
             message: 'System Search Error ! Please try again.',
             result: sb_rc_search?.error.message,
           });
-        } else if (sb_rc_search.length !== 1) {
+        } else if (sb_rc_search.length === 0) {
           return response.status(404).send({
             success: false,
             status: 'sb_rc_search_no_found',
