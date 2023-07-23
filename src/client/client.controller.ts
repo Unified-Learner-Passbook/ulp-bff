@@ -31,7 +31,7 @@ export class ClientController {
     const result = {
       success: true,
       message:
-        'Client API Working 22 June CRED URL ' + CRED_URL + ' / ' + TESTVAR,
+        'Client API Working 23 July CRED URL ' + CRED_URL + ' / ' + TESTVAR,
       CRED_URL: CRED_URL,
       DID_URL: DID_URL,
       SCHEMA_URL: SCHEMA_URL,
