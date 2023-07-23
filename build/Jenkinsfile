@@ -38,7 +38,7 @@ node() {
     }
     
     stage('Start deploy job with latest tag') {
-         if (env.BRANCH_NAME == 'main' || env.BRANCH_NAME == 'master') { 
+         if (env.BRANCH_NAME == 'dev') { 
                 build job: 'SBRC-deploy/deploy-services/deploy-staging/ulp-bff/', parameters: [string(name: 'tag', value: 'dev')]
          }
 }
