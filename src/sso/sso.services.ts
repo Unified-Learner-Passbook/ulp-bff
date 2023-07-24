@@ -354,7 +354,7 @@ export class SSOService {
           //return render_response;
           try {
             //generateQRCode
-            const url = process.env.VERIFICATION_URL + certificateId;
+            /*const url = process.env.VERIFICATION_URL + certificateId;
 
             let stringData = JSON.stringify(url);
             await qr.toDataURL(stringData, async function (err, code) {
@@ -398,8 +398,16 @@ export class SSOService {
                   }),
                 );
               }
-            });
+            });*/
 
+            return new StreamableFile(
+              await wkhtmltopdf(render_response, {
+                pageSize: 'A4',
+                disableExternalLinks: true,
+                disableInternalLinks: true,
+                disableJavascript: true,
+              }),
+            );
             console.log('----------------outside');
           } catch (e) {
             //console.log(e);
