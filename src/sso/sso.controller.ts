@@ -312,7 +312,7 @@ export class SSOController {
     @Body('name') name: string,
     @Body('dob') dob: string,
     @Body('gender') gender: string,
-    @Body('aadhar_id') aadhar_id: string,
+    @Body('recoveryphone') recoveryphone: string,
     @Body('username') username: string,
     @Body('password') password: string,
     @Res() response: Response,
@@ -321,10 +321,27 @@ export class SSOController {
       name,
       dob,
       gender,
-      aadhar_id,
+      recoveryphone,
       username,
       password,
       response,
+    );
+  }
+  //learner aadhaar
+  @Post('/learner/aadhaar')
+  async getAadhaarToken(
+    @Res() response: Response,
+    @Body('aadhaar_id') aadhaar_id: string,
+    @Body('aadhaar_name') aadhaar_name: string,
+    @Body('aadhaar_dob') aadhaar_dob: string,
+    @Body('aadhaar_gender') aadhaar_gender: string,
+  ) {
+    return this.ssoService.getAadhaarTokenUpdate(
+      response,
+      aadhaar_id,
+      aadhaar_name,
+      aadhaar_dob,
+      aadhaar_gender,
     );
   }
   @Get('/learner/getdid')
@@ -343,4 +360,5 @@ export class SSOController {
     const jwt = auth.replace('Bearer ', '');
     return this.ssoService.getDetailLearner(jwt, response);
   }
+  
 }
