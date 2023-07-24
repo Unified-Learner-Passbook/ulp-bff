@@ -18,38 +18,38 @@ export class Enrollment {
   aadhaar_id: string;
 
   @Column({ nullable: true })
-  orgName: string;
+  orgname: string;
 
   @Column({ nullable: true })
-  orgId: string;
+  orgid: string;
 
   @Column({ nullable: true })
-  orgAddress: string;
+  orgaddress: string;
 
   @Column({ nullable: true })
-  orgContact: string;
+  orgcontact: string;
 
   @Column({ nullable: true })
-  orgEmail: string;
+  orgemail: string;
 
   @Column({ nullable: true })
-  associatedSince: string;
+  associatedsince: string;
 
   @Column({ nullable: true })
   contact: string;
 
   @Column({ nullable: true })
-  orgLogo: string;
+  orglogo: string;
 
   @Column({ nullable: true })
-  profileImage: string;
+  profileimage: string;
 
   @Column({ nullable: true })
-  associatedTill: string;
+  associatedtill: string;
 
   @Column({ nullable: true })
-  emergencyContact: string;
+  emergencycontact: string;
 
   @Column({ nullable: true })
-  unitAssociatedWith: string;
+  unitassociatedwith: string;
 }
