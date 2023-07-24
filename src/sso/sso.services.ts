@@ -628,7 +628,7 @@ export class SSOService {
           });
         } else {
           let render_response_student = [];
-          if (type === 'student') {
+          /*if (type === 'student') {
             for (let i = 0; i < render_response.length; i++) {
               if (render_response[i]?.credentialSubject?.student_name) {
                 render_response_student.push(render_response[i]);
@@ -642,7 +642,8 @@ export class SSOService {
             }
           } else {
             render_response_student = render_response;
-          }
+          }*/
+          render_response_student = render_response;
           return response.status(200).send({
             success: true,
             status: 'cred_search_api_success',
