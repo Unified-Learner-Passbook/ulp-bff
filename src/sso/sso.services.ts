@@ -3205,7 +3205,7 @@ export class SSOService {
               gender: gender,
               did: '',
               username: username,
-              aadhar_token: '',
+              aadhaar_token: '',
               kyc_aadhaar_token: '',
               recoveryphone: recoveryphone,
             };
