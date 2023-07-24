@@ -916,7 +916,9 @@ export class ClientService {
                 iterator.academic_year =
                   credentialPlayload.credentialSubjectCommon.academic_year;
               }
-              if (credentialPlayload?.credentialSubjectCommon?.benefitProvider) {
+              if (
+                credentialPlayload?.credentialSubjectCommon?.benefitProvider
+              ) {
                 iterator.benefitProvider =
                   credentialPlayload.credentialSubjectCommon.benefitProvider;
               }
@@ -976,13 +978,22 @@ export class ClientService {
               }
 
               //generate did or find did
-              var aadhar_token = iterator.aadhar_token;
+              var name = iterator.student_name;
+              var dob = iterator.dob;
+              var gender = iterator.gender;
+              var aadhaar_token = iterator.aadhar_token;
 
               // find student
               let searchSchema = {
                 filters: {
-                  aadhar_token: {
-                    eq: aadhar_token,
+                  name: {
+                    eq: name,
+                  },
+                  dob: {
+                    eq: dob,
+                  },
+                  gender: {
+                    eq: gender,
                   },
                 },
               };
@@ -1022,12 +1033,14 @@ export class ClientService {
                     error_count++;
                   }
                 } else {
-                  let didRes = await this.credService.generateDid(aadhar_token);
+                  let didRes = await this.credService.generateDid(
+                    aadhaar_token,
+                  );
 
                   if (didRes) {
                     iterator.id = didRes[0].verificationMethod[0].controller;
                     let updateRes = await this.sbrcService.sbrcUpdate(
-                      { did: iterator.id },
+                      { did: iterator.id, aadhaar_token: aadhaar_token },
                       'Learner',
                       studentDetails[0].osid,
                     );
@@ -1088,16 +1101,19 @@ export class ClientService {
                   }
                 }
               } else {
-                let didRes = await this.credService.generateDid(aadhar_token);
+                let didRes = await this.credService.generateDid(aadhaar_token);
 
                 if (didRes) {
                   iterator.id = didRes[0].verificationMethod[0].controller;
                   let inviteSchema = {
                     name: iterator.student_name,
                     dob: iterator.dob,
+                    gender: iterator.gender,
                     did: iterator.id,
                     username: '',
-                    aadhar_token: iterator.aadhar_token,
+                    aadhaar_token: iterator.aadhar_token,
+                    kyc_aadhaar_token: '',
+                    recoveryphone: '',
                   };
                   console.log('inviteSchema', inviteSchema);
                   let createStudent = await this.sbrcService.sbrcInvite(
@@ -1296,6 +1312,7 @@ export class ClientService {
           student_id: iterator?.Id,
           student_name: iterator?.name,
           dob: iterator?.age,
+          gender: 'M',
           reference_id: iterator?.ref_id,
           aadhar_token: iterator?.aadhaar_id,
           marks: iterator?.marks,
@@ -1326,22 +1343,23 @@ export class ClientService {
         iterator = JSON.parse(JSON.stringify(iterator));
         console.log('iterator 1126', iterator);
         let enrollmentObj = {
-          student_id: iterator?.Id,
           student_name: iterator?.name,
-          dob: iterator?.age,
-          reference_id: iterator?.ref_id,
+          name: iterator?.name,
+          dob: iterator?.dob,
+          gender: iterator?.gender,
           aadhar_token: iterator?.aadhaar_id,
-          guardian_name: iterator?.gname,
-          enrolled_on: iterator?.enrolled_on,
-          //common
-          grade: 'class-7',
-          academic_year: '2023-2024',
-          stateCode: '09',
-          stateName: 'Uttar Pradesh',
-          districtCode: '0913',
-          districtName: iterator?.district_id,
-          blockCode: '091306',
-          blockName: iterator?.block_id,
+          orgName: iterator?.orgName,
+          orgId: iterator?.orgId,
+          orgAddress: iterator?.orgAddress,
+          orgContact: iterator?.orgContact,
+          orgEmail: iterator?.orgEmail,
+          associatedSince: iterator?.associatedSince,
+          contact: iterator?.contact,
+          orgLogo: iterator?.orgLogo,
+          profileImage: iterator?.profileImage,
+          associatedTill: iterator?.associatedTill,
+          emergencyContact: iterator?.emergencyContact,
+          unitAssociatedWith: iterator?.unitAssociatedWith,
         };
         credSubject.push(enrollmentObj);
       }
@@ -1359,6 +1377,7 @@ export class ClientService {
           student_id: iterator?.Id,
           student_name: iterator?.name,
           dob: '29/12/1990',
+          gender: 'M',
           reference_id: iterator?.ref_id,
           aadhar_token: iterator?.aadhaar_id,
           guardian_name: 'Test Guardian ' + iterator?.name,
