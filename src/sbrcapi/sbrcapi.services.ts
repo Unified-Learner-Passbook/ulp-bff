@@ -189,17 +189,17 @@ export class SbrcapiService {
     let response_array = [];
     for (let i = 0; i < aadhaar_list.length; i++) {
       response_array[i] = {};
-      response_array[i].aadhar_token = aadhaar_list[i];
+      response_array[i].aadhaar_token = aadhaar_list[i];
       try {
-        let aadhar_token = aadhaar_list[i];
+        let aadhaar_token = aadhaar_list[i];
         console.log('################');
-        console.log('aadhar_token', aadhar_token);
+        console.log('aadhaar_token', aadhaar_token);
         //search student
         let search_response = await new Promise<any>(async (done) => {
           const data = JSON.stringify({
             filters: {
-              aadhar_token: {
-                eq: aadhar_token,
+              aadhaar_token: {
+                eq: aadhaar_token,
               },
             },
           });
