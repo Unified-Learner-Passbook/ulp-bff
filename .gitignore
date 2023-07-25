@@ -39,3 +39,4 @@ lerna-debug.log*
 # /src/utils/envs/dev.env
 envs/dev.env
 .env
+/build/Jenkinsfile
