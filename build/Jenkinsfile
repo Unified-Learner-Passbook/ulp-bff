@@ -19,9 +19,9 @@ node() {
         sh '''
         docker build -t $docker_server/$docker_repo:$commit_id .
         '''
-        if (env.BRANCH_NAME == 'main' ) {
+        if (env.BRANCH_NAME == 'dev') {
             sh '''
-            docker build -t $docker_server/$docker_repo:main .
+            docker build -t $docker_server/$docker_repo:dev .
             '''
         }
     }
@@ -30,17 +30,20 @@ node() {
         sh '''
         docker push $docker_server/$docker_repo:$commit_id
         '''
-        if (env.BRANCH_NAME == 'main') {
+        if (env.BRANCH_NAME == 'dev') {
             sh '''
-            docker push $docker_server/$docker_repo:main
+            docker push $docker_server/$docker_repo:dev
             '''
         }
     }
     
-  stage('Start deploy job with latest tag') {
-         if (env.BRANCH_NAME == 'main') { 
-                build job: 'ULP/deploy-staging/ulp-bff/', parameters: [string(name: 'tag', value: 'main')]
-        }
+    stage('Start deploy job with latest tag') {
+         if (env.BRANCH_NAME == 'dev') { 
+                build job: 'SBRC-deploy/deploy-services/deploy-staging/ulp-bff/', parameters: [string(name: 'tag', value: 'dev')]
+         }
 }
 
 }
+
+    
+
