@@ -18,7 +18,7 @@ export class UsersService {
 
   findAllEnrollment(): Promise<Enrollment[]> {
     return this.enrollmentRepository.query(
-      `SELECT * FROM public.enrollment ORDER BY "Id" ASC `,
+      `SELECT * FROM public.enrollmentv2 ORDER BY "Id" ASC `,
     );
   }
 
