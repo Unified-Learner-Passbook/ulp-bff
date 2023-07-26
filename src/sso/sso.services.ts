@@ -346,9 +346,9 @@ export class SSOService {
           const observable = this.httpService.post(url, data, config);
           const promise = observable.toPromise();
           const response = await promise;
-          //console.log(JSON.stringify(response.data));
+         
           render_response = response.data;
-          //console.log(render_response);
+          
         } catch (e) {
           //console.log(e);
           //render_response = { error: e };
@@ -3624,17 +3624,14 @@ export class SSOService {
 
     let qrcodestring = await qr.toDataURL(stringData, function (err, code) {
       if (code) {
-        //return console.log('error');
-
-        //console.log(code);
+       
         qrcodestring = code;
-        console.log(code);
+        
         return qrcodestring;
       } else {
-        console.log(err, '------------------');
+          return err;
       }
     });
-    //console.log(qrcodestring);
-    console.log('----------------outside');
+   
   }
 }
