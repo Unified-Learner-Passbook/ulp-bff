@@ -364,8 +364,7 @@ export class SSOService {
             const modified = await new Promise((resolve, reject) => {
               qr.toDataURL(stringData, function (err, code) {
                 if (err) {
-                  // console.error('Error generating QR code:', err);
-                  resolve(null); // Handle the error and resolve with null
+                  resolve(null);
                   return;
                 }
                 if (code) {
@@ -385,14 +384,14 @@ export class SSOService {
 
                   if (found) {
                     const modified = root.toString();
-                    resolve(modified); // Resolve with the modified value
+                    resolve(modified);
                   } else {
                     console.log('no image');
-                    resolve(null); // Resolve with null if no image found
+                    resolve(null);
                   }
                 } else {
                   console.log('Code is null');
-                  resolve(null); // Resolve with null if code is null
+                  resolve(null);
                 }
               });
             });
