@@ -6,59 +6,50 @@ export class Enrollment {
   Id: string;
 
   @Column({ nullable: true })
-  ref_id: string;
-
-  @Column({ nullable: true })
   name: string;
 
   @Column({ nullable: true })
-  fname: string;
-
-  @Column({ nullable: true })
-  mname: string;
-
-  @Column({ nullable: true })
-  gname: string;
-
-  @Column({ nullable: true })
-  age: string;
-
-  @Column({ nullable: true })
-  class: string;
+  dob: string;
 
   @Column({ nullable: true })
   gender: string;
 
   @Column({ nullable: true })
-  mobile: string;
-
-  @Column({ nullable: true })
-  email: string;
-
-  @Column({ nullable: true })
   aadhaar_id: string;
 
   @Column({ nullable: true })
-  alt_id_type: string;
+  orgname: string;
 
   @Column({ nullable: true })
-  alt_id: string;
+  orgid: string;
 
   @Column({ nullable: true })
-  district_id: string;
+  orgaddress: string;
 
   @Column({ nullable: true })
-  block_id: string;
+  orgcontact: string;
 
   @Column({ nullable: true })
-  village_id: string;
+  orgemail: string;
 
   @Column({ nullable: true })
-  school_id: string;
+  associatedsince: string;
 
   @Column({ nullable: true })
-  status: string;
-  
+  contact: string;
+
   @Column({ nullable: true })
-  enrolled_on: string;
+  orglogo: string;
+
+  @Column({ nullable: true })
+  profileimage: string;
+
+  @Column({ nullable: true })
+  associatedtill: string;
+
+  @Column({ nullable: true })
+  emergencycontact: string;
+
+  @Column({ nullable: true })
+  unitassociatedwith: string;
 }
