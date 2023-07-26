@@ -28,6 +28,7 @@ export class ClientController {
     const KEYCLOAK_URL = process.env.KEYCLOAK_URL;
     const REGISTRY_URL = process.env.REGISTRY_URL;
     const TESTVAR = process.env.TESTVAR;
+    const PROOF_OF_ENROLLMENT = process.env.PROOF_OF_ENROLLMENT;
     const result = {
       success: true,
       message:
@@ -37,6 +38,7 @@ export class ClientController {
       SCHEMA_URL: SCHEMA_URL,
       KEYCLOAK_URL: KEYCLOAK_URL,
       REGISTRY_URL: REGISTRY_URL,
+      PROOF_OF_ENROLLMENT: PROOF_OF_ENROLLMENT,
     };
     response.status(200).send(result);
   }
