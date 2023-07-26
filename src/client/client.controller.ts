@@ -161,7 +161,7 @@ export class ClientController {
     }
     if (type === 'proofOfEnrollment') {
       //var schemaId = "did:ulpschema:098765";
-      var schemaId = 'clkb5s57m0042tj14tyoeojo9';
+      var schemaId = process.env.PROOF_OF_ENROLLMENT;
     }
     if (type === 'proofOfBenifits') {
       //var schemaId = "did:ulpschema:098765";
