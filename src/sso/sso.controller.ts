@@ -361,4 +361,21 @@ export class SSOController {
     const jwt = auth.replace('Bearer ', '');
     return this.ssoService.getDetailLearner(jwt, response);
   }
+  @Post('/learner/digi/getdetail')
+  async getDetailDigiLearner(
+    @Headers('Authorization') auth: string,
+    @Body('name') name: string,
+    @Body('dob') dob: string,
+    @Body('gender') gender: string,
+    @Res() response: Response,
+  ) {
+    const jwt = auth.replace('Bearer ', '');
+    return this.ssoService.getDetailDigiLearner(
+      jwt,
+      name,
+      dob,
+      gender,
+      response,
+    );
+  }
 }
