@@ -18,6 +18,9 @@ const { parse, HTMLElement } = require('node-html-parser');
 const path = require('path');
 import sharp from 'sharp';
 import { join } from 'path';
+import { log } from 'console';
+const zlib = require('zlib');
+const htmlMinifier = require('html-minifier');
 
 const jsdom = require('jsdom');
 const handlebars = require('handlebars');
@@ -26,6 +29,7 @@ const crypto = require('crypto');
 const jQuery = require('jquery');
 const cheerio = require('cheerio');
 
+const minimize = require('minimize');
 @Injectable()
 export class SSOService {
   public codeVerifier: string;
@@ -342,8 +346,9 @@ export class SSOService {
           const observable = this.httpService.post(url, data, config);
           const promise = observable.toPromise();
           const response = await promise;
-          //console.log(JSON.stringify(response.data));
+         
           render_response = response.data;
+          
         } catch (e) {
           //console.log(e);
           //render_response = { error: e };
@@ -353,62 +358,55 @@ export class SSOService {
         } else {
           //return render_response;
           try {
-            //generateQRCode
-            /*const url = process.env.VERIFICATION_URL + certificateId;
-
+            const url = process.env.VERIFICATION_URL + certificateId;
             let stringData = JSON.stringify(url);
-            await qr.toDataURL(stringData, async function (err, code) {
-              if (code) {
-                let newRenderResponse = render_response;
-                const newhtml = code;
 
-                const root = parse(render_response);
-                const imgTag = root.querySelectorAll('img');
-                let found = false;
-                for (const img of imgTag) {
-                  const src = img.getAttribute('src');
-                  if (src && src.includes('data:image/png;')) {
-                    img.setAttribute('src', newhtml);
-                    found = true;
-                    break;
-                  }
+            const modified = await new Promise((resolve, reject) => {
+              qr.toDataURL(stringData, function (err, code) {
+                if (err) {
+                  resolve(null);
+                  return;
                 }
-                let modified = null;
-                if (found) {
-                  modified = root.toString();
-                  const outputPath = path.join(__dirname, modified);
+                if (code) {
+                  const newhtml = code;
+                  const root = parse(render_response);
+                  const imgTag = root.querySelectorAll('img');
+                  let found = false;
 
-                  fs.writeFile(outputPath, modified, (err) => {
-                    if (err) {
-                      return;
+                  for (const img of imgTag) {
+                    const src = img.getAttribute('src');
+                    if (src && src.includes('data:image/png;')) {
+                      img.setAttribute('src', newhtml);
+                      found = true;
+                      break;
                     }
-                  });
-                } else {
-                  console.log('no image');
-                }
-                newRenderResponse = modified;
-                console.log(newRenderResponse);
+                  }
 
-                return new StreamableFile(
-                  await wkhtmltopdf(newRenderResponse, {
-                    pageSize: 'A4',
-                    disableExternalLinks: true,
-                    disableInternalLinks: true,
-                    disableJavascript: true,
-                  }),
-                );
-              }
-            });*/
+                  if (found) {
+                    const modified = root.toString();
+                    resolve(modified);
+                  } else {
+                    console.log('no image');
+                    resolve(null);
+                  }
+                } else {
+                  console.log('Code is null');
+                  resolve(null);
+                }
+              });
+            });
+            if (!modified) {
+              return null;
+            }
 
             return new StreamableFile(
-              await wkhtmltopdf(render_response, {
+              await wkhtmltopdf(modified, {
                 pageSize: 'A4',
                 disableExternalLinks: true,
                 disableInternalLinks: true,
                 disableJavascript: true,
               }),
             );
-            console.log('----------------outside');
           } catch (e) {
             //console.log(e);
             return 'HTML to PDF Convert Fail';
@@ -3623,16 +3621,17 @@ export class SSOService {
     // let qrcodestring = "";
 
     let stringData = JSON.stringify(url);
+
     let qrcodestring = await qr.toDataURL(stringData, function (err, code) {
       if (code) {
-        //return console.log('error');
-
-        //console.log(code);
+       
         qrcodestring = code;
+        
         return qrcodestring;
+      } else {
+          return err;
       }
     });
-    //console.log(qrcodestring);
-    console.log('----------------outside');
+   
   }
 }

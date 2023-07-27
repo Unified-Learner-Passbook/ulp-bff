@@ -64,6 +64,7 @@ export class SSOController {
   ): Promise<string | StreamableFile> {
     const jwt = auth.replace('Bearer ', '');
     response.header('Content-Type', 'application/pdf');
+
     return this.ssoService.renderCredentials(jwt, requestbody);
   }
   @Post('/student/credentials/renderhtml')
@@ -360,5 +361,4 @@ export class SSOController {
     const jwt = auth.replace('Bearer ', '');
     return this.ssoService.getDetailLearner(jwt, response);
   }
-  
 }
