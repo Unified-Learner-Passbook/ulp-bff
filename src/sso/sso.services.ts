@@ -346,9 +346,8 @@ export class SSOService {
           const observable = this.httpService.post(url, data, config);
           const promise = observable.toPromise();
           const response = await promise;
-         
+
           render_response = response.data;
-          
         } catch (e) {
           //console.log(e);
           //render_response = { error: e };
@@ -3585,6 +3584,77 @@ export class SSOService {
     }
   }
 
+  //getDetailDigiLearner
+  async getDetailDigiLearner(
+    token: string,
+    name: string,
+    dob: string,
+    gender: string,
+    response: Response,
+  ) {
+    if (token && name && dob && gender) {
+      const studentUsername = await this.keycloakService.verifyUserToken(token);
+      if (studentUsername?.error) {
+        return response.status(401).send({
+          success: false,
+          status: 'keycloak_token_bad_request',
+          message: 'You do not have access for this request.',
+          result: null,
+        });
+      } else if (!studentUsername?.preferred_username) {
+        return response.status(401).send({
+          success: false,
+          status: 'keycloak_token_error',
+          message: 'Your Login Session Expired.',
+          result: null,
+        });
+      } else {
+        const sb_rc_search = await this.sbrcService.sbrcSearchEL('Learner', {
+          filters: {
+            name: {
+              eq: name,
+            },
+            dob: {
+              eq: dob,
+            },
+            gender: {
+              eq: gender,
+            },
+          },
+        });
+        if (sb_rc_search?.error) {
+          return response.status(501).send({
+            success: false,
+            status: 'sb_rc_search_error',
+            message: 'System Search Error ! Please try again.',
+            result: sb_rc_search?.error.message,
+          });
+        } else if (sb_rc_search.length === 0) {
+          return response.status(404).send({
+            success: false,
+            status: 'sb_rc_search_no_found',
+            message: 'Data Not Found in System.',
+            result: null,
+          });
+        } else {
+          return response.status(200).send({
+            success: true,
+            status: 'sb_rc_search_found',
+            message: 'Data Found in System.',
+            result: sb_rc_search[0],
+          });
+        }
+      }
+    } else {
+      return response.status(400).send({
+        success: false,
+        status: 'invalid_request',
+        message: 'Invalid Request. Not received token.',
+        result: null,
+      });
+    }
+  }
+
   //helper function
   //get convert date and repalce character from string
   async convertDate(datetime) {
@@ -3624,14 +3694,12 @@ export class SSOService {
 
     let qrcodestring = await qr.toDataURL(stringData, function (err, code) {
       if (code) {
-       
         qrcodestring = code;
-        
+
         return qrcodestring;
       } else {
-          return err;
+        return err;
       }
     });
-   
   }
 }
