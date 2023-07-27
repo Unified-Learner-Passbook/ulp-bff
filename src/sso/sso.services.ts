@@ -346,9 +346,9 @@ export class SSOService {
           const observable = this.httpService.post(url, data, config);
           const promise = observable.toPromise();
           const response = await promise;
-          //console.log(JSON.stringify(response.data));
+         
           render_response = response.data;
-          //console.log(render_response);
+          
         } catch (e) {
           //console.log(e);
           //render_response = { error: e };
@@ -364,8 +364,7 @@ export class SSOService {
             const modified = await new Promise((resolve, reject) => {
               qr.toDataURL(stringData, function (err, code) {
                 if (err) {
-                  // console.error('Error generating QR code:', err);
-                  resolve(null); // Handle the error and resolve with null
+                  resolve(null);
                   return;
                 }
                 if (code) {
@@ -385,14 +384,14 @@ export class SSOService {
 
                   if (found) {
                     const modified = root.toString();
-                    resolve(modified); // Resolve with the modified value
+                    resolve(modified);
                   } else {
                     console.log('no image');
-                    resolve(null); // Resolve with null if no image found
+                    resolve(null);
                   }
                 } else {
                   console.log('Code is null');
-                  resolve(null); // Resolve with null if code is null
+                  resolve(null);
                 }
               });
             });
@@ -3625,17 +3624,14 @@ export class SSOService {
 
     let qrcodestring = await qr.toDataURL(stringData, function (err, code) {
       if (code) {
-        //return console.log('error');
-
-        //console.log(code);
+       
         qrcodestring = code;
-        console.log(code);
+        
         return qrcodestring;
       } else {
-        console.log(err, '------------------');
+          return err;
       }
     });
-    //console.log(qrcodestring);
-    console.log('----------------outside');
+   
   }
 }
