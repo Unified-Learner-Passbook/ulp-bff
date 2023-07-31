@@ -15,6 +15,7 @@ import { CredService } from 'src/services/cred/cred.service';
 import { KeycloakService } from 'src/services/keycloak/keycloak.service';
 const qr = require('qrcode');
 const { parse, HTMLElement } = require('node-html-parser');
+
 const path = require('path');
 import sharp from 'sharp';
 import { join } from 'path';
@@ -340,6 +341,7 @@ export class SSOService {
         };
 
         let render_response = null;
+
         let certificateId = requestbody?.credential?.id;
 
         try {
@@ -360,46 +362,41 @@ export class SSOService {
             const url = process.env.VERIFICATION_URL + certificateId;
             let stringData = JSON.stringify(url);
 
+            let modifiedHtml = null;
+
             const modified = await new Promise((resolve, reject) => {
               qr.toDataURL(stringData, function (err, code) {
                 if (err) {
                   resolve(null);
                   return;
                 }
+
                 if (code) {
-                  const newhtml = code;
+                  const newHtml = code;
                   const root = parse(render_response);
-                  const imgTag = root.querySelectorAll('img');
-                  let found = false;
 
-                  for (const img of imgTag) {
-                    const src = img.getAttribute('src');
-                    if (src && src.includes('data:image/png;')) {
-                      img.setAttribute('src', newhtml);
-                      found = true;
-                      break;
-                    }
-                  }
+                  // Find the img tag with id "qrcode"
+                  const qrcodeImg = root.querySelector('#qrcode');
 
-                  if (found) {
-                    const modified = root.toString();
-                    resolve(modified);
+                  if (qrcodeImg) {
+                    qrcodeImg.setAttribute('src', newHtml);
+                    modifiedHtml = root.toString();
+                    resolve(modifiedHtml);
                   } else {
-                    console.log('no image');
                     resolve(null);
                   }
                 } else {
-                  console.log('Code is null');
                   resolve(null);
                 }
               });
             });
+
             if (!modified) {
               return null;
             }
 
             return new StreamableFile(
-              await wkhtmltopdf(modified, {
+              await wkhtmltopdf(modifiedHtml, {
                 pageSize: 'A4',
                 disableExternalLinks: true,
                 disableInternalLinks: true,
