@@ -315,7 +315,7 @@ export class SSOController {
     @Body('gender') gender: string,
     @Body('recoveryphone') recoveryphone: string,
     @Body('username') username: string,
-    @Body('password') password: string,
+    @Body('kyc_aadhaar_token') kyc_aadhaar_token: string,
     @Res() response: Response,
   ) {
     return this.ssoService.registerLearner(
@@ -324,8 +324,19 @@ export class SSOController {
       gender,
       recoveryphone,
       username,
-      password,
+      kyc_aadhaar_token,
       response,
+    );
+  }
+  //aadhaar ekyc
+  @Post('/aadhaar/ekyc')
+  async getAadhaarEkyc(
+    @Res() response: Response,
+    @Body('aadhaar_id') aadhaar_id: string,
+  ) {
+    return this.ssoService.getAadhaarEkyc(
+      response,
+      aadhaar_id,
     );
   }
   //learner aadhaar
