@@ -20,7 +20,7 @@ export class CredService {
 
       return response.data;
     } catch (e) {
-      console.log('schema error', e.message);
+      console.log('schema error', e);
       console.log(e);
     }
   }
@@ -62,7 +62,7 @@ export class CredService {
       console.log('generateDid 67', response.data);
       return response.data;
     } catch (e) {
-      console.log('did error', e.message);
+      console.log('did error', e);
     }
   }
 
@@ -107,7 +107,7 @@ export class CredService {
 
       return response.data;
     } catch (e) {
-      console.log('cred error', e.message);
+      console.log('cred error', e);
     }
   }
 

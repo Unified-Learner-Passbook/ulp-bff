@@ -64,6 +64,7 @@ export class SSOController {
   ): Promise<string | StreamableFile> {
     const jwt = auth.replace('Bearer ', '');
     response.header('Content-Type', 'application/pdf');
+
     return this.ssoService.renderCredentials(jwt, requestbody);
   }
   @Post('/student/credentials/renderhtml')
@@ -314,7 +315,7 @@ export class SSOController {
     @Body('gender') gender: string,
     @Body('recoveryphone') recoveryphone: string,
     @Body('username') username: string,
-    @Body('password') password: string,
+    @Body('kyc_aadhaar_token') kyc_aadhaar_token: string,
     @Res() response: Response,
   ) {
     return this.ssoService.registerLearner(
@@ -323,8 +324,19 @@ export class SSOController {
       gender,
       recoveryphone,
       username,
-      password,
+      kyc_aadhaar_token,
       response,
+    );
+  }
+  //aadhaar ekyc
+  @Post('/aadhaar/ekyc')
+  async getAadhaarEkyc(
+    @Res() response: Response,
+    @Body('aadhaar_id') aadhaar_id: string,
+  ) {
+    return this.ssoService.getAadhaarEkyc(
+      response,
+      aadhaar_id,
     );
   }
   //learner aadhaar
@@ -360,5 +372,21 @@ export class SSOController {
     const jwt = auth.replace('Bearer ', '');
     return this.ssoService.getDetailLearner(jwt, response);
   }
-  
+  @Post('/learner/digi/getdetail')
+  async getDetailDigiLearner(
+    @Headers('Authorization') auth: string,
+    @Body('name') name: string,
+    @Body('dob') dob: string,
+    @Body('gender') gender: string,
+    @Res() response: Response,
+  ) {
+    const jwt = auth.replace('Bearer ', '');
+    return this.ssoService.getDetailDigiLearner(
+      jwt,
+      name,
+      dob,
+      gender,
+      response,
+    );
+  }
 }
