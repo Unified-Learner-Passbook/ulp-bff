@@ -28,15 +28,17 @@ export class ClientController {
     const KEYCLOAK_URL = process.env.KEYCLOAK_URL;
     const REGISTRY_URL = process.env.REGISTRY_URL;
     const TESTVAR = process.env.TESTVAR;
+    const PROOF_OF_ENROLLMENT = process.env.PROOF_OF_ENROLLMENT;
     const result = {
       success: true,
       message:
-        'Client API Working 22 June CRED URL ' + CRED_URL + ' / ' + TESTVAR,
+        'Client API Working 23 July CRED URL ' + CRED_URL + ' / ' + TESTVAR,
       CRED_URL: CRED_URL,
       DID_URL: DID_URL,
       SCHEMA_URL: SCHEMA_URL,
       KEYCLOAK_URL: KEYCLOAK_URL,
       REGISTRY_URL: REGISTRY_URL,
+      PROOF_OF_ENROLLMENT: PROOF_OF_ENROLLMENT,
     };
     response.status(200).send(result);
   }
@@ -161,7 +163,7 @@ export class ClientController {
     }
     if (type === 'proofOfEnrollment') {
       //var schemaId = "did:ulpschema:098765";
-      var schemaId = 'clf0rjgov0002tj15ml0fdest';
+      var schemaId = process.env.PROOF_OF_ENROLLMENT;
     }
     if (type === 'proofOfBenifits') {
       //var schemaId = "did:ulpschema:098765";

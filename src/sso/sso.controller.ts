@@ -64,6 +64,7 @@ export class SSOController {
   ): Promise<string | StreamableFile> {
     const jwt = auth.replace('Bearer ', '');
     response.header('Content-Type', 'application/pdf');
+
     return this.ssoService.renderCredentials(jwt, requestbody);
   }
   @Post('/student/credentials/renderhtml')
@@ -312,19 +313,47 @@ export class SSOController {
     @Body('name') name: string,
     @Body('dob') dob: string,
     @Body('gender') gender: string,
-    @Body('aadhar_id') aadhar_id: string,
+    @Body('recoveryphone') recoveryphone: string,
     @Body('username') username: string,
-    @Body('password') password: string,
+    @Body('kyc_aadhaar_token') kyc_aadhaar_token: string,
     @Res() response: Response,
   ) {
     return this.ssoService.registerLearner(
       name,
       dob,
       gender,
-      aadhar_id,
+      recoveryphone,
       username,
-      password,
+      kyc_aadhaar_token,
       response,
+    );
+  }
+  //aadhaar ekyc
+  @Post('/aadhaar/ekyc')
+  async getAadhaarEkyc(
+    @Res() response: Response,
+    @Body('aadhaar_id') aadhaar_id: string,
+  ) {
+    return this.ssoService.getAadhaarEkyc(
+      response,
+      aadhaar_id,
+    );
+  }
+  //learner aadhaar
+  @Post('/learner/aadhaar')
+  async getAadhaarToken(
+    @Res() response: Response,
+    @Body('aadhaar_id') aadhaar_id: string,
+    @Body('aadhaar_name') aadhaar_name: string,
+    @Body('aadhaar_dob') aadhaar_dob: string,
+    @Body('aadhaar_gender') aadhaar_gender: string,
+  ) {
+    return this.ssoService.getAadhaarTokenUpdate(
+      response,
+      aadhaar_id,
+      aadhaar_name,
+      aadhaar_dob,
+      aadhaar_gender,
     );
   }
   @Get('/learner/getdid')
@@ -342,5 +371,22 @@ export class SSOController {
   ) {
     const jwt = auth.replace('Bearer ', '');
     return this.ssoService.getDetailLearner(jwt, response);
+  }
+  @Post('/learner/digi/getdetail')
+  async getDetailDigiLearner(
+    @Headers('Authorization') auth: string,
+    @Body('name') name: string,
+    @Body('dob') dob: string,
+    @Body('gender') gender: string,
+    @Res() response: Response,
+  ) {
+    const jwt = auth.replace('Bearer ', '');
+    return this.ssoService.getDetailDigiLearner(
+      jwt,
+      name,
+      dob,
+      gender,
+      response,
+    );
   }
 }
