@@ -194,9 +194,6 @@ export class CredService {
     let data = JSON.stringify({
       subject: subjectFilter,
     });
-    // let data = JSON.stringify({
-    //   subjectId: sb_rc_search[0]?.did ? sb_rc_search[0].did : '',
-    // });
 
     const url = process.env.CRED_URL + 'credentials/search';
 

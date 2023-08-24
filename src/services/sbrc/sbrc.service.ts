@@ -1,7 +1,6 @@
 import { HttpService } from '@nestjs/axios';
 import { Injectable } from '@nestjs/common';
 import { AxiosRequestConfig } from 'axios';
-import { log } from 'node:console';
 
 @Injectable()
 export class SbrcService {
@@ -126,10 +125,9 @@ export class SbrcService {
       const observable = this.httpService.put(url, data, config);
       const promise = observable.toPromise();
       const response = await promise;
-      //console.log(JSON.stringify(response.data));
+
       sb_rc_response_text = response.data;
     } catch (e) {
-      //console.log(e);
       sb_rc_response_text = { error: e };
     }
     return sb_rc_response_text;
