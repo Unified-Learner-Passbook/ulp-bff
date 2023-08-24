@@ -1,6 +1,7 @@
 import { HttpService } from '@nestjs/axios';
 import { Injectable } from '@nestjs/common';
 import { AxiosRequestConfig } from 'axios';
+import { log } from 'node:console';
 
 @Injectable()
 export class SbrcService {
@@ -139,6 +140,7 @@ export class SbrcService {
     let data = JSON.stringify(filter);
     const url = process.env.REGISTRY_URL + 'api/v1/' + entity + '/search';
     //console.log(data + ' ' + url);
+
     const config: AxiosRequestConfig = {
       headers: {
         'Content-Type': 'application/json',
@@ -147,8 +149,11 @@ export class SbrcService {
     let sb_rc_search = null;
     try {
       const observable = this.httpService.post(url, data, config);
+
       const promise = observable.toPromise();
+
       const response = await promise;
+
       //console.log(JSON.stringify(response.data));
       sb_rc_search = response.data;
     } catch (e) {
@@ -179,5 +184,4 @@ export class SbrcService {
     }
     return sb_rc_response_text;
   }
-
 }
