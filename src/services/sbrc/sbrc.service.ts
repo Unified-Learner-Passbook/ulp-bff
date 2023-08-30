@@ -125,10 +125,9 @@ export class SbrcService {
       const observable = this.httpService.put(url, data, config);
       const promise = observable.toPromise();
       const response = await promise;
-      //console.log(JSON.stringify(response.data));
+
       sb_rc_response_text = response.data;
     } catch (e) {
-      //console.log(e);
       sb_rc_response_text = { error: e };
     }
     return sb_rc_response_text;
@@ -139,6 +138,7 @@ export class SbrcService {
     let data = JSON.stringify(filter);
     const url = process.env.REGISTRY_URL + 'api/v1/' + entity + '/search';
     //console.log(data + ' ' + url);
+
     const config: AxiosRequestConfig = {
       headers: {
         'Content-Type': 'application/json',
@@ -147,8 +147,11 @@ export class SbrcService {
     let sb_rc_search = null;
     try {
       const observable = this.httpService.post(url, data, config);
+
       const promise = observable.toPromise();
+
       const response = await promise;
+
       //console.log(JSON.stringify(response.data));
       sb_rc_search = response.data;
     } catch (e) {
@@ -179,5 +182,4 @@ export class SbrcService {
     }
     return sb_rc_response_text;
   }
-
 }
