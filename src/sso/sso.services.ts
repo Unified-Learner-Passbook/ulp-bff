@@ -358,14 +358,14 @@ export class SSOService {
           return 'Credentials Render Failed ! Please Try Again.';
         } else {
           //return render_response;
+
           try {
             const url = process.env.VERIFICATION_URL + certificateId;
-            let stringData = JSON.stringify(url);
 
             let modifiedHtml = null;
 
             const modified = await new Promise((resolve, reject) => {
-              qr.toDataURL(stringData, function (err, code) {
+              qr.toDataURL(url, function (err, code) {
                 if (err) {
                   resolve(null);
                   return;
@@ -373,6 +373,7 @@ export class SSOService {
 
                 if (code) {
                   const newHtml = code;
+
                   const root = parse(render_response);
 
                   // Find the img tag with id "qrcode"
@@ -381,6 +382,7 @@ export class SSOService {
                   if (qrcodeImg) {
                     qrcodeImg.setAttribute('src', newHtml);
                     modifiedHtml = root.toString();
+
                     resolve(modifiedHtml);
                   } else {
                     resolve(null);
@@ -405,6 +407,7 @@ export class SSOService {
             );
           } catch (e) {
             //console.log(e);
+
             return 'HTML to PDF Convert Fail';
           }
         }
@@ -3665,6 +3668,7 @@ export class SSOService {
     let qrcodestring = await qr.toDataURL(stringData, function (err, code) {
       if (code) {
         qrcodestring = code;
+        console.log(qrcodestring);
 
         return qrcodestring;
       } else {
