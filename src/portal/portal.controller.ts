@@ -33,6 +33,6 @@ export class PortalController {
     @Res() response: Response,
   ) {
     const jwt = auth.replace('Bearer ', '');
-    return this.portalService.searchCount(jwt,countFields, response);
+    return this.portalService.searchCount(jwt, countFields, response);
   }
 }

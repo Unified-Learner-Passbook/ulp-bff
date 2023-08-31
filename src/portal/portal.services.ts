@@ -52,7 +52,7 @@ export class PortalService {
         });
         if (searchFilter?.error) {
           return response.status(500).send({
-            success: false,
+            success: true,
             status: 'Data not found',
             message: 'Data not found',
             result: 0,
