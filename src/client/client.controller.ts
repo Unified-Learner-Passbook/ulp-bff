@@ -31,8 +31,7 @@ export class ClientController {
     const PROOF_OF_ENROLLMENT = process.env.PROOF_OF_ENROLLMENT;
     const result = {
       success: true,
-      message:
-        'Client API Working 23 July CRED URL ' + CRED_URL + ' / ' + TESTVAR,
+      message: 'Bulk Issuance API Working 29 August 23 v4',
       CRED_URL: CRED_URL,
       DID_URL: DID_URL,
       SCHEMA_URL: SCHEMA_URL,

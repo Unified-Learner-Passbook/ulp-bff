@@ -158,8 +158,6 @@ export class CredService {
 
   // cred search
   async credSearch(sb_rc_search) {
-    console.log('sb_rc_search', sb_rc_search);
-
     let data = JSON.stringify({
       subject: {
         id: sb_rc_search[0]?.did ? sb_rc_search[0].did : '',
@@ -188,6 +186,35 @@ export class CredService {
       //console.log(e);
       cred_search = { error: e };
     }
+    return cred_search;
+  }
+  //custom
+  //credSearchFilter
+  async credSearchFilter(subjectFilter: any) {
+    let data = JSON.stringify({
+      subject: subjectFilter,
+    });
+
+    const url = process.env.CRED_URL + 'credentials/search';
+
+    const config: AxiosRequestConfig = {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      data: data,
+    };
+    let cred_search = null;
+    try {
+      const observable = this.httpService.post(url, data, config);
+      const promise = observable.toPromise();
+      const response = await promise;
+      //console.log(JSON.stringify(response.data));
+      cred_search = response.data;
+    } catch (e) {
+      //console.log(e);
+      cred_search = { error: e };
+    }
+
     return cred_search;
   }
 }

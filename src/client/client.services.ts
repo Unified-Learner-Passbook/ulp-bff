@@ -9,7 +9,7 @@ import { BulkCredentialDto } from './dto/bulkCred-dto';
 import { SbrcService } from '../services/sbrc/sbrc.service';
 import { CredService } from 'src/services/cred/cred.service';
 import { AadharService } from '../services/aadhar/aadhar.service';
-import { UsersService } from 'src/services/users/users.service';
+//import { UsersService } from 'src/services/users/users.service';
 
 const cred_url = process.env.CRED_URL || 'http://64.227.185.154:3002';
 const did_url = process.env.DID_URL || 'http://64.227.185.154:3000';
@@ -22,7 +22,7 @@ export class ClientService {
     private sbrcService: SbrcService,
     private credService: CredService,
     private aadharService: AadharService,
-    private usersService: UsersService,
+    //private usersService: UsersService,
   ) {}
   //axios call
   md5 = require('md5');
@@ -1296,7 +1296,7 @@ export class ClientService {
   }
 
   async credentialSubjectData(type) {
-    console.log('type', type);
+    /*console.log('type', type);
     var users;
     var credSubject = [];
     if (type === 'proofOfAssessment') {
@@ -1402,6 +1402,6 @@ export class ClientService {
       }
     }
     console.log('credSubject', credSubject);
-    return credSubject;
+    return credSubject;*/
   }
 }
