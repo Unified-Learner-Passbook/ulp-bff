@@ -158,6 +158,7 @@ export class SbrcService {
       //console.log(e);
       sb_rc_search = { error: e };
     }
+
     return sb_rc_search;
   }
 

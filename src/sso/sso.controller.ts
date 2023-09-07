@@ -334,10 +334,7 @@ export class SSOController {
     @Res() response: Response,
     @Body('aadhaar_id') aadhaar_id: string,
   ) {
-    return this.ssoService.getAadhaarEkyc(
-      response,
-      aadhaar_id,
-    );
+    return this.ssoService.getAadhaarEkyc(response, aadhaar_id);
   }
   //learner aadhaar
   @Post('/learner/aadhaar')
