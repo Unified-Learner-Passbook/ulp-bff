@@ -15,7 +15,10 @@ export class KeycloakService {
   };
   async getUserTokenAccount(token: string) {
     const url =
-      process.env.KEYCLOAK_URL + 'realms/' + process.env.REALM_ID + '/account';
+      process.env.KEYCLOAK_URL +
+      'realms/' +
+      process.env.KEYCLOAK_REALM_ID +
+      '/account';
 
     const config: AxiosRequestConfig = {
       headers: {
@@ -41,7 +44,7 @@ export class KeycloakService {
     const url =
       process.env.KEYCLOAK_URL +
       'realms/' +
-      process.env.REALM_ID +
+      process.env.KEYCLOAK_REALM_ID +
       '/protocol/openid-connect/userinfo';
 
     const config: AxiosRequestConfig = {
@@ -76,7 +79,7 @@ export class KeycloakService {
     const url =
       process.env.KEYCLOAK_URL +
       'realms/' +
-      process.env.REALM_ID +
+      process.env.KEYCLOAK_REALM_ID +
       '/protocol/openid-connect/token';
 
     const config: AxiosRequestConfig = {
@@ -113,7 +116,7 @@ export class KeycloakService {
     const url =
       process.env.KEYCLOAK_URL +
       'realms/' +
-      process.env.REALM_ID +
+      process.env.KEYCLOAK_REALM_ID +
       '/protocol/openid-connect/token';
 
     const config: AxiosRequestConfig = {
@@ -155,7 +158,7 @@ export class KeycloakService {
     const url =
       process.env.KEYCLOAK_URL +
       'admin/realms/' +
-      process.env.REALM_ID +
+      process.env.KEYCLOAK_REALM_ID +
       '/users';
 
     const config: AxiosRequestConfig = {
@@ -196,7 +199,7 @@ export class KeycloakService {
     const url =
       process.env.KEYCLOAK_URL +
       'admin/realms/' +
-      process.env.REALM_ID +
+      process.env.KEYCLOAK_REALM_ID +
       '/users';
 
     const config: AxiosRequestConfig = {
