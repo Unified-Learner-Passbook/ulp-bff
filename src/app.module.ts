@@ -5,6 +5,10 @@ import { SchoolModule } from './school/school.module';
 import { ClientModule } from './client/client.module';
 import { PortalModule } from './portal/portal.module';
 import { SbrcapiModule } from './sbrcapi/sbrcapi.module';
+import { InstructorModule } from './instructor/instructor.module';
+import { IssuerModule } from './issuer/issuer.module';
+import { LearnerModule } from './learner/learner.module';
+import { SchemaModule } from './schema/schema.module';
 
 //call env variable
 import { ConfigModule } from '@nestjs/config';
@@ -20,7 +24,7 @@ import { UsersModule } from './services/users/users.module';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({  isGlobal: true }),
+    ConfigModule.forRoot({ isGlobal: true }),
     //HttpModule,
     {
       ...HttpModule.register({}),
@@ -32,6 +36,10 @@ import { UsersModule } from './services/users/users.module';
     ClientModule,
     PortalModule,
     SbrcapiModule,
+    InstructorModule,
+    IssuerModule,
+    LearnerModule,
+    SchemaModule,
     // TypeOrmModule.forRoot({
     //   type: 'postgres',
     //   host: '64.227.129.71',
