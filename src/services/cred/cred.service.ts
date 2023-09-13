@@ -6,6 +6,94 @@ import { AxiosRequestConfig } from 'axios';
 export class CredService {
   constructor(private readonly httpService: HttpService) {}
 
+  //schema Create
+  async schemaCreate(postrequest) {
+    const url = `${process.env.SCHEMA_URL}/schema`;
+    var data = JSON.stringify(postrequest);
+    var config = {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    };
+    let response_list = null;
+    try {
+      const observable = this.httpService.post(url, data, config);
+
+      const promise = observable.toPromise();
+
+      const response = await promise;
+      response_list = response.data;
+      //console.log(response.data);
+    } catch (e) {
+      console.log('schema error', e.message);
+      response_list = { error: e };
+    }
+    return response_list;
+  }
+
+  //schema list
+  async schemaList(taglist) {
+    const url = `${process.env.SCHEMA_URL}/schema/tags?tags=${taglist}`;
+    let response_list = null;
+    try {
+      const observable = this.httpService.get(url);
+
+      const promise = observable.toPromise();
+
+      const response = await promise;
+      response_list = response.data;
+      //console.log(response.data);
+    } catch (e) {
+      console.log('schema error', e.message);
+      response_list = { error: e };
+    }
+    return response_list;
+  }
+
+  //schema template Create
+  async schemaTemplateCreate(postrequest) {
+    const url = `${process.env.SCHEMA_URL}/rendering-template`;
+    var data = JSON.stringify(postrequest);
+    var config = {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    };
+    let response_list = null;
+    try {
+      const observable = this.httpService.post(url, data, config);
+
+      const promise = observable.toPromise();
+
+      const response = await promise;
+      response_list = response.data;
+      //console.log(response.data);
+    } catch (e) {
+      console.log('schema template error', e.message);
+      response_list = { error: e };
+    }
+    return response_list;
+  }
+
+  //schema template list
+  async schemaTemplateList(schemaid) {
+    const url = `${process.env.SCHEMA_URL}/rendering-template/${schemaid}`;
+    let response_list = null;
+    try {
+      const observable = this.httpService.get(url);
+
+      const promise = observable.toPromise();
+
+      const response = await promise;
+      response_list = response.data;
+      //console.log(response.data);
+    } catch (e) {
+      console.log('schema error', e.message);
+      response_list = { error: e };
+    }
+    return response_list;
+  }
+
   //generate schema
   async generateSchema(schemaId) {
     const url = `${process.env.SCHEMA_URL}/schema/jsonld?id=${schemaId}`;

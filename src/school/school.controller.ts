@@ -65,4 +65,9 @@ export class SchoolController {
   async getSchoolList(@Body() requestbody: any, @Res() response: Response) {
     return this.schoolService.getSchoolList(requestbody, response);
   }
+  //getSchoolMobileVerify
+  @Post('/mobile/verify')
+  async getSchoolMobileVerify(@Body() requestbody: any, @Res() response: Response) {
+    return this.schoolService.getSchoolMobileVerify(requestbody, response);
+  }
 }

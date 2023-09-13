@@ -22,15 +22,18 @@ export class PortalService {
   //searchCount
   async searchCount(token: string, countFields: any, response: Response) {
     if (token && countFields.length > 0) {
-      const username = await this.keycloakService.verifyUserToken(token);
-      if (username?.error) {
+      const instructorUsername = await this.keycloakService.getUserTokenAccount(
+        token,
+      );
+
+      if (instructorUsername?.error) {
         return response.status(401).send({
           success: false,
           status: 'keycloak_token_bad_request',
           message: 'You do not have access for this request.',
           result: null,
         });
-      } else if (!username?.preferred_username) {
+      } else if (!instructorUsername?.username) {
         return response.status(401).send({
           success: false,
           status: 'keycloak_token_error',
@@ -38,195 +41,127 @@ export class PortalService {
           result: null,
         });
       } else {
-        const sb_rc_search = await this.sbrcService.sbrcSearchEL('Instructor', {
+        let name = '';
+        let dob = '';
+        let gender = '';
+        if (
+          instructorUsername?.attributes?.gender &&
+          instructorUsername?.attributes?.dob &&
+          instructorUsername?.attributes?.name
+        ) {
+          //login with digilocker
+          name = instructorUsername?.attributes?.name[0];
+          dob = instructorUsername?.attributes?.dob[0];
+          gender = instructorUsername?.attributes?.gender[0];
+        } else {
+          //login with mobile and otp
+          const sb_rc_search = await this.sbrcService.sbrcSearchEL(
+            'Instructor',
+            {
+              filters: {
+                username: {
+                  eq: instructorUsername?.username,
+                },
+              },
+            },
+          );
+          if (sb_rc_search?.error) {
+            return response.status(501).send({
+              success: false,
+              status: 'sb_rc_search_error',
+              message: 'System Search Error ! Please try again.',
+              result: sb_rc_search?.error.message,
+            });
+          } else if (sb_rc_search.length === 0) {
+            return response.status(404).send({
+              success: false,
+              status: 'sb_rc_search_no_found',
+              message: 'Data Not Found in System.',
+              result: null,
+            });
+          } else {
+            name = sb_rc_search[0].name;
+            dob = sb_rc_search[0].dob;
+            gender = sb_rc_search[0].gender;
+          }
+        }
+        //search count
+        let searchSchema = {
           filters: {
-            username: {
-              eq: username?.preferred_username,
+            name: {
+              eq: name,
+            },
+            dob: {
+              eq: dob,
+            },
+            gender: {
+              eq: gender,
             },
           },
-        });
-
-        const school_id = sb_rc_search[0].school_id;
-        const searchFilter = await this.credService.credSearchFilter({
-          orgId: school_id,
-        });
-        if (searchFilter?.error) {
-          return response.status(500).send({
-            success: true,
-            status: 'Data not found',
-            message: 'Data not found',
-            result: 0,
+        };
+        const instructorDetails = await this.sbrcService.sbrcSearch(
+          searchSchema,
+          'Instructor',
+        );
+        //console.log('Instructor Details', instructorDetails);
+        if (instructorDetails.length == 0) {
+          //register in keycloak and then in sunbird rc
+          return response.status(400).send({
+            success: false,
+            status: 'sbrc_instructor_no_found_error',
+            message: 'Instructor Account Not Found. Register and Try Again.',
+            result: null,
           });
-        }
-
-        // if (sb_rc_search?.error) {
-        //   return response.status(501).send({
-        //     success: false,
-        //     status: 'sb_rc_search_error',
-        //     message: 'Sunbird RC Teacher Search Failed',
-        //     result: sb_rc_search?.error,
-        //   });
-        // } else if (sb_rc_search.length === 0) {
-        //   return response.status(404).send({
-        //     success: false,
-        //     status: 'sb_rc_search_no_found',
-        //     message: 'Data Not Found in System.',
-        //     result: null,
-        //   });
-        // } else {
-        //   let schoolUdise = sb_rc_search[0]?.schoolUdise;
-        //   //count field start
-        //   let countlog = {};
-        //   //common student list from udise code
-        //   const sb_rc_search_student_udise_code =
-        //     await this.sbrcService.sbrcSearchEL('StudentV2', {
-        //       filters: {
-        //         school_udise: {
-        //           eq: schoolUdise,
-        //         },
-        //       },
-        //     });
-        //   for (let i = 0; i < countFields.length; i++) {
-        //     let field = countFields[i];
-        //     let fieldcount = 0;
-        //     //students_registered
-        //     if (field === 'students_registered') {
-        //       if (sb_rc_search_student_udise_code?.error) {
-        //       } else {
-        //         fieldcount = sb_rc_search_student_udise_code.length;
-        //       }
-        //     }
-        //     //claims_pending
-        //     if (field === 'claims_pending') {
-        //       fieldcount = 0;
-        //       for (let i = 0; i < sb_rc_search_student_udise_code.length; i++) {
-        //         const sb_rc_search_student_detail =
-        //           await this.sbrcService.sbrcSearchEL('StudentDetailV2', {
-        //             filters: {
-        //               student_id: {
-        //                 eq: sb_rc_search_student_udise_code[i].osid,
-        //               },
-        //               claim_status: {
-        //                 eq: 'pending',
-        //               },
-        //             },
-        //           });
-        //         if (sb_rc_search_student_detail?.error) {
-        //         } else if (sb_rc_search_student_detail.length !== 0) {
-        //           fieldcount++;
-        //         }
-        //       }
-        //     }
-        //     //claims_approved
-        //     if (field === 'claims_approved') {
-        //       fieldcount = 0;
-        //       for (let i = 0; i < sb_rc_search_student_udise_code.length; i++) {
-        //         const sb_rc_search_student_detail =
-        //           await this.sbrcService.sbrcSearchEL('StudentDetailV2', {
-        //             filters: {
-        //               student_id: {
-        //                 eq: sb_rc_search_student_udise_code[i].osid,
-        //               },
-        //               claim_status: {
-        //                 eq: 'approved',
-        //               },
-        //             },
-        //           });
-        //         if (sb_rc_search_student_detail?.error) {
-        //         } else if (sb_rc_search_student_detail.length !== 0) {
-        //           fieldcount++;
-        //         }
-        //       }
-        //     }
-        //     //claims_rejected
-        //     if (field === 'claims_rejected') {
-        //       fieldcount = 0;
-        //       for (let i = 0; i < sb_rc_search_student_udise_code.length; i++) {
-        //         const sb_rc_search_student_detail =
-        //           await this.sbrcService.sbrcSearchEL('StudentDetailV2', {
-        //             filters: {
-        //               student_id: {
-        //                 eq: sb_rc_search_student_udise_code[i].osid,
-        //               },
-        //               claim_status: {
-        //                 eq: 'rejected',
-        //               },
-        //             },
-        //           });
-        //         if (sb_rc_search_student_detail?.error) {
-        //         } else if (sb_rc_search_student_detail.length !== 0) {
-        //           fieldcount++;
-        //         }
-        //       }
-        //     }
-        //     //credentials_issued
-        //     if (field === 'credentials_issued') {
-        //       //find school did from school udise id
-        //       let did = '';
-        //       //find if student account present in sb rc or not
-        //       const sb_rc_search = await this.sbrcService.sbrcSearchEL(
-        //         'SchoolDetail',
-        //         {
-        //           filters: {
-        //             udiseCode: {
-        //               eq: schoolUdise,
-        //             },
-        //           },
-        //         },
-        //       );
-        //       if (sb_rc_search?.error) {
-        //       } else if (sb_rc_search.length === 0) {
-        //         // no school found
-        //       } else {
-        //         //get did id
-        //         did = sb_rc_search[0].did;
-        //       }
-        //       //get issues credentials list from school did
-        //       var data = JSON.stringify({
-        //         issuer: {
-        //           id: did,
-        //         },
-        //       });
-
-        //       const url = process.env.CRED_URL + '/credentials/search';
-        //       const config: AxiosRequestConfig = {
-        //         headers: {
-        //           'Content-Type': 'application/json',
-        //         },
-        //       };
-
-        //       let render_response = null;
-        //       try {
-        //         const observable = this.httpService.post(url, data, config);
-        //         const promise = observable.toPromise();
-        //         const response = await promise;
-        //         //console.log(JSON.stringify(response.data));
-        //         render_response = response.data;
-        //       } catch (e) {
-        //         //console.log(e);
-        //         render_response = { error: e };
-        //       }
-
-        //       if (render_response?.error) {
-        //       } else {
-        //         //check only student count
-        //         let fieldcount_student = 0;
-        //         for (let i = 0; i < render_response.length; i++) {
-        //           if (render_response[i]?.credentialSubject?.student_name) {
-        //             fieldcount_student++;
-        //           }
-        //         }
-        //         fieldcount = fieldcount_student;
-        //       }
-        //     }
-        //     countlog[field] = fieldcount;
-        //   }
-        else {
+        } else if (instructorDetails.length > 0) {
+          //get count
+          const school_id = instructorDetails[0]?.school_id;
+          //count field start
+          let countlog = {};
+          for (let i = 0; i < countFields.length; i++) {
+            let field = countFields[i];
+            let fieldcount = 0;
+            //students_registered
+            //console.log('school_id', school_id);
+            if (field === 'students_registered') {
+              if (school_id) {
+                const searchFilter = await this.credService.credSearchFilter({
+                  orgId: school_id,
+                });
+                //console.log('searchFilter', searchFilter);
+                try {
+                  if (searchFilter?.error) {
+                  } else {
+                    fieldcount = searchFilter.length;
+                  }
+                } catch (e) {}
+              }
+            }
+            //claims_pending
+            if (field === 'claims_pending') {
+              fieldcount = 0;
+            }
+            //claims_approved
+            if (field === 'claims_approved') {
+              fieldcount = 0;
+            }
+            //claims_rejected
+            if (field === 'claims_rejected') {
+              fieldcount = 0;
+            }
+            countlog[field] = fieldcount;
+          }
           return response.status(200).send({
             success: true,
             status: 'count_success',
             message: 'Count Success',
-            result: searchFilter.length,
+            result: countlog,
+          }); 
+        } else {
+          return response.status(200).send({
+            success: false,
+            status: 'sbrc_search_error',
+            message: 'Unable to search Instructor. Try Again.',
+            result: null,
           });
         }
       }

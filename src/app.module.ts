@@ -5,13 +5,16 @@ import { SchoolModule } from './school/school.module';
 import { ClientModule } from './client/client.module';
 import { PortalModule } from './portal/portal.module';
 import { SbrcapiModule } from './sbrcapi/sbrcapi.module';
+import { InstructorModule } from './instructor/instructor.module';
+import { IssuerModule } from './issuer/issuer.module';
+import { LearnerModule } from './learner/learner.module';
+import { SchemaModule } from './schema/schema.module';
 
 //call env variable
 import { ConfigModule } from '@nestjs/config';
 import { CredService } from './services/cred/cred.service';
 import { SbrcService } from './services/sbrc/sbrc.service';
 import { HttpModule, HttpModuleOptions } from '@nestjs/axios';
-import { getEnvPath } from './services/helper/helper';
 import { AadharService } from './services/aadhar/aadhar.service';
 import { KeycloakService } from './services/keycloak/keycloak.service';
 import { UdiseService } from 'src/services/udise/udise.service';
@@ -21,11 +24,9 @@ import { UsersModule } from './services/users/users.module';
 import { ClaimAttestService } from './claimAttest/claimAttest.service';
 import { ClaimAttestModule } from './claimAttest/claimAttest.module';
 
-const envFilePath: string = getEnvPath(`${__dirname}/envs`);
-//console.log('envFilePath', envFilePath);
 @Module({
   imports: [
-    ConfigModule.forRoot({ envFilePath, isGlobal: true }),
+    ConfigModule.forRoot({ isGlobal: true }),
     //HttpModule,
     {
       ...HttpModule.register({}),
@@ -37,6 +38,10 @@ const envFilePath: string = getEnvPath(`${__dirname}/envs`);
     ClientModule,
     PortalModule,
     SbrcapiModule,
+    InstructorModule,
+    IssuerModule,
+    LearnerModule,
+    SchemaModule,
     // TypeOrmModule.forRoot({
     //   type: 'postgres',
     //   host: '64.227.129.71',

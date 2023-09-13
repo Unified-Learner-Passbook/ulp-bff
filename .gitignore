@@ -34,9 +34,8 @@ lerna-debug.log*
 !.vscode/launch.json
 !.vscode/extensions.json
 
-# env
-# /src/utils/envs/prod.env
-# /src/utils/envs/dev.env
-envs/dev.env
-.env
+# env ignore
+# .env
 /build/Jenkinsfile
+env.backup
+env.backup.server
