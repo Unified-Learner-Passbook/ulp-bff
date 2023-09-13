@@ -18,6 +18,8 @@ import { UdiseService } from 'src/services/udise/udise.service';
 import { TelemetryService } from './services/telemetry/telemetry.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UsersModule } from './services/users/users.module';
+import { ClaimAttestService } from './claimAttest/claimAttest.service';
+import { ClaimAttestModule } from './claimAttest/claimAttest.module';
 
 const envFilePath: string = getEnvPath(`${__dirname}/envs`);
 //console.log('envFilePath', envFilePath);
@@ -47,6 +49,7 @@ const envFilePath: string = getEnvPath(`${__dirname}/envs`);
     //   logging: true,
     // }),
     //UsersModule,
+    ClaimAttestModule
   ],
   providers: [
     CredService,
@@ -55,6 +58,7 @@ const envFilePath: string = getEnvPath(`${__dirname}/envs`);
     KeycloakService,
     UdiseService,
     TelemetryService,
+    ClaimAttestService
   ],
 })
 export class AppModule {}

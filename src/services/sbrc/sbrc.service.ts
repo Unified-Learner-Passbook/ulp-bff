@@ -135,6 +135,7 @@ export class SbrcService {
 
   // search entity in registery
   async sbrcSearchEL(entity: string, filter: any) {
+    
     let data = JSON.stringify(filter);
     const url = process.env.REGISTRY_URL + 'api/v1/' + entity + '/search';
     //console.log(data + ' ' + url);
