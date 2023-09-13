@@ -1,21 +1,15 @@
 {
   "$schema": "https://json.schemastore.org/nest-cli",
   "collection": "@nestjs/schematics",
-  "sourceRoot": "",
+  "sourceRoot": "src",
   "compilerOptions": {
     "deleteOutDir": true,
     "assets": [
       {
-        "include": "./src/assets",
+        "include": "./assets",
         "outDir": "dist/services/udise/",
         "watchAssets": true
-      },
-      {
-        "include": "./envs",
-        "outDir": "dist/",
-        "watchAssets": true
       }
-    ],
-    "watchAssets": true
+    ]
   }
 }

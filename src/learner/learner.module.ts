@@ -1,22 +1,21 @@
-import { HttpModule } from '@nestjs/axios';
 import { Module } from '@nestjs/common';
+import { LearnerService } from './learner.service';
+import { LearnerController } from './learner.controller';
 import { CredService } from 'src/services/cred/cred.service';
 import { SbrcService } from 'src/services/sbrc/sbrc.service';
 import { TelemetryService } from 'src/services/telemetry/telemetry.service';
-import { CredentialsController } from './credentials.controller';
-import { CredentialsService } from './credentials.service';
+import { AadharService } from 'src/services/aadhar/aadhar.service';
 import { KeycloakService } from 'src/services/keycloak/keycloak.service';
-import { AadharService } from '../services/aadhar/aadhar.service';
 
 @Module({
-  controllers: [CredentialsController],
+  controllers: [LearnerController],
   providers: [
-    CredentialsService,
+    LearnerService,
     CredService,
     SbrcService,
     TelemetryService,
-    KeycloakService,
     AadharService,
+    KeycloakService,
   ],
 })
-export class CredentialsModule {}
+export class LearnerModule {}
