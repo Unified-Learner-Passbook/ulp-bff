@@ -59,7 +59,7 @@ export class SchemaService {
     if (postrequest?.taglist) {
       console.log(postrequest.taglist);
       const getschemalist = await this.credService.schemaList(
-        '[' + postrequest?.taglist + ']',
+        postrequest?.taglist,
       );
       if (getschemalist?.error) {
         return response.status(400).send({
