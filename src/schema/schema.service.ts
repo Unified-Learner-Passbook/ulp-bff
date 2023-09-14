@@ -73,8 +73,8 @@ export class SchemaService {
           let schemalist = [];
           for (let i = 0; i < getschemalist.length; i++) {
             schemalist.push({
-              schema_name: getschemalist[i]?.name,
-              schema_id: getschemalist[i]?.id,
+              schema_name: getschemalist[i]?.schema?.name,
+              schema_id: getschemalist[i]?.schema?.id,
             });
           }
           return response.status(200).send({
