@@ -22,6 +22,7 @@ export class InstructorService {
     private readonly httpService: HttpService, //private usersService: UsersService,
   ) {}
 
+  moment = require('moment');
   fs = require('fs');
   async = require('async');
 
@@ -427,7 +428,7 @@ export class InstructorService {
         ) {
           //login with digilocker
           aadhaar_name = instructorUsername?.attributes?.name[0];
-          aadhaar_dob = instructorUsername?.attributes?.dob[0];
+          aadhaar_dob = await this.convertDate(instructorUsername?.attributes?.dob[0]);
           aadhaar_gender = instructorUsername?.attributes?.gender[0];
         } else {
           //login with mobile and otp
@@ -605,7 +606,7 @@ export class InstructorService {
         ) {
           //login with digilocker
           name = instructorUsername?.attributes?.name[0];
-          dob = instructorUsername?.attributes?.dob[0];
+          dob = await this.convertDate(instructorUsername?.attributes?.dob[0]);
           gender = instructorUsername?.attributes?.gender[0];
         } else {
           //login with mobile and otp
@@ -843,6 +844,17 @@ export class InstructorService {
   }
 
   //helper function
+  //get convert date and repalce character from string
+  async convertDate(datetime) {
+    if (!datetime) {
+      return '';
+    }
+    let date_string = datetime.substring(0, 10);
+    const datetest = this.moment(date_string, 'DD/MM/YYYY').format(
+      'DD/MM/YYYY',
+    );
+    return datetest;
+  }
   //get jwt token information
   parseJwt = async (token): Promise<any> => {
     if (!token) {

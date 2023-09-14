@@ -19,6 +19,8 @@ export class PortalService {
     private sbrcService: SbrcService,
     private credService: CredService,
   ) {}
+
+  moment = require('moment');
   //searchCount
   async searchCount(token: string, countFields: any, response: Response) {
     if (token && countFields.length > 0) {
@@ -51,7 +53,7 @@ export class PortalService {
         ) {
           //login with digilocker
           name = instructorUsername?.attributes?.name[0];
-          dob = instructorUsername?.attributes?.dob[0];
+          dob = await this.convertDate(instructorUsername?.attributes?.dob[0]);
           gender = instructorUsername?.attributes?.gender[0];
         } else {
           //login with mobile and otp
@@ -173,5 +175,18 @@ export class PortalService {
         result: null,
       });
     }
+  }
+
+  //helper function
+  //get convert date and repalce character from string
+  async convertDate(datetime) {
+    if (!datetime) {
+      return '';
+    }
+    let date_string = datetime.substring(0, 10);
+    const datetest = this.moment(date_string, 'DD/MM/YYYY').format(
+      'DD/MM/YYYY',
+    );
+    return datetest;
   }
 }
