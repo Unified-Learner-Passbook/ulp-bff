@@ -106,7 +106,7 @@ export class CredService {
 
       const response = await promise;
 
-      return response.data;
+      return response.data[0]?.schema;
     } catch (e) {
       console.log('schema error', e.message);
       console.log(e);
