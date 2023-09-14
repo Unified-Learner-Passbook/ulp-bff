@@ -77,7 +77,7 @@ export class CredService {
 
   //schema template list
   async schemaTemplateList(schemaid) {
-    const url = `${process.env.SCHEMA_URL}/rendering-template?schemaId=${schemaid}`;
+    const url = `${process.env.SCHEMA_URL}/template?schemaId=${schemaid}`;
     let response_list = null;
     try {
       const observable = this.httpService.get(url);
