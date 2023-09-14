@@ -1,6 +1,6 @@
 import { Controller, Get,Post,Res ,Headers} from '@nestjs/common';
 import {ClaimAttestService} from './claimAttest.service';
-import { Response } from 'express';
+import { Response, response } from 'express';
 
 @Controller('v1/claim')
 export class ClaimAttestController{
@@ -12,8 +12,10 @@ export class ClaimAttestController{
     }
     @Post('/sent')
     sent(
-        @Headers('Authorization') token:string){
-        return this.claimAttestService.sent(token);
+        @Headers('Authorization') token:string,
+        @Res() response:Response
+        ){
+        return this.claimAttestService.sent(token,response);
     }
     @Post('/search')
     search(){

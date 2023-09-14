@@ -52,6 +52,7 @@
     "qr-image": "^3.2.0",
     "qrcode": "^1.5.3",
     "reflect-metadata": "^0.1.13",
+    "reload": "^3.2.1",
     "rxjs": "^7.2.0",
     "sharp": "^0.32.2",
     "typeorm": "^0.3.17",
