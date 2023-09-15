@@ -39,7 +39,7 @@ export class CredentialsService {
     private sbrcService: SbrcService,
     private telemetryService: TelemetryService,
     private keycloakService: KeycloakService,
-  ) { }
+  ) {}
 
   //axios call
   md5 = require('md5');
@@ -221,7 +221,7 @@ export class CredentialsService {
   //credentialsSchema
   async credentialsSchema(id: string, response: Response) {
     if (id) {
-      const url = process.env.SCHEMA_URL + '/credential-schema/' + id;
+      const url = process.env.CRED_URL + '/credentials/' + id;
 
       var config = {
         headers: {},
