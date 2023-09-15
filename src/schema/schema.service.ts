@@ -59,7 +59,7 @@ export class SchemaService {
     if (postrequest?.taglist) {
       console.log(postrequest.taglist);
       const getschemalist = await this.credService.schemaList(
-        '[' + postrequest?.taglist + ']',
+        postrequest?.taglist,
       );
       if (getschemalist?.error) {
         return response.status(400).send({
@@ -73,8 +73,8 @@ export class SchemaService {
           let schemalist = [];
           for (let i = 0; i < getschemalist.length; i++) {
             schemalist.push({
-              schema_name: getschemalist[i]?.name,
-              schema_id: getschemalist[i]?.id,
+              schema_name: getschemalist[i]?.schema?.name,
+              schema_id: getschemalist[i]?.schema?.id,
             });
           }
           return response.status(200).send({

@@ -221,7 +221,7 @@ export class CredentialsService {
   //credentialsSchema
   async credentialsSchema(id: string, response: Response) {
     if (id) {
-      const url = process.env.CRED_URL + '/credentials/schema/' + id;
+      const url = process.env.SCHEMA_URL + '/credential-schema/' + id;
 
       var config = {
         headers: {},
@@ -266,7 +266,7 @@ export class CredentialsService {
   //renderTemplateSchema
   async renderTemplateSchema(id: string, response: Response) {
     if (id) {
-      const url = process.env.SCHEMA_URL + '/rendering-template/' + id;
+      const url = process.env.SCHEMA_URL + '/template/' + id;
 
       var config = {
         headers: {},
@@ -311,7 +311,7 @@ export class CredentialsService {
   //credentialsSchemaJSON
   async credentialsSchemaJSON(id: string, response: Response) {
     if (id) {
-      const url = process.env.SCHEMA_URL + '/schema/jsonld?id=' + id;
+      const url = process.env.SCHEMA_URL + '/credential-schema/' + id;
 
       const config: AxiosRequestConfig = {
         headers: {},

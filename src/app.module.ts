@@ -21,7 +21,6 @@ import { UdiseService } from 'src/services/udise/udise.service';
 import { TelemetryService } from './services/telemetry/telemetry.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UsersModule } from './services/users/users.module';
-import { ClaimAttestService } from './claimAttest/claimAttest.service';
 import { ClaimAttestModule } from './claimAttest/claimAttest.module';
 
 @Module({
@@ -62,8 +61,7 @@ import { ClaimAttestModule } from './claimAttest/claimAttest.module';
     AadharService,
     KeycloakService,
     UdiseService,
-    TelemetryService,
-    ClaimAttestService
+    TelemetryService
   ],
 })
 export class AppModule {}
