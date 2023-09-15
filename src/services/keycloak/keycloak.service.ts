@@ -30,23 +30,18 @@ export class KeycloakService {
     let response_text = null;
     try {
       const observable = this.httpService.get(url, config);
-      
-      
+
       const promise = observable.toPromise();
-      
-      
+
       const response = await promise;
-      
-      
+
       //console.log(JSON.stringify(response.data));
       response_text = response.data;
-      
     } catch (error) {
       //console.log(e);
       response_text = { error: error };
     }
-    console.log(response_text);
-    
+
     return response_text;
   }
   async verifyUserToken(token: string) {

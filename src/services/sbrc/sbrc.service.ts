@@ -38,8 +38,6 @@ export class SbrcService {
     const data = JSON.stringify(searchSchema);
 
     const url = process.env.REGISTRY_URL + 'api/v1/' + entityName + '/search';
-    console.log(url);
-    
 
     const config: AxiosRequestConfig = {
       headers: {
@@ -49,17 +47,13 @@ export class SbrcService {
 
     try {
       const observable = this.httpService.post(url, data, config);
-      console.log(observable);
-      
+
       const promise = observable.toPromise();
-      console.log(promise);
-      
+
       const response = await promise;
-      console.log(response);
-      
-      //console.log('sbrcSearch', response.data);
-      console.log("response.data---"+response.data);
-      
+
+      console.log('sbrcSearch', response.data);
+
       return response.data;
     } catch (e) {
       console.log('sbrcSearch error', e.message);
@@ -98,6 +92,8 @@ export class SbrcService {
   // invite entity in registery
   async sbrcInviteEL(inviteSchema, entityName) {
     let data = JSON.stringify(inviteSchema);
+    //console.log(data+" data");
+
     const url = process.env.REGISTRY_URL + 'api/v1/' + entityName + '/invite';
     const config: AxiosRequestConfig = {
       headers: {
@@ -143,10 +139,9 @@ export class SbrcService {
 
   // search entity in registery
   async sbrcSearchEL(entity: string, filter: any) {
-    
     let data = JSON.stringify(filter);
     const url = process.env.REGISTRY_URL + 'api/v1/' + entity + '/search';
-    //console.log(data + ' ' + url);
+    console.log(data + ' ' + url);
     const config: AxiosRequestConfig = {
       headers: {
         'Content-Type': 'application/json',
@@ -163,8 +158,6 @@ export class SbrcService {
       //console.log(e);
       sb_rc_search = { error: e };
     }
-    console.log("inside sbrcSearchEL-----------" +sb_rc_search);
-    
     return sb_rc_search;
   }
 

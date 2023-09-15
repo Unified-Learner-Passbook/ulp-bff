@@ -13,35 +13,32 @@ export class ClaimAttestService {
     private readonly httpService: HttpService,
     private sbrcService: SbrcService,
     private keycloakService: KeycloakService,
-    private credService: CredService
+    private credService: CredService,
   ) {}
+  moment = require('moment');
 
   public test() {
     console.log('Test Function Success');
   }
-  public async sent(token: string,response:Response) {
-    //verification of token
-    // const username = await this.verifyToken(token);
-    // if (username?.error) {
-    //   return 'error1';
-    // } else {
-    //   //retieve data from sbrc
-    //   const search = await this.sbrcService.sbrcSearchEL('Learner', {
-    //     filters: {
-    //       username: {
-    //         eq: username?.preferred_username,
-    //       },
-    //     },
-    //   });
-    // }
-
-
-    if (token) {
+  public async sent(
+    token: string,
+    attest_school_id: string,
+    attest_school_name: string,
+    credential_schema_id: string,
+    credentialSubject: object,
+    response: Response,
+  ) {
+    if (
+      token &&
+      attest_school_id &&
+      attest_school_name &&
+      credential_schema_id &&
+      credentialSubject
+    ) {
       const learnerUsername = await this.keycloakService.getUserTokenAccount(
         token,
       );
-        //console.log(learnerUsername);
-        
+
       if (learnerUsername?.error) {
         return response.status(401).send({
           success: false,
@@ -67,22 +64,18 @@ export class ClaimAttestService {
         ) {
           //login with digilocker
           name = learnerUsername?.attributes?.name[0];
-          dob = learnerUsername?.attributes?.dob[0];
+          dob = await this.convertDate(learnerUsername?.attributes?.dob[0]);
           gender = learnerUsername?.attributes?.gender[0];
         } else {
           //login with mobile and otp
-          const sb_rc_search = await this.sbrcService.sbrcSearchEL(
-            'Learner',
-            {
-              filters: {
-                username: {
-                  eq: learnerUsername?.username,
-                },
+          const sb_rc_search = await this.sbrcService.sbrcSearchEL('Learner', {
+            filters: {
+              username: {
+                eq: learnerUsername?.username,
               },
             },
-          );
-          
-          
+          });
+
           if (sb_rc_search?.error) {
             return response.status(501).send({
               success: false,
@@ -117,71 +110,54 @@ export class ClaimAttestService {
             },
           },
         };
-        
+
         const learnerDetails = await this.sbrcService.sbrcSearch(
           searchSchema,
           'Learner',
         );
-        //console.log('Instructor Details', learnerDetails);
-        console.log(learnerDetails+"learner details-------------");
-        
+
         if (learnerDetails.length == 0) {
           //register in keycloak and then in sunbird rc
           return response.status(400).send({
             success: false,
             status: 'sbrc_instructor_no_found_error',
-            message: 'Instructor Account Not Found. Register and Try Again.',
+            message: 'Learner Account Not Found. Register and Try Again.',
             result: null,
           });
         } else if (learnerDetails.length > 0) {
           //get count
           const osid = learnerDetails[0]?.osid;
-          //count field start
-          let countlog = {};
-          for (let i = 0; i < learnerDetails.length; i++) {
-            let field = learnerDetails[i];
-            let fieldcount = 0;
-            //students_registered
-            //console.log('school_id', school_id);
-            if (field === 'students_registered') {
-              if (osid) {
-                const searchFilter = await this.credService.credSearchFilter({
-                  orgId: osid,
-                });
-                //console.log('searchFilter', searchFilter);
-                try {
-                  if (searchFilter?.error) {
-                  } else {
-                    fieldcount = searchFilter.length;
-                  }
-                } catch (e) {}
-              }
-            }
-            //claims_pending
-            if (field === 'claims_pending') {
-              fieldcount = 0;
-            }
-            //claims_approved
-            if (field === 'claims_approved') {
-              fieldcount = 0;
-            }
-            //claims_rejected
-            if (field === 'claims_rejected') {
-              fieldcount = 0;
-            }
-            countlog[field] = fieldcount;
-          }
+
+          const requestbody = {
+            attest_school_id: attest_school_id,
+            attest_school_name: attest_school_name,
+            credential_schema_id:credential_schema_id,
+            credentialSubject:credentialSubject,
+            claim_by: osid,
+            claim_status:'raise',
+            claim_from: 'Learner',
+            attest_by: '',
+            attest_from: '',
+          };
+
+          let sbrcInviteResponse = await this.sbrcService.sbrcInviteEL(
+            requestbody,
+            'ClaimAttestSchema',
+          );
+
+          console.log('sbrcInvite' + JSON.stringify(sbrcInviteResponse));
+
           return response.status(200).send({
             success: true,
-            status: 'count_success',
-            message: 'Count Success',
-            result: countlog,
-          }); 
+            status: 'claim_attest success',
+            message: 'ClaimAttest Success',
+            result: null,
+          });
         } else {
           return response.status(200).send({
             success: false,
             status: 'sbrc_search_error',
-            message: 'Unable to search Instructor. Try Again.',
+            message: 'Unable to search Learner. Try Again.',
             result: null,
           });
         }
@@ -194,54 +170,24 @@ export class ClaimAttestService {
         result: null,
       });
     }
-
-
-
-
-
-
-
-
-
-
-
-    console.log('Sent Function Success');
   }
   public search() {
+    
     console.log('Search Function Success');
   }
   public attest() {
     console.log('Attest Function Success');
   }
-  async verifyToken(token: string) {
-    if (token != null) {
-      const url =
-        process.env.KEYCLOAK_URL +
-        'realms/' +
-        process.env.REALM_ID +
-        '/protocol/openid-connect/userinfo';
-
-      console.log(url);
-
-      const config: AxiosRequestConfig = {
-        headers: {
-          Authorization: token,
-        },
-      };
-      let response_text = null;
-      try {
-        const observable = this.httpService.get(url, config);
-        const promise = observable.toPromise();
-        const response = await promise;
-        //console.log(JSON.stringify(response.data));
-        response_text = response.data;
-      } catch (error) {
-        //console.log(e);
-        response_text = { error: error };
-      }
-      console.log(response_text);
-
-      return response_text;
+  //helper function
+  //get convert date and repalce character from string
+  async convertDate(datetime) {
+    if (!datetime) {
+      return '';
     }
+    let date_string = datetime.substring(0, 10);
+    const datetest = this.moment(date_string, 'DD/MM/YYYY').format(
+      'DD/MM/YYYY',
+    );
+    return datetest;
   }
 }
