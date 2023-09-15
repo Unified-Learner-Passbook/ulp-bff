@@ -92,6 +92,8 @@ export class SbrcService {
   // invite entity in registery
   async sbrcInviteEL(inviteSchema, entityName) {
     let data = JSON.stringify(inviteSchema);
+    //console.log(data+" data");
+
     const url = process.env.REGISTRY_URL + 'api/v1/' + entityName + '/invite';
     const config: AxiosRequestConfig = {
       headers: {
@@ -139,7 +141,7 @@ export class SbrcService {
   async sbrcSearchEL(entity: string, filter: any) {
     let data = JSON.stringify(filter);
     const url = process.env.REGISTRY_URL + 'api/v1/' + entity + '/search';
-    //console.log(data + ' ' + url);
+    console.log(data + ' ' + url);
     const config: AxiosRequestConfig = {
       headers: {
         'Content-Type': 'application/json',

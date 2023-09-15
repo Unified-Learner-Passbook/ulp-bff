@@ -21,6 +21,7 @@ import { UdiseService } from 'src/services/udise/udise.service';
 import { TelemetryService } from './services/telemetry/telemetry.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UsersModule } from './services/users/users.module';
+import { ClaimAttestModule } from './claimAttest/claimAttest.module';
 
 @Module({
   imports: [
@@ -52,6 +53,7 @@ import { UsersModule } from './services/users/users.module';
     //   logging: true,
     // }),
     //UsersModule,
+    ClaimAttestModule
   ],
   providers: [
     CredService,
@@ -59,7 +61,7 @@ import { UsersModule } from './services/users/users.module';
     AadharService,
     KeycloakService,
     UdiseService,
-    TelemetryService,
+    TelemetryService
   ],
 })
 export class AppModule {}
