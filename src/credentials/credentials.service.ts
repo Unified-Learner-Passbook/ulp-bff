@@ -224,7 +224,7 @@ export class CredentialsService {
       const url = process.env.CRED_URL + '/credentials/' + id;
 
       var config = {
-        headers: {},
+        headers: { Accept: 'application/json' },
       };
       let response_text = null;
 
@@ -269,7 +269,7 @@ export class CredentialsService {
       const url = process.env.SCHEMA_URL + '/template/' + id;
 
       var config = {
-        headers: {},
+        headers: { Accept: 'application/json' },
       };
       let response_text = null;
 
@@ -314,7 +314,7 @@ export class CredentialsService {
       const url = process.env.SCHEMA_URL + '/credential-schema/' + id;
 
       const config: AxiosRequestConfig = {
-        headers: {},
+        headers: { Accept: 'application/json' },
       };
       let response_text = null;
 
@@ -529,7 +529,7 @@ export class CredentialsService {
       const url = process.env.CRED_URL + '/credentials/' + id + '/verify';
 
       var config = {
-        headers: {},
+        headers: { Accept: 'application/json' },
       };
       let response_text = null;
 
