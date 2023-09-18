@@ -6,6 +6,7 @@ import { SbrcService } from 'src/services/sbrc/sbrc.service';
 import { KeycloakService } from 'src/services/keycloak/keycloak.service';
 import { CredService } from 'src/services/cred/cred.service';
 import { Response, Request } from 'express';
+import { log } from 'console';
 
 @Injectable()
 export class ClaimAttestService {
@@ -131,10 +132,10 @@ export class ClaimAttestService {
           const requestbody = {
             attest_school_id: attest_school_id,
             attest_school_name: attest_school_name,
-            credential_schema_id:credential_schema_id,
-            credentialSubject:credentialSubject,
+            credential_schema_id: credential_schema_id,
+            credentialSubject: credentialSubject,
             claim_by: osid,
-            claim_status:'raise',
+            claim_status: 'raise',
             claim_from: 'Learner',
             attest_by: '',
             attest_from: '',
@@ -144,8 +145,6 @@ export class ClaimAttestService {
             requestbody,
             'ClaimAttestSchema',
           );
-
-          console.log('sbrcInvite' + JSON.stringify(sbrcInviteResponse));
 
           return response.status(200).send({
             success: true,
@@ -171,10 +170,138 @@ export class ClaimAttestService {
       });
     }
   }
-  public search() {
-    
+
+  public async search(token: string, response) {
+    if (token) {
+      const searchUser = await this.keycloakService.getUserTokenAccount(token);
+
+      if (searchUser?.error) {
+        return response.status(401).send({
+          success: false,
+          status: 'keycloak_token_bad_request',
+          message: 'You do not have access for this request.',
+          result: null,
+        });
+      } else if (!searchUser?.username) {
+        return response.status(401).send({
+          success: false,
+          status: 'keycloak_token_error',
+          message: 'Your Login Session Expired.',
+          result: null,
+        });
+      } else {
+        let name = '';
+        let dob = '';
+        let gender = '';
+        if (
+          searchUser?.attributes?.gender &&
+          searchUser?.attributes?.dob &&
+          searchUser?.attributes?.name
+        ) {
+          //login with digilocker
+          name = searchUser?.attributes?.name[0];
+          dob = await this.convertDate(searchUser?.attributes?.dob[0]);
+          gender = searchUser?.attributes?.gender[0];
+        } else {
+          //login with mobile and otp
+          const sb_rc_search = await this.sbrcService.sbrcSearchEL(
+            'Instructor',
+            {
+              filters: {
+                username: {
+                  eq: searchUser?.username,
+                },
+              },
+            },
+          );
+
+          if (sb_rc_search?.error) {
+            return response.status(501).send({
+              success: false,
+              status: 'sb_rc_search_error',
+              message: 'System Search Error ! Please try again.',
+              result: sb_rc_search?.error.message,
+            });
+          } else if (sb_rc_search.length === 0) {
+            return response.status(404).send({
+              success: false,
+              status: 'sb_rc_search_no_found',
+              message: 'Data Not Found in System.',
+              result: null,
+            });
+          } else {
+            name = sb_rc_search[0].name;
+            dob = sb_rc_search[0].dob;
+            gender = sb_rc_search[0].gender;
+          }
+        }
+
+        //search count
+        let searchSchema = {
+          filters: {
+            name: {
+              eq: name,
+            },
+            dob: {
+              eq: dob,
+            },
+            gender: {
+              eq: gender,
+            },
+          },
+        };
+
+        const userDetails = await this.sbrcService.sbrcSearch(
+          searchSchema,
+          'Instructor',
+        );
+        if (userDetails[0]?.school_id) {
+          let attest_school_id = userDetails[0].school_id;
+
+          let requestbody = {
+            filters: {
+              attest_school_id: {
+                eq: attest_school_id,
+              },
+              claim_status: {
+                eq: 'raise',
+              },
+            },
+          };
+
+          const sbrcSearch = await this.sbrcService.sbrcSearchEL(
+            'ClaimAttestSchema',
+            requestbody,
+          );
+          if (sbrcSearch.length > 0) {
+            return response.status(200).send({
+              success: true,
+              status: 'search_success',
+              message: 'Search Success',
+              result: sbrcSearch,
+            });
+          } else {
+            return response.status(200).send({
+              success: true,
+              status: 'search_success',
+              message: 'Data not present in the system.',
+              result: sbrcSearch,
+            });
+          }
+        } else {
+          return response.status(404).send({
+            success: false,
+            status: 'search_fail',
+            message: 'Data not found in the system.',
+            result: userDetails[0]?.school_id,
+          });
+        }
+      }
+    }
+
     console.log('Search Function Success');
   }
+
   public attest() {
     console.log('Attest Function Success');
   }

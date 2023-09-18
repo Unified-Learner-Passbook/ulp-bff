@@ -27,9 +27,11 @@ export class ClaimAttestController{
             credentialSubject,
             response);
     }
-    @Post('/search')
-    search(){
-        return this.claimAttestService.search();
+    @Get('/search')
+    search(@Headers('Authorization') token:string,
+    @Res()response:Response
+    ){
+        return this.claimAttestService.search(token,response);
     }
     @Post('/attest')
     attest(){
