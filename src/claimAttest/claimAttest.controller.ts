@@ -1,4 +1,4 @@
-import { Controller, Get,Post,Res ,Headers,Body} from '@nestjs/common';
+import { Controller, Get,Post,Res ,Headers,Body, Put, Head} from '@nestjs/common';
 import {ClaimAttestService} from './claimAttest.service';
 import { Response, response } from 'express';
 
@@ -7,11 +7,11 @@ export class ClaimAttestController{
     constructor(private readonly claimAttestService: ClaimAttestService){}
 
     @Get('/test')
-    test(){
+    async test(){
         return this.claimAttestService.test();
     }
     @Post('/sent')
-    sent(
+    async sent(
         @Headers('Authorization') token:string,
         @Body('attest_school_id') attest_school_id:string,
         @Body('attest_school_name')attest_school_name:string, 
@@ -27,12 +27,19 @@ export class ClaimAttestController{
             credentialSubject,
             response);
     }
-    @Post('/search')
-    search(){
-        return this.claimAttestService.search();
+    @Get('/search')
+    async search(@Headers('Authorization') token:string,
+    @Res()response:Response
+    ){
+        return this.claimAttestService.search(token,response);
     }
-    @Post('/attest')
-    attest(){
-        return this.claimAttestService.attest();
+    @Put('/attest')
+    async attest(
+        @Headers('Authorization') token:string,
+        @Body('claim_status')claim_status:string,
+        @Body('claim_os_id') claim_os_id:string,
+        @Res()response:Response
+    ){
+        return this.claimAttestService.attest(token,claim_status,claim_os_id,response);
     }
 }
