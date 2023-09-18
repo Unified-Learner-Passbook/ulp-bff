@@ -289,11 +289,11 @@ export class ClaimAttestService {
             });
           }
         } else {
-          return response.status(404).send({
+          return response.status(400).send({
             success: false,
             status: 'search_fail',
-            message: 'Data not found in the system.',
-            result: userDetails[0]?.school_id,
+            message: 'school id not found in instructor account.',
+            result: null,
           });
         }
       }
@@ -302,7 +302,9 @@ export class ClaimAttestService {
     console.log('Search Function Success');
   }
 
-  public attest() {
+  public attest(token:string,claim_status:string,claim_os_id:string) {
+
+
     console.log('Attest Function Success');
   }
   //helper function
