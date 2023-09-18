@@ -151,6 +151,7 @@ export class CredentialsService {
         });
       } else {
         const cred_revoke = await this.credService.credRevoke(credId);
+        console.log('cred_revoke', cred_revoke);
         if (cred_revoke?.status === 'REVOKED') {
           return response.status(200).send({
             success: true,

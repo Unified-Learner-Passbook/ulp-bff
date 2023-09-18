@@ -283,7 +283,7 @@ export class CredService {
       subject: subjectFilter,
     });
 
-    const url = process.env.CRED_URL + 'credentials/search';
+    const url = process.env.CRED_URL + '/credentials/search';
 
     const config: AxiosRequestConfig = {
       headers: {
@@ -308,7 +308,7 @@ export class CredService {
   //revoke cred
   async credRevoke(credId: string) {
 
-    const url = process.env.CRED_URL + 'credentials/'+credId;
+    const url = process.env.CRED_URL + '/credentials/'+credId;
 
     const config: AxiosRequestConfig = {
       headers: {
