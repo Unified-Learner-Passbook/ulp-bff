@@ -37,8 +37,9 @@ export class ClaimAttestController{
     async attest(
         @Headers('Authorization') token:string,
         @Body('claim_status')claim_status:string,
-        @Body('claim_os_id') claim_os_id:string
+        @Body('claim_os_id') claim_os_id:string,
+        @Res()response:Response
     ){
-        return this.claimAttestService.attest(token,claim_status,claim_os_id);
+        return this.claimAttestService.attest(token,claim_status,claim_os_id,response);
     }
 }

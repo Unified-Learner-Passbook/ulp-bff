@@ -173,16 +173,16 @@ export class ClaimAttestService {
 
   public async search(token: string, response) {
     if (token) {
-      const searchUser = await this.keycloakService.getUserTokenAccount(token);
+      const instructorSearch = await this.keycloakService.getUserTokenAccount(token);
 
-      if (searchUser?.error) {
+      if (instructorSearch?.error) {
         return response.status(401).send({
           success: false,
           status: 'keycloak_token_bad_request',
           message: 'You do not have access for this request.',
           result: null,
         });
-      } else if (!searchUser?.username) {
+      } else if (!instructorSearch?.username) {
         return response.status(401).send({
           success: false,
           status: 'keycloak_token_error',
@@ -194,14 +194,14 @@ export class ClaimAttestService {
         let dob = '';
         let gender = '';
         if (
-          searchUser?.attributes?.gender &&
-          searchUser?.attributes?.dob &&
-          searchUser?.attributes?.name
+          instructorSearch?.attributes?.gender &&
+          instructorSearch?.attributes?.dob &&
+          instructorSearch?.attributes?.name
         ) {
           //login with digilocker
-          name = searchUser?.attributes?.name[0];
-          dob = await this.convertDate(searchUser?.attributes?.dob[0]);
-          gender = searchUser?.attributes?.gender[0];
+          name = instructorSearch?.attributes?.name[0];
+          dob = await this.convertDate(instructorSearch?.attributes?.dob[0]);
+          gender = instructorSearch?.attributes?.gender[0];
         } else {
           //login with mobile and otp
           const sb_rc_search = await this.sbrcService.sbrcSearchEL(
@@ -209,7 +209,7 @@ export class ClaimAttestService {
             {
               filters: {
                 username: {
-                  eq: searchUser?.username,
+                  eq: instructorSearch?.username,
                 },
               },
             },
@@ -302,8 +302,8 @@ export class ClaimAttestService {
     console.log('Search Function Success');
   }
 
-  public attest(token:string,claim_status:string,claim_os_id:string) {
-
+  public async attest(token:string,claim_status:string,claim_os_id:string,response) {
+    
 
     console.log('Attest Function Success');
   }
