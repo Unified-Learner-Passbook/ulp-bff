@@ -305,4 +305,28 @@ export class CredService {
 
     return cred_search;
   }
+  //revoke cred
+  async credRevoke(credId: string) {
+
+    const url = process.env.CRED_URL + 'credentials/'+credId;
+
+    const config: AxiosRequestConfig = {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    };
+    let cred_revoke = null;
+    try {
+      const observable = this.httpService.delete(url, config);
+      const promise = observable.toPromise();
+      const response = await promise;
+      //console.log(JSON.stringify(response.data));
+      cred_revoke = response.data;
+    } catch (e) {
+      //console.log(e);
+      cred_revoke = { error: e };
+    }
+
+    return cred_revoke;
+  }
 }
