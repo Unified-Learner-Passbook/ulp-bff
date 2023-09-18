@@ -112,12 +112,12 @@ export class ClaimAttestService {
           },
         };
 
-        const learnerDetails = await this.sbrcService.sbrcSearch(
+        const instructorDetails = await this.sbrcService.sbrcSearch(
           searchSchema,
           'Learner',
         );
 
-        if (learnerDetails.length == 0) {
+        if (instructorDetails.length == 0) {
           //register in keycloak and then in sunbird rc
           return response.status(400).send({
             success: false,
@@ -125,9 +125,9 @@ export class ClaimAttestService {
             message: 'Learner Account Not Found. Register and Try Again.',
             result: null,
           });
-        } else if (learnerDetails.length > 0) {
+        } else if (instructorDetails.length > 0) {
           //get count
-          const osid = learnerDetails[0]?.osid;
+          const osid = instructorDetails[0]?.osid;
 
           const requestbody = {
             attest_school_id: attest_school_id,
@@ -173,7 +173,9 @@ export class ClaimAttestService {
 
   public async search(token: string, response) {
     if (token) {
-      const instructorSearch = await this.keycloakService.getUserTokenAccount(token);
+      const instructorSearch = await this.keycloakService.getUserTokenAccount(
+        token,
+      );
 
       if (instructorSearch?.error) {
         return response.status(401).send({
@@ -302,8 +304,155 @@ export class ClaimAttestService {
     console.log('Search Function Success');
   }
 
-  public async attest(token:string,claim_status:string,claim_os_id:string,response) {
-    
+  public async attest(
+    token: string,
+    claim_status: string,
+    claim_os_id: string,
+    credential_schema_id: string,
+    credentialSubject: object,
+    issuanceDate: string,
+    expirationDate: string,
+    response,
+  ) {
+    if (token && claim_status && claim_os_id && credential_schema_id && credentialSubject && issuanceDate && expirationDate) {
+      const instructorUsername = await this.keycloakService.getUserTokenAccount(
+        token,
+      );
+      if (instructorUsername?.error) {
+        return response.status(401).send({
+          success: false,
+          status: 'keycloak_token_bad_request',
+          message: 'You do not have access for this request.',
+          result: null,
+        });
+      } else if (!instructorUsername?.username) {
+        return response.status(401).send({
+          success: false,
+          status: 'keycloak_token_error',
+          message: 'Your Login Session Expired.',
+          result: null,
+        });
+      } else {
+        let name = '';
+        let dob = '';
+        let gender = '';
+        if (
+          instructorUsername?.attributes?.gender &&
+          instructorUsername?.attributes?.dob &&
+          instructorUsername?.attributes?.name
+        ) {
+          //login with digilocker
+          name = instructorUsername?.attributes?.name[0];
+          dob = await this.convertDate(instructorUsername?.attributes?.dob[0]);
+          gender = instructorUsername?.attributes?.gender[0];
+        } else {
+          //login with mobile and otp
+          const sb_rc_search = await this.sbrcService.sbrcSearchEL(
+            'Instructor',
+            {
+              filters: {
+                username: {
+                  eq: instructorUsername?.username,
+                },
+              },
+            },
+          );
+          if (sb_rc_search?.error) {
+            return response.status(501).send({
+              success: false,
+              status: 'sb_rc_search_error',
+              message: 'System Search Error ! Please try again.',
+              result: sb_rc_search?.error.message,
+            });
+          } else if (sb_rc_search.length === 0) {
+            return response.status(404).send({
+              success: false,
+              status: 'sb_rc_search_no_found',
+              message: 'Data Not Found in System.',
+              result: null,
+            });
+          } else {
+            name = sb_rc_search[0].name;
+            dob = sb_rc_search[0].dob;
+            gender = sb_rc_search[0].gender;
+          }
+        }
+        //search count
+        let searchSchema = {
+          filters: {
+            name: {
+              eq: name,
+            },
+            dob: {
+              eq: dob,
+            },
+            gender: {
+              eq: gender,
+            },
+          },
+        };
+        const instructorDetails = await this.sbrcService.sbrcSearch(
+          searchSchema,
+          'Instructor',
+        );
+        if (instructorDetails.length == 0) {
+          //register in keycloak and then in sunbird rc
+          return response.status(400).send({
+            success: false,
+            status: 'sbrc_instructor_no_found_error',
+            message: 'Instructor Account Not Found. Register and Try Again.',
+            result: null,
+          });
+        } else if (instructorDetails.length > 0) {
+          if (claim_status == 'approved') {
+            const issuer_did = instructorDetails[0].issuer_did;
+
+            let payload = {
+              issuerId: issuer_did,
+              issuanceDate: issuanceDate,
+              expirationDate: expirationDate,
+              credentialSubject: credentialSubject,
+              credSchema: {
+                id: credential_schema_id,
+              },
+            };
+            const issueCredential = await this.credService.issueCredentialsEL(
+              payload,
+            );
+            console.log(issueCredential);
+          } else if (claim_status == 'rejected') {
+            //get count
+            const osid = instructorDetails[0]?.osid;
+
+            let requestBody = {
+              attest_by: osid,
+              claim_status: claim_status,
+              attest_from: 'Instructor',
+            };
+            const updateSearch = await this.sbrcService.sbrcUpdateEL(
+              requestBody,
+              'ClaimAttestSchema',
+              claim_os_id,
+            );
+            if (updateSearch?.error) {
+              return response.status(400).send({
+                success: false,
+                status: 'claim_api_unsuccessful',
+                message: 'Claim API Unsuccessful',
+                result: updateSearch,
+              });
+            }
+          }
+        }
+      }
+    } else {
+      return response.status(400).send({
+        success: false,
+        status: 'invalid_request',
+        message: 'Invalid Request. Not received All Parameters.',
+        result: null,
+      });
+    }
 
     console.log('Attest Function Success');
   }
