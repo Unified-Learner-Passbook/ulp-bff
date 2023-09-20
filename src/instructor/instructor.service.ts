@@ -40,6 +40,7 @@ export class InstructorService {
     kyc_aadhaar_token: string,
     school_name: string,
     school_id: string,
+    school_mobile: string,
     response: Response,
   ) {
     if (
@@ -52,6 +53,7 @@ export class InstructorService {
       email &&
       kyc_aadhaar_token &&
       school_name &&
+      school_mobile &&
       school_id
     ) {
       // find student
@@ -111,6 +113,7 @@ export class InstructorService {
               issuer_did: issuer_did,
               school_name: school_name,
               school_id: school_id,
+              school_mobile: school_mobile,
               email: email,
             };
             console.log('inviteSchema', inviteSchema);
@@ -291,6 +294,7 @@ export class InstructorService {
               issuer_did: issuer_did,
               school_name: '',
               school_id: '',
+              school_mobile: '',
               email: email,
             };
             console.log('inviteSchema', inviteSchema);
@@ -428,7 +432,9 @@ export class InstructorService {
         ) {
           //login with digilocker
           aadhaar_name = instructorUsername?.attributes?.name[0];
-          aadhaar_dob = await this.convertDate(instructorUsername?.attributes?.dob[0]);
+          aadhaar_dob = await this.convertDate(
+            instructorUsername?.attributes?.dob[0],
+          );
           aadhaar_gender = instructorUsername?.attributes?.gender[0];
         } else {
           //login with mobile and otp
@@ -576,8 +582,9 @@ export class InstructorService {
     response: Response,
     school_name: string,
     school_id: string,
+    school_mobile: string,
   ) {
-    if (token && school_name && school_id) {
+    if (token && school_name && school_id && school_mobile) {
       const instructorUsername = await this.keycloakService.getUserTokenAccount(
         token,
       );
@@ -672,7 +679,11 @@ export class InstructorService {
           //update kyc aadhar token
           //update username
           let updateRes = await this.sbrcService.sbrcUpdate(
-            { school_name: school_name, school_id: school_id },
+            {
+              school_name: school_name,
+              school_id: school_id,
+              school_mobile: school_mobile,
+            },
             'Instructor',
             instructorDetails[0].osid,
           );
