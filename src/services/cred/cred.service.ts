@@ -207,7 +207,6 @@ export class CredService {
           'https://www.w3.org/2018/credentials/v1',
           'https://www.w3.org/2018/credentials/examples/v1',
         ],
-        id: 'did:ulp:b4a191af-d86e-453c-9d0e-dd4771067235',
         type: ['VerifiableCredential', 'UniversityDegreeCredential'],
         issuer: `${payload.issuerId}`,
         issuanceDate: payload.issuanceDate,
@@ -221,6 +220,7 @@ export class CredService {
         },
       },
       credentialSchemaId: payload.credSchema.id,
+      credentialSchemaVersion: '1.0.0',
       tags: ['tag1', 'tag2', 'tag3'],
     });
     const url = `${process.env.CRED_URL}/credentials/issue`;
@@ -283,7 +283,7 @@ export class CredService {
       subject: subjectFilter,
     });
 
-    const url = process.env.CRED_URL + 'credentials/search';
+    const url = process.env.CRED_URL + '/credentials/search';
 
     const config: AxiosRequestConfig = {
       headers: {
@@ -304,5 +304,29 @@ export class CredService {
     }
 
     return cred_search;
+  }
+  //revoke cred
+  async credRevoke(credId: string) {
+
+    const url = process.env.CRED_URL + '/credentials/'+credId;
+
+    const config: AxiosRequestConfig = {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    };
+    let cred_revoke = null;
+    try {
+      const observable = this.httpService.delete(url, config);
+      const promise = observable.toPromise();
+      const response = await promise;
+      //console.log(JSON.stringify(response.data));
+      cred_revoke = response.data;
+    } catch (e) {
+      //console.log(e);
+      cred_revoke = { error: e };
+    }
+
+    return cred_revoke;
   }
 }

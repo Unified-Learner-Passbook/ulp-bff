@@ -8,6 +8,7 @@ import {
   Res,
   Headers,
   StreamableFile,
+  Delete,
 } from '@nestjs/common';
 import { CredentialsService } from './credentials.service';
 import { Response } from 'express';
@@ -33,6 +34,16 @@ export class CredentialsController {
   }
 
   //new credentials list schema id schema template
+  //revoke credentials
+  @Delete('/revoke/:id')
+  async credentialsRevoke(
+    @Headers('Authorization') auth: string,
+    @Param('id') credId: string,
+    @Res() response: Response,
+  ) {
+    const jwt = auth.replace('Bearer ', '');
+    return this.credentialsService.credentialsRevoke(jwt, credId, response);
+  }
   //credentialsSearch
   @Post('/search/:type')
   async credentialsSearch(
