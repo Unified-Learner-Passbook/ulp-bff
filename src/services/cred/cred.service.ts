@@ -207,7 +207,6 @@ export class CredService {
           'https://www.w3.org/2018/credentials/v1',
           'https://www.w3.org/2018/credentials/examples/v1',
         ],
-        id: 'did:ulp:b4a191af-d86e-453c-9d0e-dd4771067235',
         type: ['VerifiableCredential', 'UniversityDegreeCredential'],
         issuer: `${payload.issuerId}`,
         issuanceDate: payload.issuanceDate,
@@ -221,6 +220,7 @@ export class CredService {
         },
       },
       credentialSchemaId: payload.credSchema.id,
+      credentialSchemaVersion: '1.0.0',
       tags: ['tag1', 'tag2', 'tag3'],
     });
     const url = `${process.env.CRED_URL}/credentials/issue`;
