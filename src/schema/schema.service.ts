@@ -194,11 +194,12 @@ export class SchemaService {
           let required_fileds = getschema?.schema?.required;
           let learner_schema_field =
             process.env.LEARNER_SCHEMA_FIELD.split(' ');
-          for (let i = 0; i < learner_schema_field.length; i++) {
+          //include register_required into required
+          /*for (let i = 0; i < learner_schema_field.length; i++) {
             if (!required_fileds.includes(learner_schema_field[i])) {
               required_fileds.push(learner_schema_field[i]);
             }
-          }
+          }*/
           let allfields = Object.keys(schema_fields);
           let optional_fileds = [];
           for (let i = 0; i < allfields.length; i++) {
@@ -222,6 +223,7 @@ export class SchemaService {
             schemaid: getschema?.schema?.$id,
             required: required_fileds,
             optional: optional_fileds,
+            register_required:learner_schema_field,
           };
 
           return response.status(200).send({
