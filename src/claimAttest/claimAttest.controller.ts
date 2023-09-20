@@ -49,8 +49,6 @@ export class ClaimAttestController {
     @Headers('Authorization') token: string,
     @Body('claim_status') claim_status: string,
     @Body('claim_os_id') claim_os_id: string,
-    @Body('credential_schema_id') credential_schema_id: string,
-    @Body('credentialSubject') credentialSubject: object,
     @Body('issuanceDate') issuanceDate: string,
     @Body('expirationDate') expirationDate: string,
 
@@ -60,8 +58,6 @@ export class ClaimAttestController {
       token,
       claim_status,
       claim_os_id,
-      credential_schema_id,
-      credentialSubject,
       issuanceDate,
       expirationDate,
       response,
