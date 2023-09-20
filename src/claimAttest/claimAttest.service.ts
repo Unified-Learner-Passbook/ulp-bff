@@ -128,12 +128,14 @@ export class ClaimAttestService {
         } else if (learnerDetails.length > 0) {
           //get count
           const osid = learnerDetails[0]?.osid;
+          let credentialSubjectJson = new Object(credentialSubject);
+          credentialSubjectJson['id'] = osid;
 
           const requestbody = {
             attest_school_id: attest_school_id,
             attest_school_name: attest_school_name,
             credential_schema_id: credential_schema_id,
-            credentialSubject: credentialSubject,
+            credentialSubject: credentialSubjectJson,
             claim_by: osid,
             claim_status: 'raise',
             claim_from: 'Learner',
@@ -173,7 +175,9 @@ export class ClaimAttestService {
 
   public async search(token: string, response) {
     if (token) {
-      const instructorSearch = await this.keycloakService.getUserTokenAccount(token);
+      const instructorSearch = await this.keycloakService.getUserTokenAccount(
+        token,
+      );
 
       if (instructorSearch?.error) {
         return response.status(401).send({
@@ -302,11 +306,226 @@ export class ClaimAttestService {
     console.log('Search Function Success');
   }
 
-  public async attest(token:string,claim_status:string,claim_os_id:string,response) {
-    
+  public async attest(
+    token: string,
+    claim_status: string,
+    claim_os_id: string,
+    issuanceDate: string,
+    expirationDate: string,
+    response,
+  ) {
+    if (
+      token &&
+      claim_status &&
+      claim_os_id &&
+      issuanceDate &&
+      expirationDate
+    ) {
+      const sbrcSearchClaim = await this.sbrcService.sbrcSearchEL(
+        'ClaimAttestSchema',
+        {
+          filters: {
+            osid: {
+              eq: claim_os_id,
+            },
+          },
+        },
+      );
 
+      if (
+        sbrcSearchClaim[0]?.credential_schema_id &&
+        sbrcSearchClaim[0]?.credentialSubject
+      ) {
+        const credential_schema_id = sbrcSearchClaim[0].credential_schema_id;
+        const credentialSubject = sbrcSearchClaim[0].credentialSubject;
+        const instructorUsername =
+          await this.keycloakService.getUserTokenAccount(token);
+        if (instructorUsername?.error) {
+          return response.status(401).send({
+            success: false,
+            status: 'keycloak_token_bad_request',
+            message: 'You do not have access for this request.',
+            result: null,
+          });
+        } else if (!instructorUsername?.username) {
+          return response.status(401).send({
+            success: false,
+            status: 'keycloak_token_error',
+            message: 'Your Login Session Expired.',
+            result: null,
+          });
+        } else {
+          let name = '';
+          let dob = '';
+          let gender = '';
+          if (
+            instructorUsername?.attributes?.gender &&
+            instructorUsername?.attributes?.dob &&
+            instructorUsername?.attributes?.name
+          ) {
+            //login with digilocker
+            name = instructorUsername?.attributes?.name[0];
+            dob = await this.convertDate(
+              instructorUsername?.attributes?.dob[0],
+            );
+            gender = instructorUsername?.attributes?.gender[0];
+          } else {
+            //login with mobile and otp
+            const sb_rc_search = await this.sbrcService.sbrcSearchEL(
+              'Instructor',
+              {
+                filters: {
+                  username: {
+                    eq: instructorUsername?.username,
+                  },
+                },
+              },
+            );
+            if (sb_rc_search?.error) {
+              return response.status(501).send({
+                success: false,
+                status: 'sb_rc_search_error',
+                message: 'System Search Error ! Please try again.',
+                result: sb_rc_search?.error.message,
+              });
+            } else if (sb_rc_search.length === 0) {
+              return response.status(404).send({
+                success: false,
+                status: 'sb_rc_search_no_found',
+                message: 'Data Not Found in System.',
+                result: null,
+              });
+            } else {
+              name = sb_rc_search[0].name;
+              dob = sb_rc_search[0].dob;
+              gender = sb_rc_search[0].gender;
+            }
+          }
+          //search count
+          let searchSchema = {
+            filters: {
+              name: {
+                eq: name,
+              },
+              dob: {
+                eq: dob,
+              },
+              gender: {
+                eq: gender,
+              },
+            },
+          };
+          const instructorDetails = await this.sbrcService.sbrcSearch(
+            searchSchema,
+            'Instructor',
+          );
+          if (instructorDetails.length == 0) {
+            //register in keycloak and then in sunbird rc
+            return response.status(400).send({
+              success: false,
+              status: 'sbrc_instructor_no_found_error',
+              message: 'Instructor Account Not Found. Register and Try Again.',
+              result: null,
+            });
+          } else if (instructorDetails.length > 0) {
+            if (claim_status == 'approved') {
+              const issuer_did = instructorDetails[0].issuer_did;
+
+              let payload = {
+                issuerId: issuer_did,
+                issuanceDate: issuanceDate,
+                expirationDate: expirationDate,
+                credentialSubject: credentialSubject,
+                credSchema: {
+                  id: credential_schema_id,
+                },
+              };
+              const issueCredential = await this.credService.issueCredentialsEL(
+                payload,
+              );
+              if (issueCredential?.error) {
+                return response.status(400).send({
+                  success: false,
+                  status: 'issue_credentials_failed',
+                  message: 'Issue Credentials Failed.',
+                  result: null,
+                });
+              } else {
+                const osid = instructorDetails[0]?.osid;
+                const updateStatusPayload = {
+                  claim_status: claim_status,
+                  attest_by: osid,
+                  attest_from: 'Instructor',
+                };
+                const updateStatus = await this.sbrcService.sbrcUpdateEL(
+                  updateStatusPayload,
+                  'ClaimAttestSchema',
+                  claim_os_id,
+                );
+                if (updateStatus?.error) {
+                  return response.status(400).send({
+                    success: false,
+                    status: 'claim_api_unsuccessful',
+                    message: 'Claim API Unsuccessful',
+                    result: updateStatus,
+                  });
+                } else {
+                  return response.status(200).send({
+                    success: true,
+                    status: 'claim_api_successful',
+                    message: 'Claim API Successful',
+                    result: updateStatus,
+                  });
+                }
+              }
+            } else if (claim_status == 'rejected') {
+              const osid = instructorDetails[0]?.osid;
+              let requestBody = {
+                attest_by: osid,
+                claim_status: claim_status,
+                attest_from: 'Instructor',
+              };
+              const updateSearch = await this.sbrcService.sbrcUpdateEL(
+                requestBody,
+                'ClaimAttestSchema',
+                claim_os_id,
+              );
+              if (updateSearch?.error) {
+                return response.status(400).send({
+                  success: false,
+                  status: 'claim_api_unsuccessful',
+                  message: 'Claim API Unsuccessful',
+                  result: updateSearch,
+                });
+              } else {
+                response.status(200).send({
+                  success: true,
+                  status: 'reject_claim_successful',
+                  message: 'Reject Claim Successful',
+                });
+              }
+            }
+          }
+        }
+      } else {
+        return response.status(400).send({
+          success: false,
+          status: 'claim_request_not_found',
+          message: 'Claim request not found.',
+          result: null,
+        });
+      }
+    } else {
+      return response.status(400).send({
+        success: false,
+        status: 'invalid_request',
+        message: 'Invalid Request. Not received All Parameters.',
+        result: null,
+      });
+    }
     console.log('Attest Function Success');
   }
+
   //helper function
   //get convert date and repalce character from string
   async convertDate(datetime) {
