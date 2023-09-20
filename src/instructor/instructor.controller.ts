@@ -37,6 +37,7 @@ export class InstructorController {
     @Body('kyc_aadhaar_token') kyc_aadhaar_token: string,
     @Body('school_name') school_name: string,
     @Body('school_id') school_id: string,
+    @Body('school_mobile') school_mobile: string,
     @Res() response: Response,
   ) {
     return this.instructorService.registerQ1Instructor(
@@ -50,6 +51,7 @@ export class InstructorController {
       kyc_aadhaar_token,
       school_name,
       school_id,
+      school_mobile,
       response,
     );
   }
@@ -98,6 +100,7 @@ export class InstructorController {
     @Res() response: Response,
     @Body('school_name') school_name: string,
     @Body('school_id') school_id: string,
+    @Body('school_mobile') school_mobile: string,
   ) {
     const jwt = auth.replace('Bearer ', '');
     return this.instructorService.getUDISEUpdate(
@@ -105,6 +108,7 @@ export class InstructorController {
       response,
       school_name,
       school_id,
+      school_mobile
     );
   }
   //get details
