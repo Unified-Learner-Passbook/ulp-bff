@@ -21,15 +21,16 @@ export class ClaimAttestController {
   }
   @Post('/sent')
   async sent(
-    @Headers('Authorization') token: string,
+    @Headers('Authorization') auth: string,
     @Body('attest_school_id') attest_school_id: string,
     @Body('attest_school_name') attest_school_name: string,
     @Body('credential_schema_id') credential_schema_id: string,
     @Body('credentialSubject') credentialSubject: object,
     @Res() response: Response,
   ) {
+    const jwt = auth.replace('Bearer ', '');
     return this.claimAttestService.sent(
-      token,
+      jwt,
       attest_school_id,
       attest_school_name,
       credential_schema_id,
@@ -39,14 +40,15 @@ export class ClaimAttestController {
   }
   @Get('/search')
   async search(
-    @Headers('Authorization') token: string,
+    @Headers('Authorization') auth: string,
     @Res() response: Response,
   ) {
-    return this.claimAttestService.search(token, response);
+    const jwt = auth.replace('Bearer ', '');
+    return this.claimAttestService.search(jwt, response);
   }
   @Put('/attest')
   async attest(
-    @Headers('Authorization') token: string,
+    @Headers('Authorization') auth: string,
     @Body('claim_status') claim_status: string,
     @Body('claim_os_id') claim_os_id: string,
     @Body('issuanceDate') issuanceDate: string,
@@ -54,8 +56,9 @@ export class ClaimAttestController {
 
     @Res() response: Response,
   ) {
+    const jwt = auth.replace('Bearer ', '');
     return this.claimAttestService.attest(
-      token,
+      jwt,
       claim_status,
       claim_os_id,
       issuanceDate,
