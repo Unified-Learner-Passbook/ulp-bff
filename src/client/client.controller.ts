@@ -27,6 +27,8 @@ export class ClientController {
     const KEYCLOAK_URL = process.env.KEYCLOAK_URL;
     const REGISTRY_URL = process.env.REGISTRY_URL;
     const TESTVAR = process.env.TESTVAR;
+    const KEYCLOAK_CLIENT_ID = process.env.KEYCLOAK_REALM_ID;
+    
     const result = {
       success: true,
       message: 'Bulk Issuance API Working 12 September 23 ' + TESTVAR,
@@ -35,6 +37,7 @@ export class ClientController {
       SCHEMA_URL: SCHEMA_URL,
       KEYCLOAK_URL: KEYCLOAK_URL,
       REGISTRY_URL: REGISTRY_URL,
+      KEYCLOAK_CLIENT_ID:KEYCLOAK_CLIENT_ID
     };
     response.status(200).send(result);
   }

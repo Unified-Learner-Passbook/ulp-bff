@@ -175,10 +175,13 @@ export class ClaimAttestService {
 
   public async search(token: string, response) {
     if (token) {
+      console.log(token);
+      
       const instructorSearch = await this.keycloakService.getUserTokenAccount(
         token,
       );
-
+        console.log(JSON.stringify(instructorSearch));
+        
       if (instructorSearch?.error) {
         return response.status(401).send({
           success: false,
@@ -301,6 +304,13 @@ export class ClaimAttestService {
           });
         }
       }
+    } else {
+      return response.status(400).send({
+        success: false,
+        status: 'invalid_request',
+        message: 'Invalid Request. Not received All Parameters.',
+        result: null,
+      });
     }
 
     console.log('Search Function Success');
