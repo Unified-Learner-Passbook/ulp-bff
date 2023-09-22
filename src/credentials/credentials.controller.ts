@@ -7,69 +7,19 @@ import {
   Query,
   Res,
   Headers,
+  StreamableFile,
+  Delete,
 } from '@nestjs/common';
 import { CredentialsService } from './credentials.service';
-import { SingleCredentialDto } from './dto/singlecred-dto';
-import { BulkCredentialDto } from './dto/bulkCred-dto';
 import { Response } from 'express';
 
-@Controller('/v1/credentials')
+@Controller('v1/credentials')
 export class CredentialsController {
   constructor(private readonly credentialsService: CredentialsService) {}
-
-  @Post('/upload/:type')
-  bulkUpload(
-    @Query() query: { type: string },
-    @Param('type') type: string,
-    @Body() payload: BulkCredentialDto,
-    @Res() response: Response,
-  ) {
-    console.log('body', payload);
-    console.log('query', query.type);
-    console.log('params', type);
-
-    if (type === 'proofOfAssessment') {
-      var schemaId = process.env.PROOF_OF_ASSESSMENT;
-    }
-    if (type === 'proofOfEnrollment') {
-      var schemaId = process.env.PROOF_OF_ENROLLMENT;
-    }
-    if (type === 'proofOfBenifits') {
-      var schemaId = process.env.PROOF_OF_BENIFIT;
-    }
-    return this.credentialsService.issueBulkCredential(
-      payload,
-      schemaId,
-      type,
-      response,
-    );
-  }
 
   @Get('/getSchema/:id')
   getSchema(@Param('id') id: string, @Res() response: Response) {
     return this.credentialsService.getSchema(id, response);
-  }
-
-  @Post('/approveStudentv2')
-  approveStudentv2(
-    @Body() payload: SingleCredentialDto,
-    @Res() response: Response,
-  ) {
-    var schemaId = process.env.PROOF_OF_ENROLLMENT;
-
-    return this.credentialsService.issueSingleCredential(
-      payload,
-      schemaId,
-      response,
-    );
-  }
-
-  @Post('/rejectStudentv2')
-  rejectStudentv2(
-    @Body() payload: SingleCredentialDto,
-    @Res() response: Response,
-  ) {
-    return this.credentialsService.rejectStudent(payload, response);
   }
 
   //get certificate id
@@ -83,10 +33,71 @@ export class CredentialsController {
     return this.credentialsService.getCredId(jwt, id, response);
   }
 
-  @Post('/verify')
-    verify(@Body() payload, @Res() response: Response) {
-        console.log("payload 50", payload)
-        this.credentialsService.verifyCertificate(payload, response)
-        
-    }
+  //new credentials list schema id schema template
+  //revoke credentials
+  @Delete('/revoke/:id')
+  async credentialsRevoke(
+    @Headers('Authorization') auth: string,
+    @Param('id') credId: string,
+    @Res() response: Response,
+  ) {
+    const jwt = auth.replace('Bearer ', '');
+    return this.credentialsService.credentialsRevoke(jwt, credId, response);
+  }
+  //credentialsSearch
+  @Post('/search/:type')
+  async credentialsSearch(
+    @Headers('Authorization') auth: string,
+    @Param('type') type: string,
+    @Body() requestbody: any,
+    @Res() response: Response,
+  ) {
+    const jwt = auth.replace('Bearer ', '');
+    return this.credentialsService.credentialsSearch(jwt, type, requestbody, response);
+  }
+  //credentialsSchema
+  @Get('/schema/:id')
+  async credentialsSchema(@Param('id') id: string, @Res() response: Response) {
+    return this.credentialsService.credentialsSchema(id, response);
+  }
+  @Get('/rendertemplateschema/:id')
+  async renderTemplateSchema(
+    @Param('id') id: string,
+    @Res() response: Response,
+  ) {
+    return this.credentialsService.renderTemplateSchema(id, response);
+  }
+  //credentialsSchemaJSON
+  @Get('/schema/json/:id')
+  async credentialsSchemaJSON(
+    @Param('id') id: string,
+    @Res() response: Response,
+  ) {
+    return this.credentialsService.credentialsSchemaJSON(id, response);
+  }
+  @Post('/render')
+  async renderCredentials(
+    @Headers('Authorization') auth: string,
+    @Body() requestbody: any,
+    @Res({ passthrough: true }) response,
+  ): Promise<string | StreamableFile> {
+    const jwt = auth.replace('Bearer ', '');
+    response.header('Content-Type', 'application/pdf');
+
+    return this.credentialsService.renderCredentials(jwt, requestbody);
+  }
+  @Post('/renderhtml')
+  async renderCredentialsHTML(
+    @Headers('Authorization') auth: string,
+    @Body() requestbody: any,
+    @Res() response: Response,
+  ) {
+    const jwt = auth.replace('Bearer ', '');
+    return this.credentialsService.renderCredentialsHTML(jwt, requestbody, response);
+  }
+  //credentialsVerify
+  @Get('/verify/:id')
+  async credentialsVerify(@Param('id') id: string, @Res() response: Response) {
+    return this.credentialsService.credentialsVerify(id, response);
+  }
 }

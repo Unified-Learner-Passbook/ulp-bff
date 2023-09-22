@@ -6,9 +6,97 @@ import { AxiosRequestConfig } from 'axios';
 export class CredService {
   constructor(private readonly httpService: HttpService) {}
 
+  //schema Create
+  async schemaCreate(postrequest) {
+    const url = `${process.env.SCHEMA_URL}/credential-schema`;
+    var data = JSON.stringify(postrequest);
+    var config = {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    };
+    let response_list = null;
+    try {
+      const observable = this.httpService.post(url, data, config);
+
+      const promise = observable.toPromise();
+
+      const response = await promise;
+      response_list = response.data;
+      //console.log(response.data);
+    } catch (e) {
+      console.log('schema error', e.message);
+      response_list = { error: e };
+    }
+    return response_list;
+  }
+
+  //schema list
+  async schemaList(taglist) {
+    const url = `${process.env.SCHEMA_URL}/credential-schema?tags=${taglist}`;
+    let response_list = null;
+    try {
+      const observable = this.httpService.get(url);
+
+      const promise = observable.toPromise();
+
+      const response = await promise;
+      response_list = response.data;
+      //console.log(response.data);
+    } catch (e) {
+      console.log('schema error', e.message);
+      response_list = { error: e };
+    }
+    return response_list;
+  }
+
+  //schema template Create
+  async schemaTemplateCreate(postrequest) {
+    const url = `${process.env.SCHEMA_URL}/template`;
+    var data = JSON.stringify(postrequest);
+    var config = {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    };
+    let response_list = null;
+    try {
+      const observable = this.httpService.post(url, data, config);
+
+      const promise = observable.toPromise();
+
+      const response = await promise;
+      response_list = response.data;
+      //console.log(response.data);
+    } catch (e) {
+      console.log('schema template error', e.message);
+      response_list = { error: e };
+    }
+    return response_list;
+  }
+
+  //schema template list
+  async schemaTemplateList(schemaid) {
+    const url = `${process.env.SCHEMA_URL}/template?schemaId=${schemaid}`;
+    let response_list = null;
+    try {
+      const observable = this.httpService.get(url);
+
+      const promise = observable.toPromise();
+
+      const response = await promise;
+      response_list = response.data;
+      //console.log(response.data);
+    } catch (e) {
+      console.log('schema error', e.message);
+      response_list = { error: e };
+    }
+    return response_list;
+  }
+
   //generate schema
   async generateSchema(schemaId) {
-    const url = `${process.env.SCHEMA_URL}/schema/jsonld?id=${schemaId}`;
+    const url = `${process.env.SCHEMA_URL}/credential-schema/${schemaId}`;
     console.log(url);
 
     try {
@@ -18,7 +106,7 @@ export class CredService {
 
       const response = await promise;
 
-      return response.data;
+      return response.data[0]?.schema;
     } catch (e) {
       console.log('schema error', e);
       console.log(e);
@@ -74,7 +162,6 @@ export class CredService {
           'https://www.w3.org/2018/credentials/v1',
           'https://www.w3.org/2018/credentials/examples/v1',
         ],
-        id: 'did:ulp:b4a191af-d86e-453c-9d0e-dd4771067235',
         type: ['VerifiableCredential', 'UniversityDegreeCredential'],
         issuer: `${payload.issuerId}`,
         issuanceDate: payload.issuanceDate,
@@ -88,6 +175,7 @@ export class CredService {
         },
       },
       credentialSchemaId: payload.credSchema.id,
+      credentialSchemaVersion: '1.0.0',
       tags: ['tag1', 'tag2', 'tag3'],
     });
 
@@ -119,7 +207,6 @@ export class CredService {
           'https://www.w3.org/2018/credentials/v1',
           'https://www.w3.org/2018/credentials/examples/v1',
         ],
-        id: 'did:ulp:b4a191af-d86e-453c-9d0e-dd4771067235',
         type: ['VerifiableCredential', 'UniversityDegreeCredential'],
         issuer: `${payload.issuerId}`,
         issuanceDate: payload.issuanceDate,
@@ -133,6 +220,7 @@ export class CredService {
         },
       },
       credentialSchemaId: payload.credSchema.id,
+      credentialSchemaVersion: '1.0.0',
       tags: ['tag1', 'tag2', 'tag3'],
     });
     const url = `${process.env.CRED_URL}/credentials/issue`;
@@ -195,7 +283,7 @@ export class CredService {
       subject: subjectFilter,
     });
 
-    const url = process.env.CRED_URL + 'credentials/search';
+    const url = process.env.CRED_URL + '/credentials/search';
 
     const config: AxiosRequestConfig = {
       headers: {
@@ -216,5 +304,29 @@ export class CredService {
     }
 
     return cred_search;
+  }
+  //revoke cred
+  async credRevoke(credId: string) {
+
+    const url = process.env.CRED_URL + '/credentials/'+credId;
+
+    const config: AxiosRequestConfig = {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    };
+    let cred_revoke = null;
+    try {
+      const observable = this.httpService.delete(url, config);
+      const promise = observable.toPromise();
+      const response = await promise;
+      //console.log(JSON.stringify(response.data));
+      cred_revoke = response.data;
+    } catch (e) {
+      //console.log(e);
+      cred_revoke = { error: e };
+    }
+
+    return cred_revoke;
   }
 }

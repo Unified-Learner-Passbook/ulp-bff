@@ -83,6 +83,7 @@ export class SbrcService {
 
       return response.data;
     } catch (e) {
+      console.log(JSON.stringify(e));
       console.log('sbrcUpdate error', e.message);
     }
   }
@@ -91,6 +92,8 @@ export class SbrcService {
   // invite entity in registery
   async sbrcInviteEL(inviteSchema, entityName) {
     let data = JSON.stringify(inviteSchema);
+    //console.log(data+" data");
+
     const url = process.env.REGISTRY_URL + 'api/v1/' + entityName + '/invite';
     const config: AxiosRequestConfig = {
       headers: {
@@ -125,9 +128,10 @@ export class SbrcService {
       const observable = this.httpService.put(url, data, config);
       const promise = observable.toPromise();
       const response = await promise;
-
+      //console.log(JSON.stringify(response.data));
       sb_rc_response_text = response.data;
     } catch (e) {
+      //console.log(e);
       sb_rc_response_text = { error: e };
     }
     return sb_rc_response_text;
@@ -137,8 +141,7 @@ export class SbrcService {
   async sbrcSearchEL(entity: string, filter: any) {
     let data = JSON.stringify(filter);
     const url = process.env.REGISTRY_URL + 'api/v1/' + entity + '/search';
-    //console.log(data + ' ' + url);
-
+    console.log(data + ' ' + url);
     const config: AxiosRequestConfig = {
       headers: {
         'Content-Type': 'application/json',
@@ -147,11 +150,8 @@ export class SbrcService {
     let sb_rc_search = null;
     try {
       const observable = this.httpService.post(url, data, config);
-
       const promise = observable.toPromise();
-
       const response = await promise;
-
       //console.log(JSON.stringify(response.data));
       sb_rc_search = response.data;
     } catch (e) {

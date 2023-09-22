@@ -13,12 +13,42 @@ export class KeycloakService {
     client_id: process.env.KEYCLOAK_CLIENT_ID,
     client_secret: process.env.KEYCLOAK_CLIENT_SECRET,
   };
+  async getUserTokenAccount(token: string) {
+    const url =
+      process.env.KEYCLOAK_URL +
+      'realms/' +
+      process.env.KEYCLOAK_REALM_ID +
+      '/account';
 
+    const config: AxiosRequestConfig = {
+      headers: {
+        'content-type': 'application/json',
+        Authorization: 'Bearer ' + token,
+      },
+    };
+
+    let response_text = null;
+    try {
+      const observable = this.httpService.get(url, config);
+
+      const promise = observable.toPromise();
+
+      const response = await promise;
+
+      //console.log(JSON.stringify(response.data));
+      response_text = response.data;
+    } catch (error) {
+      //console.log(e);
+      response_text = { error: error };
+    }
+
+    return response_text;
+  }
   async verifyUserToken(token: string) {
     const url =
       process.env.KEYCLOAK_URL +
       'realms/' +
-      process.env.REALM_ID +
+      process.env.KEYCLOAK_REALM_ID +
       '/protocol/openid-connect/userinfo';
 
     const config: AxiosRequestConfig = {
@@ -53,7 +83,7 @@ export class KeycloakService {
     const url =
       process.env.KEYCLOAK_URL +
       'realms/' +
-      process.env.REALM_ID +
+      process.env.KEYCLOAK_REALM_ID +
       '/protocol/openid-connect/token';
 
     const config: AxiosRequestConfig = {
@@ -90,7 +120,7 @@ export class KeycloakService {
     const url =
       process.env.KEYCLOAK_URL +
       'realms/' +
-      process.env.REALM_ID +
+      process.env.KEYCLOAK_REALM_ID +
       '/protocol/openid-connect/token';
 
     const config: AxiosRequestConfig = {
@@ -132,7 +162,7 @@ export class KeycloakService {
     const url =
       process.env.KEYCLOAK_URL +
       'admin/realms/' +
-      process.env.REALM_ID +
+      process.env.KEYCLOAK_REALM_ID +
       '/users';
 
     const config: AxiosRequestConfig = {
@@ -173,7 +203,7 @@ export class KeycloakService {
     const url =
       process.env.KEYCLOAK_URL +
       'admin/realms/' +
-      process.env.REALM_ID +
+      process.env.KEYCLOAK_REALM_ID +
       '/users';
 
     const config: AxiosRequestConfig = {
