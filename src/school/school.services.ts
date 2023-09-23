@@ -342,17 +342,17 @@ export class SchoolService {
               Authorization: 'Bearer ' + authtoken,
             },
           };
-          //console.log('config_token', config_token);
+          console.log('config_token', config_token);
           let response_text = null;
 
           try {
             const observable = this.httpService.post(url, data, config_token);
             const promise = observable.toPromise();
             const response = await promise;
-            //console.log(JSON.stringify(response.data));
+            console.log(JSON.stringify(response.data));
             response_text = response.data;
           } catch (e) {
-            //console.log(e);
+            console.log(e);
             response_text = { error: e };
           }
 
