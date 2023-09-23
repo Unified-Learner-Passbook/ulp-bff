@@ -128,6 +128,63 @@ export class CredentialsService {
       });
     }
   }
+  
+//credentialsReissue
+  async credentialsReissue(token: string, credId: string, response: Response) {
+    if (token && credId) {
+      const keycloakUsername = await this.keycloakService.verifyUserToken(
+        token,
+      );
+      if (keycloakUsername?.error) {
+        return response.status(401).send({
+          success: false,
+          status: 'keycloak_token_bad_request',
+          message: 'You do not have access for this request.',
+          result: null,
+        });
+      } else if (!keycloakUsername?.preferred_username) {
+        return response.status(400).send({
+          success: false,
+          status: 'keycloak_token_error',
+          message: 'Your Login Session Expired.',
+          result: null,
+        });
+      } else {
+        //fetch cred detail required for issue
+        /*return response.status(200).send({
+          success: true,
+          status: 'cred_reissue_success',
+          message: 'Credential Revoke API Success !',
+          result: cred_detail,
+        });*/
+        /*const cred_revoke = await this.credService.credRevoke(credId);
+        console.log('cred_revoke', cred_revoke);
+        if (cred_revoke?.status === 'REVOKED') {
+          //reissue cred
+          return response.status(200).send({
+            success: true,
+            status: 'cred_revoke_success',
+            message: 'Credential Revoke API Success !',
+            result: cred_revoke,
+          });
+        } else {
+          return response.status(400).send({
+            success: false,
+            status: 'cred_revoke_error',
+            message: 'Credential Revoke API Failed ! Please Try Again.',
+            result: null,
+          });
+        }*/
+      }
+    } else {
+      return response.status(400).send({
+        success: false,
+        status: 'invalid_request',
+        message: 'Invalid Request. Not received token or requestbody.',
+        result: null,
+      });
+    }
+  }
 
   //credentialsRevoke
   async credentialsRevoke(token: string, credId: string, response: Response) {

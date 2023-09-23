@@ -54,6 +54,75 @@ export class SchemaService {
       });
     }
   }
+  //getCredentialSchemaUpdate
+  async getCredentialSchemaUpdate(
+    postrequest: any,
+    id: string,
+    version: string,
+    response: Response,
+  ) {
+    if (postrequest && id && version) {
+      const getschemaupdate = await this.credService.schemaUpdate(
+        postrequest,
+        id,
+        version,
+      );
+      if (getschemaupdate?.error) {
+        return response.status(400).send({
+          success: false,
+          status: 'get_schema_error',
+          message: 'Get Schema Update Failed ! Please Try Again.',
+          result: getschemaupdate,
+        });
+      } else {
+        return response.status(200).send({
+          success: true,
+          status: 'schema_update_success',
+          message: 'Schema Update Success',
+          result: getschemaupdate,
+        });
+      }
+    } else {
+      return response.status(400).send({
+        success: false,
+        status: 'invalid_request',
+        message: 'Invalid Request. Not received All Parameters.',
+        result: null,
+      });
+    }
+  }
+  //getCredentialSchemaRevoke
+  async getCredentialSchemaRevoke(
+    id: string,
+    version: string,
+    response: Response,
+  ) {
+    if (id && version) {
+      const getschemarevoke = await this.credService.schemaRevoke(id, version);
+      if (getschemarevoke?.error) {
+        return response.status(400).send({
+          success: false,
+          status: 'get_schema_error',
+          message: 'Get Schema Revoke Failed ! Please Try Again.',
+          result: getschemarevoke,
+        });
+      } else {
+        return response.status(200).send({
+          success: true,
+          status: 'schema_revoke_success',
+          message: 'Schema Revoke Success',
+          result: getschemarevoke,
+        });
+      }
+    } else {
+      return response.status(400).send({
+        success: false,
+        status: 'invalid_request',
+        message: 'Invalid Request. Not received All Parameters.',
+        result: null,
+      });
+    }
+  }
   //getCredentialSchemaList
   async getCredentialSchemaList(postrequest: any, response: Response) {
     if (postrequest?.taglist) {
@@ -75,6 +144,8 @@ export class SchemaService {
             schemalist.push({
               schema_name: getschemalist[i]?.schema?.name,
               schema_id: getschemalist[i]?.schema?.id,
+              schema_version: getschemalist[i]?.schema?.version,
+              schema_status: getschemalist[i]?.status,
             });
           }
           return response.status(200).send({
@@ -122,6 +193,68 @@ export class SchemaService {
           status: 'schema_template_create_success',
           message: 'Schema Template Create Success',
           result: getschematemplatecreate,
+        });
+      }
+    } else {
+      return response.status(400).send({
+        success: false,
+        status: 'invalid_request',
+        message: 'Invalid Request. Not received All Parameters.',
+        result: null,
+      });
+    }
+  }
+  //getCredentialSchemaTemplateUpdate
+  async getCredentialSchemaTemplateUpdate(
+    postrequest: any,
+    id: string,
+    response: Response,
+  ) {
+    if (postrequest && id) {
+      const getschematemplateupdate =
+        await this.credService.schemaTemplateUpdate(postrequest, id);
+      if (getschematemplateupdate?.error) {
+        return response.status(400).send({
+          success: false,
+          status: 'get_schema_template_error',
+          message: 'Get Schema Template Update Failed ! Please Try Again.',
+          result: getschematemplateupdate,
+        });
+      } else {
+        return response.status(200).send({
+          success: true,
+          status: 'schema_template_update_success',
+          message: 'Schema Template Update Success',
+          result: getschematemplateupdate,
+        });
+      }
+    } else {
+      return response.status(400).send({
+        success: false,
+        status: 'invalid_request',
+        message: 'Invalid Request. Not received All Parameters.',
+        result: null,
+      });
+    }
+  }
+  //getCredentialSchemaTemplateDelete
+  async getCredentialSchemaTemplateDelete(id: string, response: Response) {
+    if (id) {
+      const getschematemplatedelete =
+        await this.credService.schemaTemplateDelete(id);
+      if (getschematemplatedelete?.error) {
+        return response.status(400).send({
+          success: false,
+          status: 'get_schema_template_error',
+          message: 'Get Schema Template Delete Failed ! Please Try Again.',
+          result: getschematemplatedelete,
+        });
+      } else {
+        return response.status(200).send({
+          success: true,
+          status: 'schema_template_delete_success',
+          message: 'Schema Template Delete Success',
+          result: getschematemplatedelete,
         });
       }
     } else {
@@ -223,7 +356,7 @@ export class SchemaService {
             schemaid: getschema?.schema?.$id,
             required: required_fileds,
             optional: optional_fileds,
-            register_required:learner_schema_field,
+            register_required: learner_schema_field,
           };
 
           return response.status(200).send({

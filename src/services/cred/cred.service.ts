@@ -31,6 +31,55 @@ export class CredService {
     return response_list;
   }
 
+  //schema Update
+  async schemaUpdate(postrequest,id,version) {
+    const url = `${process.env.SCHEMA_URL}/credential-schema/${id}/${version}`;
+    var data = JSON.stringify(postrequest);
+    var config = {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    };
+    let response_list = null;
+    try {
+      const observable = this.httpService.put(url, data, config);
+
+      const promise = observable.toPromise();
+
+      const response = await promise;
+      response_list = response.data;
+      //console.log(response.data);
+    } catch (e) {
+      console.log('schema error', e.message);
+      response_list = { error: e };
+    }
+    return response_list;
+  }
+
+//schema Revoke
+async schemaRevoke(id,version) {
+  const url = `${process.env.SCHEMA_URL}/credential-schema/revoke/${id}/${version}`;
+  var config = {
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  };
+  let response_list = null;
+  try {
+    const observable = this.httpService.put(url, config);
+
+    const promise = observable.toPromise();
+
+    const response = await promise;
+    response_list = response.data;
+    //console.log(response.data);
+  } catch (e) {
+    console.log('schema error', e.message);
+    response_list = { error: e };
+  }
+  return response_list;
+}
+
   //schema list
   async schemaList(taglist) {
     const url = `${process.env.SCHEMA_URL}/credential-schema?tags=${taglist}`;
@@ -62,6 +111,55 @@ export class CredService {
     let response_list = null;
     try {
       const observable = this.httpService.post(url, data, config);
+
+      const promise = observable.toPromise();
+
+      const response = await promise;
+      response_list = response.data;
+      //console.log(response.data);
+    } catch (e) {
+      console.log('schema template error', e.message);
+      response_list = { error: e };
+    }
+    return response_list;
+  }
+
+  //schema template Update
+  async schemaTemplateUpdate(postrequest,id) {
+    const url = `${process.env.SCHEMA_URL}/template/${id}`;
+    var data = JSON.stringify(postrequest);
+    var config = {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    };
+    let response_list = null;
+    try {
+      const observable = this.httpService.put(url, data, config);
+
+      const promise = observable.toPromise();
+
+      const response = await promise;
+      response_list = response.data;
+      //console.log(response.data);
+    } catch (e) {
+      console.log('schema template error', e.message);
+      response_list = { error: e };
+    }
+    return response_list;
+  }
+
+  //schema template Delete
+  async schemaTemplateDelete(id) {
+    const url = `${process.env.SCHEMA_URL}/template/${id}`;
+    var config = {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    };
+    let response_list = null;
+    try {
+      const observable = this.httpService.delete(url, config);
 
       const promise = observable.toPromise();
 
@@ -175,7 +273,7 @@ export class CredService {
         },
       },
       credentialSchemaId: payload.credSchema.id,
-      credentialSchemaVersion: '1.0.0',
+      credentialSchemaVersion: payload.credSchema.version,
       tags: ['tag1', 'tag2', 'tag3'],
     });
 
@@ -220,7 +318,7 @@ export class CredService {
         },
       },
       credentialSchemaId: payload.credSchema.id,
-      credentialSchemaVersion: '1.0.0',
+      credentialSchemaVersion: payload.credSchema.version,
       tags: ['tag1', 'tag2', 'tag3'],
     });
     const url = `${process.env.CRED_URL}/credentials/issue`;
