@@ -32,8 +32,8 @@ export class CredService {
   }
 
   //schema Update
-  async schemaUpdate(postrequest,id) {
-    const url = `${process.env.SCHEMA_URL}/credential-schema/${id}/1.0.0`;
+  async schemaUpdate(postrequest,id,version) {
+    const url = `${process.env.SCHEMA_URL}/credential-schema/${id}/${version}`;
     var data = JSON.stringify(postrequest);
     var config = {
       headers: {
@@ -57,8 +57,8 @@ export class CredService {
   }
 
 //schema Revoke
-async schemaRevoke(id) {
-  const url = `${process.env.SCHEMA_URL}/credential-schema/revoke/${id}/1.0.0`;
+async schemaRevoke(id,version) {
+  const url = `${process.env.SCHEMA_URL}/credential-schema/revoke/${id}/${version}`;
   var config = {
     headers: {
       'Content-Type': 'application/json',
@@ -273,7 +273,7 @@ async schemaRevoke(id) {
         },
       },
       credentialSchemaId: payload.credSchema.id,
-      credentialSchemaVersion: '1.0.0',
+      credentialSchemaVersion: payload.credSchema.version,
       tags: ['tag1', 'tag2', 'tag3'],
     });
 
@@ -318,7 +318,7 @@ async schemaRevoke(id) {
         },
       },
       credentialSchemaId: payload.credSchema.id,
-      credentialSchemaVersion: '1.0.0',
+      credentialSchemaVersion: payload.credSchema.version,
       tags: ['tag1', 'tag2', 'tag3'],
     });
     const url = `${process.env.CRED_URL}/credentials/issue`;

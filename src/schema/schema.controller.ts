@@ -31,25 +31,28 @@ export class SchemaController {
     return this.issuerService.getCredentialSchemaCreate(postrequest, response);
   }
   //put credentials/schema/update
-  @Put('/schema/update/:id')
+  @Put('/schema/update/:id/:version')
   async getCredentialSchemaUpdate(
     @Body() postrequest: any,
     @Param('id') id: string,
+    @Param('version') version: string,
     @Res() response: Response,
   ) {
     return this.issuerService.getCredentialSchemaUpdate(
       postrequest,
       id,
+      version,
       response,
     );
   }
   //put credentials/schema/revoke
-  @Put('/schema/revoke/:id')
+  @Put('/schema/revoke/:id/:version')
   async getCredentialSchemaRevoke(
     @Param('id') id: string,
+    @Param('version') version: string,
     @Res() response: Response,
   ) {
-    return this.issuerService.getCredentialSchemaRevoke(id, response);
+    return this.issuerService.getCredentialSchemaRevoke(id,version, response);
   }
   //get schema list
   @Post('/schema/list')

@@ -58,12 +58,14 @@ export class SchemaService {
   async getCredentialSchemaUpdate(
     postrequest: any,
     id: string,
+    version: string,
     response: Response,
   ) {
-    if (postrequest && id) {
+    if (postrequest && id && version) {
       const getschemaupdate = await this.credService.schemaUpdate(
         postrequest,
         id,
+        version,
       );
       if (getschemaupdate?.error) {
         return response.status(400).send({
@@ -90,9 +92,13 @@ export class SchemaService {
     }
   }
   //getCredentialSchemaRevoke
-  async getCredentialSchemaRevoke(id: string, response: Response) {
-    if (id) {
-      const getschemarevoke = await this.credService.schemaRevoke(id);
+  async getCredentialSchemaRevoke(
+    id: string,
+    version: string,
+    response: Response,
+  ) {
+    if (id && version) {
+      const getschemarevoke = await this.credService.schemaRevoke(id, version);
       if (getschemarevoke?.error) {
         return response.status(400).send({
           success: false,
@@ -138,6 +144,8 @@ export class SchemaService {
             schemalist.push({
               schema_name: getschemalist[i]?.schema?.name,
               schema_id: getschemalist[i]?.schema?.id,
+              schema_version: getschemalist[i]?.schema?.version,
+              schema_status: getschemalist[i]?.status,
             });
           }
           return response.status(200).send({
@@ -204,7 +212,7 @@ export class SchemaService {
   ) {
     if (postrequest && id) {
       const getschematemplateupdate =
-        await this.credService.schemaTemplateUpdate(postrequest,id);
+        await this.credService.schemaTemplateUpdate(postrequest, id);
       if (getschematemplateupdate?.error) {
         return response.status(400).send({
           success: false,
