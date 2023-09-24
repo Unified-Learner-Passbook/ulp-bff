@@ -23,19 +23,17 @@ export class ClaimAttestService {
   }
   public async sent(
     token: string,
-    attest_school_id: string,
-    attest_school_name: string,
     credential_schema_id: string,
-    credentialSubject: object,
+    credentialSubject: any,
     response: Response,
   ) {
-    if (
-      token &&
-      attest_school_id &&
-      attest_school_name &&
-      credential_schema_id &&
-      credentialSubject
-    ) {
+    if (token && credential_schema_id && credentialSubject) {
+      let attest_school_id = credentialSubject?.orgId
+        ? credentialSubject.orgId
+        : '';
+      let attest_school_name = credentialSubject?.orgName
+        ? credentialSubject.orgName
+        : '';
       const learnerUsername = await this.keycloakService.getUserTokenAccount(
         token,
       );
@@ -128,14 +126,12 @@ export class ClaimAttestService {
         } else if (learnerDetails.length > 0) {
           //get count
           const osid = learnerDetails[0]?.osid;
-          let credentialSubjectJson = new Object(credentialSubject);
-          credentialSubjectJson['id'] = osid;
 
           const requestbody = {
             attest_school_id: attest_school_id,
             attest_school_name: attest_school_name,
             credential_schema_id: credential_schema_id,
-            credentialSubject: credentialSubjectJson,
+            credentialSubject: credentialSubject,
             claim_by: osid,
             claim_status: 'raise',
             claim_from: 'Learner',
@@ -173,23 +169,21 @@ export class ClaimAttestService {
     }
   }
 
-  public async search(token: string, response) {
-    if (token) {
+  public async search(token: string, type: string, response) {
+    if (token && type) {
       console.log(token);
-      
-      const instructorSearch = await this.keycloakService.getUserTokenAccount(
-        token,
-      );
-        console.log(JSON.stringify(instructorSearch));
-        
-      if (instructorSearch?.error) {
+
+      const userSearch = await this.keycloakService.getUserTokenAccount(token);
+      console.log(JSON.stringify(userSearch));
+
+      if (userSearch?.error) {
         return response.status(401).send({
           success: false,
           status: 'keycloak_token_bad_request',
           message: 'You do not have access for this request.',
           result: null,
         });
-      } else if (!instructorSearch?.username) {
+      } else if (!userSearch?.username) {
         return response.status(401).send({
           success: false,
           status: 'keycloak_token_error',
@@ -201,22 +195,22 @@ export class ClaimAttestService {
         let dob = '';
         let gender = '';
         if (
-          instructorSearch?.attributes?.gender &&
-          instructorSearch?.attributes?.dob &&
-          instructorSearch?.attributes?.name
+          userSearch?.attributes?.gender &&
+          userSearch?.attributes?.dob &&
+          userSearch?.attributes?.name
         ) {
           //login with digilocker
-          name = instructorSearch?.attributes?.name[0];
-          dob = await this.convertDate(instructorSearch?.attributes?.dob[0]);
-          gender = instructorSearch?.attributes?.gender[0];
+          name = userSearch?.attributes?.name[0];
+          dob = await this.convertDate(userSearch?.attributes?.dob[0]);
+          gender = userSearch?.attributes?.gender[0];
         } else {
           //login with mobile and otp
           const sb_rc_search = await this.sbrcService.sbrcSearchEL(
-            'Instructor',
+            type === 'teacher' ? 'Instructor' : 'Learner',
             {
               filters: {
                 username: {
-                  eq: instructorSearch?.username,
+                  eq: userSearch?.username,
                 },
               },
             },
@@ -260,21 +254,36 @@ export class ClaimAttestService {
 
         const userDetails = await this.sbrcService.sbrcSearch(
           searchSchema,
-          'Instructor',
+          type === 'teacher' ? 'Instructor' : 'Learner',
         );
         if (userDetails[0]?.school_id) {
-          let attest_school_id = userDetails[0].school_id;
+          let attest_school_id = userDetails[0]?.school_id;
+          let user_osid = userDetails[0]?.osid;
 
-          let requestbody = {
-            filters: {
-              attest_school_id: {
-                eq: attest_school_id,
+          let requestbody = {};
+          if (type === 'teacher') {
+            requestbody = {
+              filters: {
+                attest_school_id: {
+                  eq: attest_school_id,
+                },
+                claim_status: {
+                  eq: 'raise',
+                },
               },
-              claim_status: {
-                eq: 'raise',
+            };
+          } else {
+            requestbody = {
+              filters: {
+                claim_by: {
+                  eq: user_osid,
+                },
+                claim_status: {
+                  eq: 'raise',
+                },
               },
-            },
-          };
+            };
+          }
 
           const sbrcSearch = await this.sbrcService.sbrcSearchEL(
             'ClaimAttestSchema',
@@ -440,7 +449,81 @@ export class ClaimAttestService {
           } else if (instructorDetails.length > 0) {
             if (claim_status == 'approved') {
               const issuer_did = instructorDetails[0].issuer_did;
-
+              //did get student and update it
+              let student_did = '';
+              let student_osid = sbrcSearchClaim[0].claim_by;
+              // find student
+              let searchSchema = {
+                filters: {
+                  osid: {
+                    eq: student_osid,
+                  },
+                },
+              };
+              const studentDetails = await this.sbrcService.sbrcSearch(
+                searchSchema,
+                'Learner',
+              );
+              console.log('Learner Details', studentDetails);
+              if (
+                typeof studentDetails !== 'undefined' &&
+                studentDetails !== null
+              ) {
+                if (studentDetails.length > 0) {
+                  if (studentDetails[0]?.did) {
+                    student_did = studentDetails[0].did;
+                  } else {
+                    let didRes = await this.credService.generateDid(
+                      student_osid,
+                    );
+                    console.log('did', didRes);
+                    if (didRes) {
+                      student_did = didRes[0].verificationMethod[0].controller;
+                      let updateRes = await this.sbrcService.sbrcUpdate(
+                        {
+                          did: student_did,
+                        },
+                        'Learner',
+                        studentDetails[0].osid,
+                      );
+                      if (updateRes) {
+                      } else {
+                        return response.status(400).send({
+                          success: false,
+                          status: 'student_update_failed',
+                          message:
+                            'Unable to Update Student Account DID ! Please Try Again.',
+                          result: null,
+                        });
+                      }
+                    } else {
+                      return response.status(400).send({
+                        success: false,
+                        status: 'student_did_update_failed',
+                        message: 'unable to generate student did!',
+                        result: null,
+                      });
+                    }
+                  }
+                } else {
+                  return response.status(400).send({
+                    success: false,
+                    status: 'student_search_no_found',
+                    message: 'Student Account Not Found ! Please Try Again.',
+                    result: null,
+                  });
+                }
+              } else {
+                return response.status(400).send({
+                  success: false,
+                  status: 'student_search_failed',
+                  message:
+                    'Unable to Search Student Account ! Please Try Again.',
+                  result: null,
+                });
+              }
+              //issue cred
+              credentialSubject.id = student_did;
               let payload = {
                 issuerId: issuer_did,
                 issuanceDate: issuanceDate,
@@ -448,6 +531,7 @@ export class ClaimAttestService {
                 credentialSubject: credentialSubject,
                 credSchema: {
                   id: credential_schema_id,
+                  version: '1.0.0',
                 },
               };
               const issueCredential = await this.credService.issueCredentialsEL(
@@ -515,6 +599,14 @@ export class ClaimAttestService {
                 });
               }
             }
+          } else {
+            //register in keycloak and then in sunbird rc
+            return response.status(400).send({
+              success: false,
+              status: 'sbrc_instructor_no_found_error',
+              message: 'Instructor Account Not Found. Register and Try Again.',
+              result: null,
+            });
           }
         }
       } else {

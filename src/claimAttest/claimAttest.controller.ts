@@ -22,8 +22,6 @@ export class ClaimAttestController {
   @Post('/sent')
   async sent(
     @Headers('Authorization') auth: string,
-    @Body('attest_school_id') attest_school_id: string,
-    @Body('attest_school_name') attest_school_name: string,
     @Body('credential_schema_id') credential_schema_id: string,
     @Body('credentialSubject') credentialSubject: object,
     @Res() response: Response,
@@ -31,20 +29,19 @@ export class ClaimAttestController {
     const jwt = auth.replace('Bearer ', '');
     return this.claimAttestService.sent(
       jwt,
-      attest_school_id,
-      attest_school_name,
       credential_schema_id,
       credentialSubject,
       response,
     );
   }
-  @Get('/search')
+  @Post('/search')
   async search(
     @Headers('Authorization') auth: string,
+    @Body('type') type: string,
     @Res() response: Response,
   ) {
     const jwt = auth.replace('Bearer ', '');
-    return this.claimAttestService.search(jwt, response);
+    return this.claimAttestService.search(jwt, type, response);
   }
   @Put('/attest')
   async attest(
