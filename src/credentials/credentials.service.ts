@@ -128,10 +128,15 @@ export class CredentialsService {
       });
     }
   }
-  
-//credentialsReissue
-  async credentialsReissue(token: string, credId: string, response: Response) {
-    if (token && credId) {
+
+  //credentialsReissue
+  async credentialsReissue(
+    token: string,
+    credId: string,
+    credentialSubject: any,
+    response: Response,
+  ) {
+    if (token && credId && credentialSubject) {
       const keycloakUsername = await this.keycloakService.verifyUserToken(
         token,
       );
@@ -151,22 +156,45 @@ export class CredentialsService {
         });
       } else {
         //fetch cred detail required for issue
-        /*return response.status(200).send({
-          success: true,
-          status: 'cred_reissue_success',
-          message: 'Credential Revoke API Success !',
-          result: cred_detail,
-        });*/
-        /*const cred_revoke = await this.credService.credRevoke(credId);
+        const cred_revoke = await this.credService.credRevoke(credId);
         console.log('cred_revoke', cred_revoke);
         if (cred_revoke?.status === 'REVOKED') {
           //reissue cred
-          return response.status(200).send({
-            success: true,
-            status: 'cred_revoke_success',
-            message: 'Credential Revoke API Success !',
-            result: cred_revoke,
-          });
+          //get issuer
+          let issuer = cred_revoke?.issuer;
+          let issuanceDate = cred_revoke?.issuanceDate;
+          let expirationDate = cred_revoke?.expirationDate;
+          let stduent_did = cred_revoke?.subject?.id;
+          let credential_schema_id=cred_revoke?.credential_schema;
+          credentialSubject.id = stduent_did;
+          let payload = {
+            issuerId: issuer,
+            issuanceDate: issuanceDate,
+            expirationDate: expirationDate,
+            credentialSubject: credentialSubject,
+            credSchema: {
+              id: credential_schema_id,
+              version: '1.0.0',
+            },
+          };
+          const issueCredential = await this.credService.issueCredentialsEL(
+            payload,
+          );
+          if (issueCredential?.error) {
+            return response.status(400).send({
+              success: false,
+              status: 'issue_credentials_failed',
+              message: 'Issue Credentials Failed.',
+              result: null,
+            });
+          } else {
+            return response.status(200).send({
+              success: true,
+              status: 'cred_reissue_success',
+              message: 'Credential Reissue API Success !',
+              result: issueCredential,
+            });
+          }
         } else {
           return response.status(400).send({
             success: false,
@@ -174,7 +202,7 @@ export class CredentialsService {
             message: 'Credential Revoke API Failed ! Please Try Again.',
             result: null,
           });
-        }*/
+        }
       }
     } else {
       return response.status(400).send({

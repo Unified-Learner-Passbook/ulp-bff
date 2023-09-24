@@ -35,14 +35,15 @@ export class CredentialsController {
 
   //new credentials list schema id schema template
   //reissue credentials
-  @Delete('/reissue/:id')
+  @Post('/reissue/:id')
   async credentialsReissue(
     @Headers('Authorization') auth: string,
     @Param('id') credId: string,
+    @Body("credentialSubject") credentialSubject: any,
     @Res() response: Response,
   ) {
     const jwt = auth.replace('Bearer ', '');
-    return this.credentialsService.credentialsReissue(jwt, credId, response);
+    return this.credentialsService.credentialsReissue(jwt, credId,credentialSubject, response);
   }
   //revoke credentials
   @Delete('/revoke/:id')
