@@ -9,6 +9,7 @@ import { InstructorModule } from './instructor/instructor.module';
 import { IssuerModule } from './issuer/issuer.module';
 import { LearnerModule } from './learner/learner.module';
 import { SchemaModule } from './schema/schema.module';
+import { GrievanceModule } from './grievance/grievance.module';
 
 //call env variable
 import { ConfigModule } from '@nestjs/config';
@@ -53,7 +54,8 @@ import { ClaimAttestModule } from './claimAttest/claimAttest.module';
     //   logging: true,
     // }),
     //UsersModule,
-    ClaimAttestModule
+    ClaimAttestModule,
+    GrievanceModule,
   ],
   providers: [
     CredService,
@@ -61,7 +63,7 @@ import { ClaimAttestModule } from './claimAttest/claimAttest.module';
     AadharService,
     KeycloakService,
     UdiseService,
-    TelemetryService
+    TelemetryService,
   ],
 })
 export class AppModule {}
