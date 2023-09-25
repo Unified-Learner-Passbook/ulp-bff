@@ -46,89 +46,6 @@ export class CredentialsService {
   moment = require('moment');
   qs = require('qs');
 
-  async getSchema(id: string, response: Response) {
-    console.log('id: 172', id);
-    //const schemaRes = await this.generateSchema(id);
-    const schemaRes = await this.credService.generateSchema(id);
-
-    console.log('schemaRes', schemaRes);
-
-    if (schemaRes) {
-      return response.status(200).send({
-        success: true,
-        status: 'cred_schema_api_success',
-        message: 'Cred Schema API Success',
-        result: schemaRes,
-      });
-    } else {
-      return response.status(200).send({
-        success: false,
-        status: 'cred_schema_api_failed',
-        message: 'Credentials Schema Failed ! Please Try Again.',
-        result: null,
-      });
-    }
-  }
-
-  //getCredId
-  async getCredId(token: string, id: string, response: Response) {
-    if (token && id) {
-      const studentUsername = await this.keycloakService.verifyUserToken(token);
-      if (studentUsername?.error) {
-        return response.status(401).send({
-          success: false,
-          status: 'keycloak_token_bad_request',
-          message: 'You do not have access for this request.',
-          result: null,
-        });
-      } else if (!studentUsername?.preferred_username) {
-        return response.status(401).send({
-          success: false,
-          status: 'keycloak_token_error',
-          message: 'Your Login Session Expired.',
-          result: null,
-        });
-      } else {
-        const url = process.env.CRED_URL + '/credentials/' + id;
-
-        const config: AxiosRequestConfig = {
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        };
-
-        let render_response = null;
-        try {
-          const observable = this.httpService.get(url, config);
-          const promise = observable.toPromise();
-          const response = await promise;
-          //console.log(JSON.stringify(response.data));
-          render_response = response.data;
-        } catch (e) {
-          //console.log(e);
-          //render_response = { error: e };
-        }
-        if (render_response == null) {
-          return response.status(400).send({
-            success: false,
-            status: 'get_credentials_api_failed',
-            message: 'Credentials Get Failed ! Please Try Again.',
-            result: null,
-          });
-        } else {
-          return response.status(200).send(render_response);
-        }
-      }
-    } else {
-      return response.status(400).send({
-        success: false,
-        status: 'invalid_request',
-        message: 'Invalid Request. Not received All Parameters.',
-        result: null,
-      });
-    }
-  }
-
   //credentialsReissue
   async credentialsReissue(
     token: string,
@@ -165,7 +82,7 @@ export class CredentialsService {
           let issuanceDate = cred_revoke?.issuanceDate;
           let expirationDate = cred_revoke?.expirationDate;
           let stduent_did = cred_revoke?.subject?.id;
-          let credential_schema_id=cred_revoke?.credential_schema;
+          let credential_schema_id = cred_revoke?.credential_schema;
           credentialSubject.id = stduent_did;
           let payload = {
             issuerId: issuer,
@@ -264,12 +181,7 @@ export class CredentialsService {
   }
 
   //credentialsSearch
-  async credentialsSearch(
-    token: string,
-    type: string,
-    requestbody: any,
-    response: Response,
-  ) {
+  async credentialsSearch(token: string, requestbody: any, response: Response) {
     if (token && requestbody) {
       const studentUsername = await this.keycloakService.verifyUserToken(token);
       if (studentUsername?.error) {
@@ -317,28 +229,28 @@ export class CredentialsService {
             result: render_response,
           });
         } else {
-          let render_response_student = [];
-          /*if (type === 'student') {
-            for (let i = 0; i < render_response.length; i++) {
-              if (render_response[i]?.credentialSubject?.student_name) {
-                render_response_student.push(render_response[i]);
-              }
+          for (let i = 0; i < render_response.length; i++) {
+            //get cred status
+            let response_text_verify = await this.credService.credVerify(
+              render_response[i]?.id,
+            );
+            if (response_text_verify?.error) {
+              return response.status(400).send({
+                success: false,
+                status: 'cred_verify_api_failed',
+                message: 'Credentials Verify Failed ! Please Try Again.',
+                result: response_text_verify,
+              });
+            } else {
+              render_response[i].status = response_text_verify?.status;
+              render_response[i].checks = response_text_verify?.checks;
             }
-          } else if (type === 'teacher') {
-            for (let i = 0; i < render_response.length; i++) {
-              if (!render_response[i]?.credentialSubject?.student_name) {
-                render_response_student.push(render_response[i]);
-              }
-            }
-          } else {
-            render_response_student = render_response;
-          }*/
-          render_response_student = render_response;
+          }
           return response.status(200).send({
             success: true,
             status: 'cred_search_api_success',
             message: 'Cred Search API Success',
-            result: render_response_student,
+            result: render_response,
           });
         }
       }
@@ -352,26 +264,10 @@ export class CredentialsService {
     }
   }
 
-  //credentialsSchema
-  async credentialsSchema(id: string, response: Response) {
+  //getCredentials
+  async getCredentials(id: string, response: Response) {
     if (id) {
-      const url = process.env.CRED_URL + '/credentials/' + id;
-
-      var config = {
-        headers: { Accept: 'application/json' },
-      };
-      let response_text = null;
-
-      try {
-        const observable = this.httpService.get(url, config);
-        const promise = observable.toPromise();
-        const response = await promise;
-        //console.log(JSON.stringify(response.data));
-        response_text = response.data;
-      } catch (error) {
-        //console.log(e);
-        response_text = { error: error };
-      }
+      let response_text = await this.credService.getCred(id);
       if (response_text?.error) {
         return response.status(400).send({
           success: false,
@@ -380,12 +276,25 @@ export class CredentialsService {
           result: response_text,
         });
       } else {
-        return response.status(200).send({
-          success: true,
-          status: 'cred_schema_api_success',
-          message: 'Cred Schema API Success',
-          result: response_text,
-        });
+        //get cred status
+        let response_text_verify = await this.credService.credVerify(id);
+        if (response_text_verify?.error) {
+          return response.status(400).send({
+            success: false,
+            status: 'cred_verify_api_failed',
+            message: 'Credentials Verify Failed ! Please Try Again.',
+            result: response_text_verify,
+          });
+        } else {
+          response_text.status = response_text_verify?.status;
+          response_text.checks = response_text_verify?.checks;
+          return response.status(200).send({
+            success: true,
+            status: 'cred_api_success',
+            message: 'Cred API Success',
+            result: response_text,
+          });
+        }
       }
     } else {
       return response.status(400).send({
@@ -445,23 +354,7 @@ export class CredentialsService {
   //credentialsSchemaJSON
   async credentialsSchemaJSON(id: string, response: Response) {
     if (id) {
-      const url = process.env.SCHEMA_URL + '/credential-schema/' + id;
-
-      const config: AxiosRequestConfig = {
-        headers: { Accept: 'application/json' },
-      };
-      let response_text = null;
-
-      try {
-        const observable = this.httpService.get(url, config);
-        const promise = observable.toPromise();
-        const response = await promise;
-        //console.log(JSON.stringify(response.data));
-        response_text = response.data;
-      } catch (error) {
-        //console.log(e);
-        response_text = { error: error };
-      }
+      let response_text = await this.credService.generateSchemaEL(id);
       if (response_text?.error) {
         return response.status(400).send({
           success: false,
@@ -499,14 +392,15 @@ export class CredentialsService {
       } else if (!studentUsername?.preferred_username) {
         return 'Keycloak Student Token Expired';
       } else {
-        var data = JSON.stringify(requestbody);
+        let filetype = 'text/html';
+        let credentialid = requestbody?.credentialid;
+        let templateid = requestbody?.templateid;
 
-        const url = process.env.CRED_URL + '/credentials/render';
+        const url = process.env.CRED_URL + '/credentials/' + credentialid;
 
+        //console.log('url', url);
         const config: AxiosRequestConfig = {
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: { Accept: filetype, templateid: templateid },
         };
 
         let render_response = null;
@@ -514,13 +408,13 @@ export class CredentialsService {
         let certificateId = requestbody?.credential?.id;
 
         try {
-          const observable = this.httpService.post(url, data, config);
+          const observable = this.httpService.get(url, config);
           const promise = observable.toPromise();
           const response = await promise;
 
           render_response = response.data;
         } catch (e) {
-          //console.log(e);
+          console.log(e);
           //render_response = { error: e };
         }
         if (render_response == null) {
@@ -563,19 +457,26 @@ export class CredentialsService {
             });
 
             if (!modified) {
-              return null;
+              return new StreamableFile(
+                await wkhtmltopdf(render_response, {
+                  pageSize: 'A4',
+                  disableExternalLinks: true,
+                  disableInternalLinks: true,
+                  disableJavascript: true,
+                }),
+              );
+            } else {
+              return new StreamableFile(
+                await wkhtmltopdf(modifiedHtml, {
+                  pageSize: 'A4',
+                  disableExternalLinks: true,
+                  disableInternalLinks: true,
+                  disableJavascript: true,
+                }),
+              );
             }
-
-            return new StreamableFile(
-              await wkhtmltopdf(modifiedHtml, {
-                pageSize: 'A4',
-                disableExternalLinks: true,
-                disableInternalLinks: true,
-                disableJavascript: true,
-              }),
-            );
           } catch (e) {
-            //console.log(e);
+            console.log(e);
 
             return 'HTML to PDF Convert Fail';
           }
@@ -609,19 +510,19 @@ export class CredentialsService {
           result: null,
         });
       } else {
-        var data = JSON.stringify(requestbody);
+        let filetype = 'text/html';
+        let credentialid = requestbody?.credentialid;
+        let templateid = requestbody?.templateid;
 
-        const url = process.env.CRED_URL + '/credentials/render';
-
+        const url = process.env.CRED_URL + '/credentials/' + credentialid;
+        //console.log('url', url);
         const config: AxiosRequestConfig = {
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: { Accept: filetype, templateid: templateid },
         };
 
         let render_response = null;
         try {
-          const observable = this.httpService.post(url, data, config);
+          const observable = this.httpService.get(url, config);
           const promise = observable.toPromise();
           const response = await promise;
           //console.log(JSON.stringify(response.data));
@@ -636,15 +537,68 @@ export class CredentialsService {
             success: false,
             status: 'render_api_failed',
             message: 'Credentials Render Failed ! Please Try Again.',
-            result: null,
-          });
-        } else {
-          return response.status(200).send({
-            success: true,
-            status: 'render_api_success',
-            message: 'Cred Render API Success',
             result: render_response,
           });
+        } else {
+          //replace qr code
+          try {
+            const url = process.env.VERIFICATION_URL + credentialid;
+
+            let modifiedHtml = null;
+
+            const modified = await new Promise((resolve, reject) => {
+              qr.toDataURL(url, function (err, code) {
+                if (err) {
+                  resolve(null);
+                  return;
+                }
+
+                if (code) {
+                  const newHtml = code;
+
+                  const root = parse(render_response);
+
+                  // Find the img tag with id "qrcode"
+                  const qrcodeImg = root.querySelector('#qrcode');
+
+                  if (qrcodeImg) {
+                    qrcodeImg.setAttribute('src', newHtml);
+                    modifiedHtml = root.toString();
+
+                    resolve(modifiedHtml);
+                  } else {
+                    resolve(null);
+                  }
+                } else {
+                  resolve(null);
+                }
+              });
+            });
+            if (!modified) {
+              return response.status(200).send({
+                success: true,
+                status: 'render_api_success',
+                message: 'Cred Render API Success',
+                result: render_response,
+              });
+            } else {
+              return response.status(200).send({
+                success: true,
+                status: 'render_api_success',
+                message: 'Cred Render API Success',
+                result: modifiedHtml,
+              });
+            }
+          } catch (e) {
+            console.log(e);
+            return response.status(400).send({
+              success: false,
+              status: 'render_qr_code_api_failed',
+              message:
+                'Credentials Render Failed in QR code replace ! Please Try Again.',
+              result: null,
+            });
+          }
         }
       }
     } else {
@@ -660,35 +614,19 @@ export class CredentialsService {
   //credentialsVerify
   async credentialsVerify(id: string, response: Response) {
     if (id) {
-      const url = process.env.CRED_URL + '/credentials/' + id + '/verify';
-
-      var config = {
-        headers: { Accept: 'application/json' },
-      };
-      let response_text = null;
-
-      try {
-        const observable = this.httpService.get(url, config);
-        const promise = observable.toPromise();
-        const response = await promise;
-        //console.log(JSON.stringify(response.data));
-        response_text = response.data;
-      } catch (error) {
-        //console.log(e);
-        response_text = { error: error };
-      }
+      let response_text = await this.credService.credVerify(id);
       if (response_text?.error) {
         return response.status(400).send({
           success: false,
-          status: 'cred_schema_api_failed',
-          message: 'Credentials Schema Failed ! Please Try Again.',
+          status: 'cred_verify_api_failed',
+          message: 'Credentials Verify Failed ! Please Try Again.',
           result: response_text,
         });
       } else {
         return response.status(200).send({
           success: true,
-          status: 'cred_schema_api_success',
-          message: 'Cred Schema API Success',
+          status: 'cred_verify_api_success',
+          message: 'Cred Verify API Success',
           result: response_text,
         });
       }

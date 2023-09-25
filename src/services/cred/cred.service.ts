@@ -6,6 +6,28 @@ import { AxiosRequestConfig } from 'axios';
 export class CredService {
   constructor(private readonly httpService: HttpService) {}
 
+  //cred get
+  async getCred(credId) {
+    const url = process.env.CRED_URL + '/credentials/' + credId;
+
+    const config = {
+      headers: { Accept: 'application/json' },
+    };
+
+    let render_response = null;
+    try {
+      const observable = this.httpService.get(url, config);
+      const promise = observable.toPromise();
+      const response = await promise;
+      //console.log(JSON.stringify(response.data));
+      render_response = response.data;
+    } catch (e) {
+      //console.log(e);
+      render_response = { error: e };
+    }
+    return render_response;
+  }
+
   //schema Create
   async schemaCreate(postrequest) {
     const url = `${process.env.SCHEMA_URL}/credential-schema`;
@@ -32,7 +54,7 @@ export class CredService {
   }
 
   //schema Update
-  async schemaUpdate(postrequest,id,version) {
+  async schemaUpdate(postrequest, id, version) {
     const url = `${process.env.SCHEMA_URL}/credential-schema/${id}/${version}`;
     var data = JSON.stringify(postrequest);
     var config = {
@@ -56,29 +78,29 @@ export class CredService {
     return response_list;
   }
 
-//schema Revoke
-async schemaRevoke(id,version) {
-  const url = `${process.env.SCHEMA_URL}/credential-schema/revoke/${id}/${version}`;
-  var config = {
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  };
-  let response_list = null;
-  try {
-    const observable = this.httpService.put(url, config);
+  //schema Revoke
+  async schemaRevoke(id, version) {
+    const url = `${process.env.SCHEMA_URL}/credential-schema/revoke/${id}/${version}`;
+    var config = {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    };
+    let response_list = null;
+    try {
+      const observable = this.httpService.put(url, config);
 
-    const promise = observable.toPromise();
+      const promise = observable.toPromise();
 
-    const response = await promise;
-    response_list = response.data;
-    //console.log(response.data);
-  } catch (e) {
-    console.log('schema error', e.message);
-    response_list = { error: e };
+      const response = await promise;
+      response_list = response.data;
+      //console.log(response.data);
+    } catch (e) {
+      console.log('schema error', e.message);
+      response_list = { error: e };
+    }
+    return response_list;
   }
-  return response_list;
-}
 
   //schema list
   async schemaList(taglist) {
@@ -125,7 +147,7 @@ async schemaRevoke(id,version) {
   }
 
   //schema template Update
-  async schemaTemplateUpdate(postrequest,id) {
+  async schemaTemplateUpdate(postrequest, id) {
     const url = `${process.env.SCHEMA_URL}/template/${id}`;
     var data = JSON.stringify(postrequest);
     var config = {
@@ -209,6 +231,29 @@ async schemaRevoke(id,version) {
       console.log('schema error', e.message);
       console.log(e);
     }
+  }
+  //gett schema EL
+  async generateSchemaEL(schemaId) {
+    const url = `${process.env.SCHEMA_URL}/credential-schema/${schemaId}`;
+    //console.log(url);
+
+    const config: AxiosRequestConfig = {
+      headers: { Accept: 'application/json' },
+    };
+    let response_text = null;
+
+    try {
+      const observable = this.httpService.get(url, config);
+      const promise = observable.toPromise();
+      const response = await promise;
+      //console.log(JSON.stringify(response.data));
+      response_text = response.data;
+    } catch (error) {
+      //console.log(e);
+      response_text = { error: error };
+    }
+
+    return response_text;
   }
 
   //generate did
@@ -405,8 +450,7 @@ async schemaRevoke(id,version) {
   }
   //revoke cred
   async credRevoke(credId: string) {
-
-    const url = process.env.CRED_URL + '/credentials/'+credId;
+    const url = process.env.CRED_URL + '/credentials/' + credId;
 
     const config: AxiosRequestConfig = {
       headers: {
@@ -426,5 +470,27 @@ async schemaRevoke(id,version) {
     }
 
     return cred_revoke;
+  }
+  //verify cred
+  async credVerify(credId: string) {
+    const url = process.env.CRED_URL + '/credentials/' + credId + '/verify';
+
+    var config = {
+      headers: { Accept: 'application/json' },
+    };
+    let response_text = null;
+
+    try {
+      const observable = this.httpService.get(url, config);
+      const promise = observable.toPromise();
+      const response = await promise;
+      //console.log(JSON.stringify(response.data));
+      response_text = response.data;
+    } catch (error) {
+      //console.log(e);
+      response_text = { error: error };
+    }
+
+    return response_text;
   }
 }

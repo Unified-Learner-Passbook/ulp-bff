@@ -17,22 +17,6 @@ import { Response } from 'express';
 export class CredentialsController {
   constructor(private readonly credentialsService: CredentialsService) {}
 
-  @Get('/getSchema/:id')
-  getSchema(@Param('id') id: string, @Res() response: Response) {
-    return this.credentialsService.getSchema(id, response);
-  }
-
-  //get certificate id
-  @Get('/get/:id')
-  async getCredId(
-    @Headers('Authorization') auth: string,
-    @Param('id') id: string,
-    @Res() response: Response,
-  ) {
-    const jwt = auth.replace('Bearer ', '');
-    return this.credentialsService.getCredId(jwt, id, response);
-  }
-
   //new credentials list schema id schema template
   //reissue credentials
   @Post('/reissue/:id')
@@ -56,20 +40,19 @@ export class CredentialsController {
     return this.credentialsService.credentialsRevoke(jwt, credId, response);
   }
   //credentialsSearch
-  @Post('/search/:type')
+  @Post('/search')
   async credentialsSearch(
     @Headers('Authorization') auth: string,
-    @Param('type') type: string,
     @Body() requestbody: any,
     @Res() response: Response,
   ) {
     const jwt = auth.replace('Bearer ', '');
-    return this.credentialsService.credentialsSearch(jwt, type, requestbody, response);
+    return this.credentialsService.credentialsSearch(jwt, requestbody, response);
   }
-  //credentialsSchema
-  @Get('/schema/:id')
-  async credentialsSchema(@Param('id') id: string, @Res() response: Response) {
-    return this.credentialsService.credentialsSchema(id, response);
+  //getCredentials
+  @Get('/json/:id')
+  async getCredentials(@Param('id') id: string, @Res() response: Response) {
+    return this.credentialsService.getCredentials(id, response);
   }
   @Get('/rendertemplateschema/:id')
   async renderTemplateSchema(
