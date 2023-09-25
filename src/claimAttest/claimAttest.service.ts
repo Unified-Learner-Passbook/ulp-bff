@@ -256,7 +256,7 @@ export class ClaimAttestService {
           searchSchema,
           type === 'teacher' ? 'Instructor' : 'Learner',
         );
-        if (userDetails[0]?.school_id) {
+        if (!userDetails?.error) {
           let attest_school_id = userDetails[0]?.school_id;
           let user_osid = userDetails[0]?.osid;
 
@@ -308,8 +308,8 @@ export class ClaimAttestService {
           return response.status(400).send({
             success: false,
             status: 'search_fail',
-            message: 'school id not found in instructor account.',
-            result: null,
+            message: 'user account search error.',
+            result: userDetails,
           });
         }
       }
