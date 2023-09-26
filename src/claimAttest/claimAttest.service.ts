@@ -357,6 +357,9 @@ export class ClaimAttestService {
       ) {
         const credential_schema_id = sbrcSearchClaim[0].credential_schema_id;
         const credentialSubject = sbrcSearchClaim[0].credentialSubject;
+        if (credentialSubject?.osid) {
+          delete credentialSubject['osid'];
+        }
         const instructorUsername =
           await this.keycloakService.getUserTokenAccount(token);
         if (instructorUsername?.error) {
