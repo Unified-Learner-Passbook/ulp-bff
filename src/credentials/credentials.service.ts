@@ -405,7 +405,7 @@ export class CredentialsService {
 
         let render_response = null;
 
-        let certificateId = requestbody?.credential?.id;
+        //let certificateId = requestbody?.credential?.id;
 
         try {
           const observable = this.httpService.get(url, config);
@@ -423,7 +423,7 @@ export class CredentialsService {
           //return render_response;
 
           try {
-            const url = process.env.VERIFICATION_URL + certificateId;
+            const url = process.env.VERIFICATION_URL + credentialid;
 
             let modifiedHtml = null;
 
