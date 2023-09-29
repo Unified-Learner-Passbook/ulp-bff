@@ -104,7 +104,7 @@ export class CredService {
 
   //schema list
   async schemaList(taglist) {
-    const url = `${process.env.SCHEMA_URL}/credential-schema?tags=${taglist}`;
+    const url = `${process.env.SCHEMA_URL}/credential-schema?tags=${taglist}&page=1&limit=1000`;
     let response_list = null;
     try {
       const observable = this.httpService.get(url);
