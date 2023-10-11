@@ -277,8 +277,15 @@ export class CredentialsService {
           result: response_text,
         });
       } else {
+        //removed api verify calls from 
+        return response.status(200).send({
+          success: true,
+          status: 'cred_api_success',
+          message: 'Cred API Success',
+          result: response_text,
+        });
         //get cred status
-        let response_text_verify = await this.credService.credVerify(id);
+        /*let response_text_verify = await this.credService.credVerify(id);
         if (response_text_verify?.error) {
           return response.status(400).send({
             success: false,
@@ -295,7 +302,7 @@ export class CredentialsService {
             message: 'Cred API Success',
             result: response_text,
           });
-        }
+        }*/
       }
     } else {
       return response.status(400).send({
