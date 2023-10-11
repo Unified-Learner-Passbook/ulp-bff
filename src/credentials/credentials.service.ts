@@ -229,7 +229,8 @@ export class CredentialsService {
             result: render_response,
           });
         } else {
-          for (let i = 0; i < render_response.length; i++) {
+          //removed verify from credentials api
+          /*for (let i = 0; i < render_response.length; i++) {
             //get cred status
             let response_text_verify = await this.credService.credVerify(
               render_response[i]?.id,
@@ -245,7 +246,7 @@ export class CredentialsService {
               render_response[i].status = response_text_verify?.status;
               render_response[i].checks = response_text_verify?.checks;
             }
-          }
+          }*/
           return response.status(200).send({
             success: true,
             status: 'cred_search_api_success',
