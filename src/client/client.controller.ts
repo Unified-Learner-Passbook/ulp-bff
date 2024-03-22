@@ -27,7 +27,7 @@ export class ClientController {
     const KEYCLOAK_URL = process.env.KEYCLOAK_URL;
     const REGISTRY_URL = process.env.REGISTRY_URL;
     const TESTVAR = process.env.TESTVAR;
-    const KEYCLOAK_CLIENT_ID = process.env.KEYCLOAK_REALM_ID;
+    const KEYCLOAK_CLIENT_ID = process.env.KEYCLOAK_CLIENT_ID;
     
     const result = {
       success: true,
