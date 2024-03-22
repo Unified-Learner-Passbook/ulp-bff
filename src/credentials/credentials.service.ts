@@ -277,7 +277,7 @@ export class CredentialsService {
           result: response_text,
         });
       } else {
-        //removed api verify calls from 
+        //removed api verify calls from
         return response.status(200).send({
           success: true,
           status: 'cred_api_success',
@@ -423,7 +423,7 @@ export class CredentialsService {
           render_response = response.data;
         } catch (e) {
           console.log(e);
-          //render_response = { error: e };
+          render_response = { error: e };
         }
         if (render_response == null) {
           return 'Credentials Render Failed ! Please Try Again.';
@@ -501,6 +501,7 @@ export class CredentialsService {
     requestbody: any,
     response: Response,
   ) {
+    console.log('hi');
     if (token) {
       const studentUsername = await this.keycloakService.verifyUserToken(token);
       if (studentUsername?.error) {
@@ -523,6 +524,7 @@ export class CredentialsService {
         let templateid = requestbody?.templateid;
 
         const url = process.env.CRED_URL + '/credentials/' + credentialid;
+        console.log('url', url);
         //console.log('url', url);
         const config: AxiosRequestConfig = {
           headers: { Accept: filetype, templateid: templateid },
@@ -533,11 +535,11 @@ export class CredentialsService {
           const observable = this.httpService.get(url, config);
           const promise = observable.toPromise();
           const response = await promise;
-          //console.log(JSON.stringify(response.data));
+          console.log(JSON.stringify(response.data));
           render_response = response.data;
         } catch (e) {
-          //console.log(e);
-          //render_response = { error: e };
+          console.log(e);
+          render_response = { error: e };
         }
 
         if (render_response == null) {
